@@ -4,6 +4,7 @@ import type { FilePreparationProgress, PhotoFraming, SequenceConfig, SequenceSli
 import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
 import { EditorPropertyRow } from './EditorPropertyRow';
+import { EditorToolButton } from './EditorTool';
 import { drawFrame, loadImages, sceneAtTime, type ImageMap } from '../utils/canvasRenderer';
 import { normalizeFraming, photoGeometry, photoSlots } from '../utils/photoFraming';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
@@ -12,7 +13,7 @@ import { downloadBlob } from '../utils/download';
 import { saveVideoAs } from '../utils/saveVideo';
 import { supportsBackgroundExport } from '../utils/videoRecorder';
 import { videoOutput } from '../utils/videoOutput';
-import { Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
 interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null }
@@ -195,7 +196,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
   const framingControls = <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
-    <EditorPropertyRow label="Edición manual"><button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="quick-button">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button></EditorPropertyRow>
+    <EditorPropertyRow label="Editar"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
     {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
       onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
       onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}
@@ -204,7 +205,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   {framingControlsTarget && createPortal(framingControls, framingControlsTarget)}
   <section className="panel preview-panel">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-indigo-500" />Previsualización {config.aspectRatio} en Vivo</h2><span className="font-mono text-[11px] text-neutral-400">{config.width} × {config.height} · {config.fps} FPS</span></div>
-    {output.rotation !== 0 && <p className="text-xs text-indigo-300">Tótem TV · Vista derecha como en tu TV vertical. Archivo final: {output.width} × {output.height}, girado 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}.</p>}
+    {output.rotation !== 0 && <p className="text-xs text-indigo-300" title={'Vista derecha como en tu TV vertical. El archivo final gira 90° a la ' + (output.rotation === 90 ? 'derecha' : 'izquierda') + '.'}>Tótem TV · {output.width} × {output.height} · {output.rotation === 90 ? '↻' : '↶'} 90°</p>}
     <div ref={media} className="preview-media">
     <div className="preview-device" style={{ width: `min(100%, calc(var(--preview-screen-height) * ${config.width / config.height} + 28px))` }}>
       <div aria-hidden="true" className="preview-notch"><span className="h-2.5 w-2.5 rounded-full border border-neutral-700 bg-neutral-950" /><span className="h-1 w-10 rounded-full bg-neutral-800" /></div>

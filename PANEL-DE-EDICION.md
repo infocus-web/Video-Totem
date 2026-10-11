@@ -20,6 +20,14 @@ Encuadre, agrupación y estilos usan botones compactos. Posición X/Y, zoom, dur
 
 Esta compactación modifica `ClientInputPanel.tsx`, `PhotoFramingControls.tsx`, `VideoPreviewPlayer.tsx` e `index.css`, y agrega `EditorPropertyRow.tsx` para compartir la alineación de etiquetas y controles. No modifica los eventos de edición, el guardado ni el exportador. En local, cargá fotos, pegá una selección larga, probá los ocho accesos y verificá encuadre, giros, música y guardado. En Vercel, repetí después de Commit → Push y del despliegue.
 
+## Controles visuales
+
+Los accesos y acciones usan iconos con nombres accesibles. El ajuste activo y el estilo elegido se resaltan; los modos de apilado muestran miniaturas de una, dos o tres divisiones. Las fotos apiladas se eligen desde sus miniaturas. La visibilidad de textos se controla con un interruptor. Anterior, Siguiente, giros y restablecer usan flechas, con las mismas acciones y alcances anteriores.
+
+`EditorTool.tsx` reúne los botones y sus ayudas al pasar el cursor o enfocar con Tab. Escape, clic y desplazamiento cierran la ayuda. Se muestra fuera del panel para que no se recorte; no ocupa espacio del editor. `ClientInputPanel.tsx`, `PhotoFramingControls.tsx`, `VideoPreviewPlayer.tsx` e `index.css` aplican estos controles. No se agregan dependencias ni cambia la codificación del video.
+
+Para probar: recorré la barra con Tab, verificá las ayudas y usá Escape; cambiá ajuste, apilado y estilo y comprobá el estado activo y la vista previa. Probá el interruptor de textos con clic y Espacio, y la selección de miniaturas. Los scripts de navegador verifican navegación, ayudas, selección, guardado, encuadre y exportación. En producción, repetí después de Commit → Push y de recargar el despliegue.
+
 ## Archivos
 
 - `src/components/ClientInputPanel.tsx`: panel único, secciones visibles y accesos directos; fondo junto al encuadre y formato de nombres junto a la selección.
