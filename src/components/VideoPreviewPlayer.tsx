@@ -50,6 +50,12 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const selectedSlot = photoSlots(currentSlide?.photos.length || 1, config.width, config.height, config.splitGapSize)[photoIndex];
   useEffect(() => {
     const photos = new Map(slides.flatMap(slide => slide.photos.map(photo => [photo.id, photo] as const)));
+    if (!photos.size) {
+      imageCache.current.clear(); setImages(new Map()); setImageError(''); setPreparationProgress(null);
+      setReady(false); onReadyChange(false); playing.current = false; setPlaying(false); audioEngine.stop();
+      time.current = 0; setDisplayTime(0);
+      return;
+    }
     if (photos.size === imageCache.current.size && [...photos.values()].every(photo => photo.previewUrl && imageCache.current.get(photo.id)?.src === photo.previewUrl)) {
       setReady(true); onReadyChange(photos.size > 0);
       return;

@@ -4,6 +4,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Navbar } from './components/Navbar';
+import { NewProjectModal } from './components/NewProjectModal';
 import { FolderOpen, Plus, Save } from 'lucide-react';
 import { ClientInputPanel } from './components/ClientInputPanel';
 import { VideoPreviewPlayer, type PreviewHandle } from './components/VideoPreviewPlayer';
@@ -40,6 +41,8 @@ export default function App() {
   const [premiereOpen, setPremiereOpen] = useState(false), [exportOpen, setExportOpen] = useState(false), [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false), [importing, setImporting] = useState(false);
   const [previewReady, setPreviewReady] = useState(false);
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [previewSession, setPreviewSession] = useState(0);
   const [framingControlsTarget, setFramingControlsTarget] = useState<HTMLDivElement | null>(null);
   const [importProgress, setImportProgress] = useState<FilePreparationProgress | null>(null);
   const [message, setMessage] = useState(''), [saveStatus, setSaveStatus] = useState('Guardando…');
@@ -154,6 +157,7 @@ export default function App() {
       const restored = decodeProject(await file.text());
       urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear();
       audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
+      setPreviewReady(false); setPreviewSession(value => value + 1);
       setProject(restored); notify('Proyecto abierto. Volvé a conectar su carpeta de fotos y su música.');
     } catch (error) { notify(error instanceof Error ? error.message : 'Proyecto inválido.'); }
   };
@@ -164,18 +168,25 @@ export default function App() {
     catch (error) { notify(error instanceof Error ? error.message : 'Audio no compatible.'); }
     finally { setImporting(false); }
   };
-  const newProject = () => {
-    if (library.length || slides.length) downloadBlob(new Blob([serializeProject(project)], { type:'application/json' }), (config.name || 'AutoReel') + '_respaldo.autoreel.json');
+  const newProject = (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length > 120 || busy || importing) return;
+    const backedUp = library.length > 0 || slides.length > 0;
+    if (backedUp) downloadBlob(new Blob([serializeProject(project)], { type:'application/json' }), (config.name || 'AutoReel') + '_respaldo.autoreel.json');
     urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear();
     audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
-    setProject({ version:1, rawText:'', config:{ ...DEFAULT_CONFIG }, library:[], slides:[] }); setTab('editor');
-    notify('Proyecto nuevo. Si había un montaje, se descargó su respaldo JSON.');
+    const fresh: SavedProject = { version:1, rawText:'', config:{ ...DEFAULT_CONFIG, name: trimmedName }, library:[], slides:[] };
+    setPreviewReady(false); setPreviewSession(value => value + 1);
+    setProject(fresh); setTab('editor'); setNewProjectOpen(false);
+    try { localStorage.setItem(STORAGE_KEY, serializeProject(fresh)); setSaveStatus('Guardado en este navegador'); }
+    catch { setSaveStatus('No se pudo guardar automáticamente. Descargá el proyecto JSON.'); }
+    notify('Proyecto «' + trimmedName + '» creado. Cargá sus fotos.' + (backedUp ? ' Se descargó el respaldo JSON del proyecto anterior.' : ''));
   };
   return <div className="app-shell bg-neutral-950 text-neutral-100">
     <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && !importing && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={selectedCount} totalDuration={totalDuration} formatLabel={config.width + ' × ' + config.height} busy={busy || importing}
       projectActions={<>
         <span className="project-save-status" title={saveStatus} aria-label={saveStatus}>{saveStatus === 'Guardado en este navegador' ? 'Guardado' : saveStatus === 'Guardando…' ? 'Guardando…' : 'Sin guardar'}</span>
-        <button className="project-button" aria-label="Nuevo proyecto" title="Nuevo proyecto" disabled={busy || importing} onClick={newProject}><Plus aria-hidden="true" /><span className="project-button-label">Nuevo</span></button>
+        <button className="project-button" aria-label="Nuevo proyecto" title="Nuevo proyecto" disabled={busy || importing} onClick={() => setNewProjectOpen(true)}><Plus aria-hidden="true" /><span className="project-button-label">Nuevo</span></button>
         <button className="project-button" aria-label="Guardar proyecto JSON" title="Guardar proyecto JSON" disabled={busy || importing} onClick={() => downloadBlob(new Blob([serializeProject(project)],{ type:'application/json' }), (config.name || 'AutoReel') + '.autoreel.json')}><Save aria-hidden="true" /><span className="project-button-label">Guardar</span></button>
         <label className="project-button" title="Abrir proyecto"><FolderOpen aria-hidden="true" /><span className="project-button-label">Abrir</span><input aria-label="Abrir proyecto" type="file" accept=".json" disabled={busy || importing} className="sr-only" onChange={event => void loadProject(event)} /></label>
       </>} />
@@ -194,10 +205,11 @@ export default function App() {
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="preview-column min-w-0"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
+        <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
       </div>
     </main>
     <footer className="app-footer text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>
+    {newProjectOpen && <NewProjectModal open onClose={() => setNewProjectOpen(false)} onCreate={newProject} hasPhotos={library.length > 0 || slides.length > 0} />}
     <DeferredDialog open={premiereOpen}><PremiereInspectorModal isOpen={premiereOpen} onClose={() => setPremiereOpen(false)} onApplyPremiereSettings={applyPremiere} /></DeferredDialog>
     <DeferredDialog open={exportOpen}><ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} canRecord={previewReady && !busy && !importing} onTriggerDirectVideoRender={chooseLocation => preview.current?.record(chooseLocation)} /></DeferredDialog>
     <DeferredDialog open={guideOpen}><FaqGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} /></DeferredDialog>

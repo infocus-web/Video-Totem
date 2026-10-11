@@ -36,6 +36,16 @@ Archivos de esta mejora: `EditorTool.tsx` comparte el texto dentro de las miniat
 
 ## Archivos
 
+### Nuevo proyecto
+
+Nuevo abre una ventana centrada con nombre obligatorio (hasta 120 caracteres), Crear proyecto y Cancelar. Cancelar/Escape conserva el montaje. Crear descarga el respaldo JSON si había fotos, libera sus referencias y música e inicia el proyecto con valores predeterminados. El nombre se guarda inmediatamente para evitar recuperar el borrador anterior al recargar. Los originales en disco no se modifican.
+
+El aviso de ANTO persistía porque la vista previa comparaba una caché vacía con un montaje vacío y salía antes de limpiar el error. Ahora el caso vacío limpia error, imágenes, carga, reproducción y posición. Cambiar de proyecto también reinicia el estado de la vista previa, incluido un video pendiente de guardar; las ediciones dentro del mismo proyecto conservan su caché.
+
+Archivos: `src/App.tsx` controla creación, respaldo y nueva sesión de vista previa; `src/components/NewProjectModal.tsx` agrega nombre y acciones; `src/components/Modal.tsx` permite una ventana compacta; `src/components/VideoPreviewPlayer.tsx` limpia errores al vaciar; `scripts/new-project-smoke.cjs` reproduce el error y verifica cancelar, respaldo con encuadre, persistencia, Enter, móvil y vaciar escenas; `README.md` y este documento describen el flujo.
+
+En local, recargá y probá Nuevo → nombre → Crear, Cancelar y Escape. El proyecto creado debe tener cero fotos y no pedir archivos del anterior. Volvé a cargar una foto y reproducila. En producción, repetí después de Commit/Push y del despliegue. Si querés conservar un video generado pendiente de descarga, guardalo antes de crear o abrir otro proyecto.
+
 - `src/components/ClientInputPanel.tsx`: panel único, secciones visibles y accesos directos; fondo junto al encuadre y formato de nombres junto a la selección.
 - `src/components/PhotoFramingControls.tsx`: navegación, contador y ajustes individuales, con posición y zoom antes del giro por lote.
 - `src/components/VideoPreviewPlayer.tsx`: conserva reproducción y selección; coloca sus controles de encuadre dentro del panel mediante un portal de React. En la línea de tiempo siguen disponibles junto a la vista previa.

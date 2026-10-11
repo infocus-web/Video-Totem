@@ -59,6 +59,8 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En escritorio, el espacio de trabajo ocupa la altura disponible: dos tercios del ancho para edición y un tercio para la vista previa ampliada. Cada panel se desplaza de forma independiente. Los avisos ocupan una línea compacta. En celulares, la cabecera usa dos filas y los paneles se distribuyen verticalmente. [Archivos y pruebas del panel](PANEL-DE-EDICION.md).
 
+**Nuevo** abre una ventana para escribir el nombre. Crear proyecto inicia un montaje vacío y limpia las fotos, música y avisos anteriores; si había fotos, descarga antes su respaldo JSON. Cancelar o Escape conserva el proyecto actual. El nuevo nombre se guarda inmediatamente en el navegador.
+
 Las propiedades se editan en filas: etiqueta a la izquierda y control a la derecha. La selección de archivos usa una caja de una línea que podés ampliar desde la esquina inferior; conserva mensajes largos y rangos. Los botones de ajuste, agrupación y estilo ocupan una fila compacta. Posición, zoom, duración y volumen muestran sus valores junto al deslizador. Las explicaciones ampliadas están en la guía y en las ayudas al pasar el puntero.
 
 La barra y las acciones usan miniaturas con icono y texto corto dentro del botón. Los ajustes activos se resaltan. El apilado muestra sus divisiones y nombre; las fotos apiladas se seleccionan por su imagen y número. La visibilidad de textos usa un interruptor. Las ayudas completas aparecen con el cursor o Tab y se cierran con Escape, clic o desplazamiento. Los grupos aprovechan dos columnas cuando el panel tiene al menos 880px de ancho; en áreas más chicas usan una columna.
