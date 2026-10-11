@@ -1,10 +1,11 @@
-import type { SequenceConfig, SequenceSlide, PhotoItem } from '../types';
+import type { SequenceConfig, SequenceSlide, PhotoItem, FilePreparationProgress } from '../types';
 export type ImageMap = Map<string, HTMLImageElement>;
 const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
-export async function loadImages(slides: SequenceSlide[], signal: AbortSignal): Promise<ImageMap> {
+export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void): Promise<ImageMap> {
   const photos = [...new Map(slides.flatMap(slide => slide.photos).map(photo => [photo.id, photo])).values()];
   const images = new Map<string, HTMLImageElement>();
+  onProgress?.({ completed: 0, total: photos.length });
   // Limit concurrent decoding to avoid a memory spike on large folders.
   let index = 0;
   await Promise.all(Array.from({ length: Math.min(4, photos.length) }, async () => {
@@ -17,6 +18,7 @@ export async function loadImages(slides: SequenceSlide[], signal: AbortSignal): 
       await image.decode();
       if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
       images.set(photo.id, image);
+      onProgress?.({ completed: images.size, total: photos.length });
     }
   }));
   return images;

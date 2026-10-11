@@ -7,6 +7,14 @@
   src: url('/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
 }
 body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
+.preparation-progress { appearance: none; border: 0; border-radius: 9999px; overflow: hidden; background: #262626; accent-color: #6366f1; }
+.preparation-progress::-webkit-progress-bar { background: #262626; border-radius: 9999px; }
+.preparation-progress::-webkit-progress-value { background: #6366f1; border-radius: 9999px; transition: width 150ms ease; }
+.preparation-progress::-moz-progress-bar { background: #6366f1; border-radius: 9999px; }
+.preparation-progress:indeterminate { background: linear-gradient(90deg, #262626 30%, #6366f1 50%, #262626 70%); background-size: 200% 100%; animation: preparation-pulse 1.2s linear infinite; }
+.preparation-progress:indeterminate::-webkit-progress-bar { background: transparent; }
+@keyframes preparation-pulse { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .preparation-progress { animation: none; } .preparation-progress::-webkit-progress-value { transition: none; } }
 @layer components {
   .panel { @apply rounded-3xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl; }
   .control { @apply rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed; }

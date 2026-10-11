@@ -1,6 +1,11 @@
 export type PhotoOrientation = 'horizontal' | 'vertical' | 'square';
 export type TransitionType = 'dissolve' | 'fade' | 'zoom' | 'wipe' | 'pan' | 'flash' | 'none';
 
+export interface FilePreparationProgress {
+  completed: number;
+  total: number;
+}
+
 export interface PhotoItem {
   id: string;
   number: string;

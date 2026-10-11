@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import type { SequenceConfig, SequenceSlide } from '../types';
+import type { FilePreparationProgress, SequenceConfig, SequenceSlide } from '../types';
+import { PreparationProgress } from './PreparationProgress';
 import { drawFrame, loadImages, type ImageMap } from '../utils/canvasRenderer';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
 import { audioEngine } from '../utils/audioSynthesizer';
@@ -15,13 +16,15 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const [displayTime, setDisplayTime] = useState(0), [isPlaying, setPlaying] = useState(false);
   const [ready, setReady] = useState(false), [progress, setProgress] = useState(0), [muted, setMuted] = useState(false);
   const [imageError, setImageError] = useState('');
+  const [preparationProgress, setPreparationProgress] = useState<FilePreparationProgress | null>(null);
   const total = slides.reduce((sum, slide) => sum + slide.duration, 0);
   const format = recordingFormat();
   useEffect(() => {
     const controller = new AbortController();
     setReady(false); setImageError(''); playing.current = false; setPlaying(false); audioEngine.stop();
     time.current = 0; setDisplayTime(0); setImages(new Map());
-    loadImages(slides, controller.signal).then(map => {
+    setPreparationProgress(null);
+    loadImages(slides, controller.signal, value => { if (!controller.signal.aborted) setPreparationProgress(value); }).then(map => {
       if (!controller.signal.aborted) { setImages(map); setReady(true); }
     }).catch(error => {
       if (!controller.signal.aborted) setImageError(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.');
@@ -83,7 +86,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
           <div><p className="text-sm font-semibold text-neutral-200">Tu próximo reel empieza acá</p><p className="mt-2 text-xs leading-relaxed text-neutral-400">{libraryCount ? 'Ya conectaste tus fotos. Agregalas al montaje para verlas acá.' : 'Conectá tus fotos y aplicá una selección para empezar.'}</p></div>
           {libraryCount > 0 && <button className="primary-button" disabled={busy} onClick={onUseAll}>Armar reel con todas las fotos</button>}
         </div>}
-        {slides.length > 0 && !ready && !imageError && <div role="status" className="absolute inset-0 flex items-center justify-center bg-black/60 text-xs text-indigo-300">Preparando vista previa…</div>}
+        {slides.length > 0 && !ready && !imageError && <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-4"><PreparationProgress title="Preparando vista previa" progress={preparationProgress} /></div>}
         {ready && total > 0 && !busy && <button aria-label={isPlaying ? 'Pausar vista previa' : 'Reproducir vista previa'} onClick={() => void toggle()}
           className={'absolute inset-0 flex items-center justify-center transition ' + (isPlaying ? 'opacity-0 hover:opacity-100 focus-visible:opacity-100' : 'bg-black/20 backdrop-blur-[2px]')}>
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600/90 text-white shadow-xl shadow-indigo-600/40">{isPlaying ? <Pause aria-hidden="true" className="h-7 w-7 fill-current" /> : <Play aria-hidden="true" className="ml-1 h-8 w-8 fill-current" />}</span>

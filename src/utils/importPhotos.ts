@@ -1,6 +1,6 @@
-import type { PhotoItem, SequenceConfig } from '../types';
+import type { FilePreparationProgress, PhotoItem, SequenceConfig } from '../types';
 import { localPath } from './config';
-export async function importPhotos(files: File[], config: SequenceConfig, signal: AbortSignal): Promise<PhotoItem[]> {
+export async function importPhotos(files: File[], config: SequenceConfig, signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void): Promise<PhotoItem[]> {
   const candidates = files.filter(file => /\.(jpe?g|png|webp|avif)$/i.test(file.name));
   if (!candidates.length) throw new Error('No hay fotos compatibles. Convertí RAW o HEIC a JPG antes de cargarlas.');
   if (candidates.length > 400) throw new Error('Elegí hasta 400 fotos por sesión.');
@@ -8,7 +8,8 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
   candidates.sort((a,b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true }));
   const result: PhotoItem[] = new Array(candidates.length);
   const created: string[] = [];
-  let index = 0;
+  let index = 0, completed = 0;
+  onProgress?.({ completed, total: candidates.length });
   try {
     const workers = await Promise.allSettled(Array.from({ length: Math.min(3,candidates.length) }, async () => {
       while (index < candidates.length) {
@@ -33,6 +34,9 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
             previewUrl, width, height, number: file.name.replace(/\.[^.]+$/,'').match(/\d+$/)?.[0] ?? file.name,
             orientation: width > height ? 'horizontal' : width < height ? 'vertical' : 'square',
             duration: config.defaultDuration, transition: config.defaultTransition, kenBurns: 'zoom-in' };
+          onProgress?.({ completed: ++completed, total: candidates.length });
+          // Give the browser a chance to paint progress before preparing another photo.
+          await new Promise<void>(resolve => window.setTimeout(resolve, 0));
         } catch (error) { throw new Error('No se pudo cargar ' + file.name + ': ' + (error instanceof Error ? error.message : 'archivo inválido')); }
         finally { URL.revokeObjectURL(original); }
       }

@@ -10,7 +10,8 @@ import { TimelineView } from './components/TimelineView';
 import { PremiereInspectorModal } from './components/PremiereInspectorModal';
 import { ExportModal } from './components/ExportModal';
 import { FaqGuideModal } from './components/FaqGuideModal';
-import type { SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject } from './types';
+import { PreparationProgress } from './components/PreparationProgress';
+import type { SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress } from './types';
 import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } from './utils/photoParser';
 import { DEFAULT_CONFIG, clampDuration, localPath } from './utils/config';
 import { importPhotos } from './utils/importPhotos';
@@ -28,6 +29,7 @@ export default function App() {
   const [tab, setTab] = useState<ViewTab>('editor');
   const [premiereOpen, setPremiereOpen] = useState(false), [exportOpen, setExportOpen] = useState(false), [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false), [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<FilePreparationProgress | null>(null);
   const [message, setMessage] = useState(''), [saveStatus, setSaveStatus] = useState('Guardando…');
   const [musicName, setMusicName] = useState(''), [musicRevision, setMusicRevision] = useState(0);
   const preview = useRef<PreviewHandle>(null), importAbort = useRef<AbortController | null>(null);
@@ -58,9 +60,9 @@ export default function App() {
   };
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
-    setImporting(true); setMessage(''); importAbort.current = new AbortController();
+    setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
     try {
-      const imported = await importPhotos(files,config,importAbort.current.signal);
+      const imported = await importPhotos(files,config,importAbort.current.signal,setImportProgress);
       const merged = new Map(library.map(photo => [photo.id,photo]));
       imported.forEach(photo => merged.set(photo.id,photo));
       if (merged.size > 400) { imported.forEach(photo => URL.revokeObjectURL(photo.previewUrl)); throw new Error('La biblioteca admite hasta 400 fotos. Abrí otro proyecto para una sesión distinta.'); }
@@ -76,7 +78,7 @@ export default function App() {
           ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
       setMessage(imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.'));
     } catch (error) { notify(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.'); }
-    finally { setImporting(false); importAbort.current = null; }
+    finally { setImporting(false); setImportProgress(null); importAbort.current = null; }
   };
   const applySelection = () => {
     try {
@@ -142,7 +144,7 @@ export default function App() {
   };
   const uploadMusic = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
-    setImporting(true);
+    setImporting(true); setImportProgress(null);
     try { await audioEngine.loadTrack(file); setMusicName(file.name); setMusicRevision(value => value + 1); if (config.musicTrack === 'none') changeConfig({ ...config, musicTrack: 'chill' }); }
     catch (error) { notify(error instanceof Error ? error.message : 'Audio no compatible.'); }
     finally { setImporting(false); }
@@ -171,8 +173,8 @@ export default function App() {
         </div>
       </div>
       {message && <div role="status" className="flex justify-between gap-3 rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-100"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
-      {importing && <p role="status" className="text-sm text-indigo-300">Preparando archivos locales…</p>}
-      {reconnect > 0 && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir su carpeta para recuperar la vista previa.</p>}
+      {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
+      {reconnect > 0 && !importing && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir su carpeta para recuperar la vista previa.</p>}
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-7">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
