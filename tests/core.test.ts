@@ -6,12 +6,55 @@ import { decodeProject, serializeProject, type SavedProject } from '../src/utils
 import { generatePremiereXml, fileUrl } from '../src/utils/premiereXmlGenerator.ts';
 import type { PhotoItem } from '../src/types/index.ts';
 import { updateProjectConfig } from '../src/utils/projectConfig.ts';
+import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
 
 const options = { localBasePath: 'D:\\Fotos', prefix: 'IMG_', padding: 3, extension: '.jpg', defaultDuration: 1.5 };
 const photo = (name: string, orientation: PhotoItem['orientation'] = 'horizontal'): PhotoItem => ({
   id: name.toLowerCase(), filename: name, relativePath: name, number: name.match(/\d+/)?.[0] || name,
   fullLocalPath: localPath(options.localBasePath,name), previewUrl:'blob:test', orientation, width: 2400,height:1600,
   duration:1.5,transition:'dissolve',kenBurns:'zoom-in'
+});
+test('reconecta una carpeta desde archivos individuales sin duplicar ni perder edición', () => {
+  const saved = { ...photo('IMG_001.jpg'), id: 'sub/img_001.jpg', relativePath: 'sub/IMG_001.jpg', previewUrl: '', duration: 2.7, kenBurns: 'pan-up' as const };
+  const result = reconnectPhotos([saved], [photo('IMG_001.jpg')], options.localBasePath);
+  assert.equal(result.library.length, 1);
+  assert.equal(result.reconnected, 1);
+  assert.deepEqual(result.library[0], { ...saved, fullLocalPath: 'D:\\Fotos\\sub\\IMG_001.jpg', previewUrl: 'blob:test' });
+});
+test('reconecta IDs antiguos por ruta y conserva el orden de la biblioteca', () => {
+  const saved = ['2.jpg', '1.jpg'].map((name, i) => ({ ...photo(name), id: 'legacy-' + i, previewUrl: '' }));
+  const result = reconnectPhotos(saved, [photo('1.jpg'), photo('2.jpg')], options.localBasePath);
+  assert.deepEqual(result.library.map(p => p.id), ['legacy-0', 'legacy-1']);
+  assert.equal(result.reconnected, 2);
+  assert.ok(result.library.every(p => p.previewUrl));
+});
+test('no adivina nombres repetidos en subcarpetas', () => {
+  const saved = ['a', 'b'].map(dir => ({ ...photo('1.jpg'), id: dir + '/1.jpg', relativePath: dir + '/1.jpg', previewUrl: '' }));
+  const result = reconnectPhotos(saved, [photo('1.jpg')], options.localBasePath);
+  assert.equal(result.reconnected, 0);
+  assert.equal(result.library.length, 3);
+  assert.ok(result.library.slice(0, 2).every(p => !p.previewUrl));
+});
+test('una ruta exacta permite reconectar nombres repetidos y tiene prioridad', () => {
+  const saved = ['a', 'b'].map(dir => ({ ...photo('1.jpg'), id: 'legacy-' + dir, relativePath: dir + '/1.jpg', previewUrl: '' }));
+  const incoming = ['b', 'a'].map(dir => ({ ...photo('1.jpg'), id: dir + '/1.jpg', relativePath: dir + '/1.jpg' }));
+  const result = reconnectPhotos(saved, incoming, options.localBasePath);
+  assert.equal(result.reconnected, 2);
+  assert.equal(result.library.length, 2);
+  assert.deepEqual(result.library.map(p => p.relativePath), ['a/1.jpg', 'b/1.jpg']);
+});
+test('no reconecta por nombre si dos archivos nuevos comparten el nombre', () => {
+  const saved = { ...photo('1.jpg'), previewUrl: '' };
+  const incoming = ['a', 'b'].map(dir => ({ ...photo('1.jpg'), id: dir + '/1.jpg', relativePath: dir + '/1.jpg' }));
+  const result = reconnectPhotos([saved], incoming, options.localBasePath);
+  assert.equal(result.reconnected, 0);
+  assert.equal(result.library[0].previewUrl, '');
+});
+test('una sesión ya conectada no se reemplaza por otra carpeta con el mismo nombre', () => {
+  const saved = { ...photo('1.jpg'), id: 'a/1.jpg', relativePath: 'a/1.jpg' };
+  const incoming = { ...photo('1.jpg'), id: 'b/1.jpg', relativePath: 'b/1.jpg', previewUrl: 'blob:new' };
+  const result = reconnectPhotos([saved], [incoming], options.localBasePath);
+  assert.deepEqual(result.library, [saved, incoming]);
 });
 test('extrae fotos de un mensaje sin crear archivos con frases', () => {
   const result = parseClientSelectionText('Hola! Queremos estas fotos:\n004, 012\nGracias!',options);

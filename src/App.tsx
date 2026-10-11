@@ -12,6 +12,7 @@ import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } fro
 import { DEFAULT_CONFIG, clampDuration } from './utils/config';
 import { updateProjectConfig } from './utils/projectConfig';
 import { importPhotos } from './utils/importPhotos';
+import { reconnectPhotos } from './utils/reconnectPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
 import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from './utils/projectStorage';
 import { downloadBlob } from './utils/download';
@@ -63,11 +64,11 @@ export default function App() {
     setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
     try {
       const imported = await importPhotos(files,config,importAbort.current.signal,setImportProgress);
-      const merged = new Map(library.map(photo => [photo.id,photo]));
-      const previousPhotos = new Map(merged);
-      imported.forEach(photo => merged.set(photo.id,photo));
+      const result = reconnectPhotos(library, imported, config.localBasePath);
+      const merged = new Map(result.library.map(photo => [photo.id, photo]));
+      const previousPhotos = new Map(library.map(photo => [photo.id, photo]));
       if (merged.size > 400) { imported.forEach(photo => URL.revokeObjectURL(photo.previewUrl)); throw new Error('La biblioteca admite hasta 400 fotos. Abrí otro proyecto para una sesión distinta.'); }
-      imported.forEach(photo => {
+      result.connected.forEach(photo => {
         const old = previousPhotos.get(photo.id);
         if (old?.previewUrl) { URL.revokeObjectURL(old.previewUrl); urls.current.delete(old.previewUrl); }
         urls.current.add(photo.previewUrl);
@@ -77,7 +78,11 @@ export default function App() {
         ? buildSlidesFromPhotos([...merged.values()].filter(photo => photo.previewUrl), config.horizontalGrouping, config.defaultDuration)
         : prev.slides.map(slide => ({ ...slide, photos: slide.photos.map(photo => ({
           ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
-      setMessage(imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.'));
+      const pending = result.library.filter(photo => !photo.previewUrl);
+      const pendingNotice = pending.length ? ' Quedan ' + pending.length + ' sin conectar: ' + pending.slice(0, 3).map(photo => photo.relativePath || photo.filename).join(', ') + '. Elegí la carpeta original si hay nombres repetidos.' : '';
+      setMessage(result.reconnected
+        ? `Se reconectaron ${result.reconnected} fotos. Se conservó la edición.${pendingNotice}`
+        : imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.') + pendingNotice);
     } catch (error) { notify(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.'); }
     finally { setImporting(false); setImportProgress(null); importAbort.current = null; }
   };
@@ -95,9 +100,10 @@ export default function App() {
     } catch (error) { notify(error instanceof Error ? error.message : 'Selección inválida.'); }
   };
   const useAll = () => {
-    if (!library.length || reconnect) { notify('Conectá las fotos de la biblioteca antes de usarlas.'); return; }
-    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(library.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
-    notify('Se agregaron todas las fotos al montaje.');
+    const connected = library.filter(photo => photo.previewUrl);
+    if (!connected.length) { notify('Conectá las fotos con Subir fotos locales o Elegir carpeta antes de usarlas.'); return; }
+    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(connected.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
+    notify(`Se agregaron ${connected.length} fotos conectadas al montaje.${reconnect ? ' Las ' + reconnect + ' fotos sin conectar siguen guardadas en la biblioteca.' : ''}`);
   };
   const regroup = () => setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(prev.slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))),config.horizontalGrouping,config.defaultDuration) }));
   const updateSlide = (index: number, update: Partial<SequenceSlide>) => {
@@ -169,7 +175,7 @@ export default function App() {
       </div>
       {message && <div role="status" className="flex justify-between gap-3 rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-100"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
       {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
-      {reconnect > 0 && !importing && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir su carpeta para recuperar la vista previa.</p>}
+      {reconnect > 0 && !importing && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir las fotos o su carpeta para recuperar la vista previa.</p>}
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-7">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
