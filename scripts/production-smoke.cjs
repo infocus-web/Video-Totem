@@ -6,9 +6,13 @@ let browser;
 (async()=>{
   browser=await chromium.launch({headless:true,...(process.argv[3]?{executablePath:process.argv[3]}:{}),args:['--autoplay-policy=no-user-gesture-required']});
   const page=await browser.newPage({viewport:{width:1280,height:900},acceptDownloads:true});
+  const openSection = async title => {
+    const summary = page.locator('.editor-section > summary').filter({ hasText: title });
+    if (!await summary.evaluate(summary => summary.parentElement.open)) await summary.click();
+  };
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{if(response.status()>=400)errors.push(response.url()+' '+response.status());});
-  await page.goto('http://127.0.0.1:4173',{waitUntil:'networkidle'});
+  await page.goto(process.argv[4] || 'http://127.0.0.1:4173',{waitUntil:'networkidle'});
   if (![1,2].every(number => fs.existsSync('artifacts/fixture-' + number + '.jpg'))) {
     const fixtures = await page.evaluate(() => ['#db2777','#4f46e5'].map((color, index) => {
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
@@ -24,10 +28,12 @@ let browser;
   ]);
   await page.getByText('2 fotos conectadas',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Usar todas las fotos'}).click();
+  await openSection('Composición de escenas');
   await page.getByRole('button',{name:/Individual \(1 foto por escena\)/}).click();
   await page.getByRole('button',{name:'Línea de tiempo',exact:true}).click();
   await page.getByRole('button',{name:'Todas: Wipe',exact:true}).click();
   await page.getByRole('button',{name:'Editor',exact:true}).click();
+  await openSection('Ritmo y estilo');
   await page.getByLabel('Duración de las escenas').press('Home');
   await page.getByLabel('Duración de las escenas').press('ArrowRight');
   const audio=Buffer.alloc(44+22050);
@@ -35,6 +41,7 @@ let browser;
   audio.writeUInt16LE(1,20);audio.writeUInt16LE(1,22);audio.writeUInt32LE(22050,24);audio.writeUInt32LE(44100,28);
   audio.writeUInt16LE(2,32);audio.writeUInt16LE(16,34);audio.write('data',36);audio.writeUInt32LE(22050,40);
   for(let sample=0;sample<11025;sample++)audio.writeInt16LE(Math.round(Math.sin(sample/22050*440*Math.PI*2)*8000),44+sample*2);
+  await openSection('Música y volumen');
   await page.getByLabel('Cargar música',{exact:true}).setInputFiles({name:'tone.wav',mimeType:'audio/wav',buffer:audio});
   await page.getByText('tone.wav',{exact:true}).waitFor();
   await page.getByRole('button',{name:/Exportar \(/}).click();
@@ -55,7 +62,7 @@ let browser;
   },{base64:fs.readFileSync('artifacts/production-video.'+download.suggestedFilename().split('.').pop()).toString('base64'),mime:download.suggestedFilename().endsWith('.mp4')?'video/mp4':'video/webm'});
   assert.equal(videoMetadata.width,1080);assert.equal(videoMetadata.height,1920);
   if(Number.isFinite(videoMetadata.duration))assert.ok(Math.abs(videoMetadata.duration-1)<0.2);
-  await page.locator('summary').filter({hasText:'Rutas de Archivos & Google Drive'}).click();
+  await openSection('Premiere y Google Drive');
   await page.getByLabel('Ruta de esa carpeta').fill('D:\\Fotos\\Sesion');
   await page.getByRole('button',{name:/Exportar \(/}).click();
   const xml=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Descargar XML de Premiere'}).click()]).then(([value])=>value);

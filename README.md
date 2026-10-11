@@ -2,13 +2,13 @@
 
 ## Tótem TV
 
-En **Ritmo, Estilo & Música → Formato**, elegí **Tótem TV · Giro 90° a la derecha** (como el ejemplo `aylu.mp4`) o a la izquierda según cómo esté montada la pantalla. Editás derecho en vertical, 1080 × 1920, y el video final sale horizontal, 1920 × 1080, con fotos, fondos, transiciones y textos girados juntos. No necesitás girar todas las fotos: el giro individual sirve para corregir cada imagen y se suma al giro final del tótem. Cambiar a Vertical 9:16 vuelve a exportar sin giro.
+En **Herramientas de edición → Formato de salida**, elegí **Tótem TV · Giro 90° a la derecha** (como el ejemplo `aylu.mp4`) o a la izquierda según cómo esté montada la pantalla. Editás derecho en vertical, 1080 × 1920, y el video final sale horizontal, 1920 × 1080, con fotos, fondos, transiciones y textos girados juntos. No necesitás girar todas las fotos: el giro individual sirve para corregir cada imagen y se suma al giro final del tótem. Cambiar a Vertical 9:16 vuelve a exportar sin giro.
 
 El modo se guarda en el borrador y JSON. El XML de Premiere conserva la secuencia vertical sin aplicar el giro del tótem. [Archivos y verificación](TOTEM-TV.md).
 
 Editor de fotos a video para fotógrafos. React 19, TypeScript, Vite y Tailwind CSS. Funciona como aplicación estática en Vercel; las fotos y la música se procesan en el navegador.
 
-Conserva el diseño de Google AI Studio: tarjetas de selección, apilado y estilos; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
+Conserva el estilo visual de Google AI Studio con las herramientas reunidas en un panel desplegable; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
 
 ## Ejecutar localmente
 
@@ -55,10 +55,16 @@ vercel.json declara el framework, la compilación, la salida y encabezados bási
 
 Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
+## Panel de edición
+
+Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Cada título abre o cierra su sección. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
+
+En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).
+
 ## Flujo de uso
 
 1. Elegí fotos individuales o una carpeta completa. Si la selección está vacía y todavía no hay escenas, el montaje se arma automáticamente con todas las fotos. Pulsá Reproducir para verlo.
-2. Si usás Premiere, abrí Rutas de Archivos & Google Drive y pegá la ruta absoluta, por ejemplo D:\Fotos\Sesion o /Users/usuario/Fotos/Sesion. El navegador no puede obtener esta ruta.
+2. Si usás Premiere, abrí Premiere y Google Drive y pegá la ruta absoluta, por ejemplo D:\Fotos\Sesion o /Users/usuario/Fotos/Sesion. El navegador no puede obtener esta ruta.
 3. Pegá la selección del cliente: números, nombres, códigos de cámara o rangos. Ejemplo: 004, 012, 025-028, DSC_1020.jpg.
 4. Pulsá Aplicar selección. Si hay fotos faltantes o nombres ambiguos, se muestra el problema y se conserva el montaje anterior. También podés usar todas las fotos.
 5. Elegí formato, estilo, duración, música y textos. Los presets Boda, Fiesta, Portfolio e Inmobiliaria ajustan estilo y ritmo.
@@ -71,17 +77,17 @@ Aplicar selección reconstruye las escenas a partir del texto, la duración y la
 
 La reproducción y su posición se mantienen al cambiar encuadre, textos, duración, agrupación, transiciones, movimientos y volumen. Cargar archivos nuevos, abrir otro proyecto o exportar pausa la vista previa. También se pausa al ocultar la pestaña.
 
-Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si el navegador no lo permite, pegá con Ctrl + V. Los campos de nombres están en Configurar formato de nombres y la separación del apilado tiene botones de 0, 4, 8, 12 y 16 píxeles.
+Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si el navegador no lo permite, pegá con Ctrl + V. Los campos de nombres están en Fotos del proyecto → Formato de nombres para la selección y la separación del apilado tiene botones de 0, 4, 8, 12 y 16 píxeles.
 
 ## Rellenar las fotos sin márgenes
 
-En **Ritmo, Estilo & Música del Video → Cómo encuadrar las fotos**, elegí **Rellenar cuadro (recortar)**. La foto se amplía hasta cubrir todo su cuadro sin estirarla. El recorte empieza centrado y afecta los lados o la parte superior e inferior según las proporciones.
+En **Herramientas de edición → Encuadre y giro**, elegí **Rellenar cuadro (recortar)**. La foto se amplía hasta cubrir todo su cuadro sin estirarla. El recorte empieza centrado y afecta los lados o la parte superior e inferior según las proporciones.
 
-Para moverlo, tocá **Encuadrar foto** debajo de la vista previa y arrastrá la imagen con el mouse o el dedo. También hay controles de encuadre horizontal, vertical y zoom (100–300%). Si un eje no tiene espacio para desplazarse, aumentá el zoom. Elegí la escena y, en fotos apiladas, la foto que querés ajustar; también podés tocar directamente esa foto en la vista previa. Con el canvas enfocado, las flechas desplazan el encuadre y Shift aumenta el paso.
+Para moverlo, tocá **Encuadrar foto** en el panel Encuadre y giro y arrastrá la imagen con el mouse o el dedo. También hay controles de encuadre horizontal, vertical y zoom (100–300%). Si un eje no tiene espacio para desplazarse, aumentá el zoom. Elegí la escena y, en fotos apiladas, la foto que querés ajustar; también podés tocar directamente esa foto en la vista previa. Con el canvas enfocado, las flechas desplazan el encuadre y Shift aumenta el paso.
 
 **Listo, volver a la vista previa** retoma la reproducción si estaba andando. El encuadre se guarda por foto en el borrador y en el JSON, se conserva al reconectar o reagrupar y se aplica al video final. El XML base de Premiere conserva su alcance anterior: el encuadre manual se debe ajustar allí o importar el video final.
 
-En el mismo panel, **Aplicar giro a** permite elegir **Esta foto**, **Fotos que marque** o **Todas las fotos del montaje**. Marcá las fotos por nombre y pulsá **Girar 90° a la izquierda/derecha**. Cada clic agrega un cuarto de vuelta; cuatro clics recuperan el giro inicial. Se gira la imagen real, conservando su posición y zoom. No redistribuye las escenas ni modifica los archivos originales. Restablecer encuadre centra y quita el zoom, conservando el giro.
+En el mismo panel, **Aplicar giro a** permite elegir **Esta foto**, **Fotos que marque** o **Todas las fotos del montaje**. Marcá las fotos por nombre y pulsá **Girar 90° a la izquierda/derecha**. Cada clic agrega un cuarto de vuelta; cuatro clics recuperan el giro inicial. Se gira la imagen real, conservando su posición y zoom. No redistribuye las escenas ni modifica los archivos originales. Restablecer encuadre centra, quita el zoom y elimina el giro individual. Conserva el giro de salida del modo Tótem TV.
 
 Se aplica a las fotos individuales y a cada espacio de las escenas 2 en 1 / 3 en 1, tanto en la vista previa como en el video descargado. Los movimientos también mantienen el cuadro cubierto. El fondo queda desactivado mientras el relleno está seleccionado.
 
@@ -177,7 +183,7 @@ Los resultados quedan en artifacts, excluido de Git. El script también acepta l
 6. Recargá la página: el montaje debe conservarse y pedir reconectar las fotos.
 7. Revisá la consola del navegador y que Vercel haya completado el build.
 8. En Línea de tiempo, elegí Todas: Wipe y cambiá una escena a Fundido. Comprobá la vista previa, la grabación y el guardado JSON.
-9. En Ritmo, Estilo & Música, activá Rellenar cuadro. Probá una foto horizontal sola, un apilado y la separación de 0px. El video descargado debe cubrir el cuadro. Al volver a Mostrar foto completa, debe recuperarse el encuadre anterior.
+9. En Encuadre y giro, activá Rellenar cuadro. Probá una foto horizontal sola, un apilado y la separación de 0px. El video descargado debe cubrir el cuadro. Al volver a Mostrar foto completa, debe recuperarse el encuadre anterior.
 
 La entrega fue verificada localmente; el despliegue en tu cuenta y la importación real en Adobe Premiere requieren estas comprobaciones.
 

@@ -39,6 +39,7 @@ export default function App() {
   const [premiereOpen, setPremiereOpen] = useState(false), [exportOpen, setExportOpen] = useState(false), [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false), [importing, setImporting] = useState(false);
   const [previewReady, setPreviewReady] = useState(false);
+  const [framingControlsTarget, setFramingControlsTarget] = useState<HTMLDivElement | null>(null);
   const [importProgress, setImportProgress] = useState<FilePreparationProgress | null>(null);
   const [message, setMessage] = useState(''), [saveStatus, setSaveStatus] = useState('Guardando…');
   const [musicName, setMusicName] = useState(''), [musicRevision, setMusicRevision] = useState(0);
@@ -182,16 +183,16 @@ export default function App() {
       {message && <div role="status" className="flex justify-between gap-3 rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-100"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
       {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
       {reconnect > 0 && !importing && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir las fotos o su carpeta para recuperar la vista previa.</p>}
-      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        <div className="min-w-0 lg:col-span-7">
+      <div className="editor-workspace grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
+        <div className="editor-column min-w-0 lg:col-span-7">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
-            libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify}
+            libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onMusicUpload={event => void uploadMusic(event)} musicName={musicName} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="preview-column min-w-0 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} /></div>
+        <div className="preview-column min-w-0 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
       </div>
     </main>
     <footer className="mx-auto max-w-7xl px-4 py-6 text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>

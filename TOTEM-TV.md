@@ -4,7 +4,7 @@ Editás el montaje vertical derecho y exportás un archivo horizontal con un gir
 
 ## Uso
 
-1. En Ritmo, Estilo & Música, abrí **Formato**.
+1. En Herramientas de edición, abrí **Formato de salida**.
 2. Elegí **Tótem TV · Giro 90° a la derecha** o **a la izquierda**.
 3. Encuadrá viendo las fotos derechas. Textos, fondos, apilado y transiciones siguen editándose verticales.
 4. En Exportar se confirma **1920 × 1080** y el sentido del giro. Grabá y guardá como siempre.

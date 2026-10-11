@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { FilePreparationProgress, PhotoFraming, SequenceConfig, SequenceSlide } from '../types';
 import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
@@ -13,9 +14,9 @@ import { videoOutput } from '../utils/videoOutput';
 import { Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
-interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number }
+interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
-export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount }, ref) {
+export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount, framingControlsTarget }, ref) {
   const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [images, setImages] = useState<ImageMap>(() => new Map());
@@ -128,6 +129,11 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       framing: normalizeFraming(photo.framing) };
     event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
   };
+  const selectFramingPhoto = (index: number, photo = 0) => {
+    drag.current = null;
+    time.current = slides.slice(0, index).reduce((sum, slide) => sum + slide.duration, 0);
+    setDisplayTime(time.current); setSelectedPhoto(photo);
+  };
   const moveFramingDrag = (event: PointerEvent<HTMLCanvasElement>) => {
     const active = drag.current;
     if (!active || active.pointer !== event.pointerId || !framingMode || disabled) return;
@@ -178,7 +184,15 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     finally { setSavingVideo(false); onBusy(false); }
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
-  return <section className="panel preview-panel">
+  const framingControls = <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
+    <button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="control w-full">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button>
+    {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
+      onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
+      onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}
+  </fieldset>;
+  return <>
+  {framingControlsTarget && createPortal(framingControls, framingControlsTarget)}
+  <section className="panel preview-panel">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-indigo-500" />Previsualización {config.aspectRatio} en Vivo</h2><span className="font-mono text-[11px] text-neutral-400">{config.width} × {config.height} · {config.fps} FPS</span></div>
     {output.rotation !== 0 && <p className="text-xs text-indigo-300">Tótem TV · Vista derecha como en tu TV vertical. Archivo final: {output.width} × {output.height}, girado 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}.</p>}
     <div className="preview-device" style={{ width: `min(${config.width >= config.height ? '100%' : '350px'}, calc(var(--preview-screen-height) * ${config.width / config.height} + 28px))` }}>
@@ -201,12 +215,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       </div>
     </div>
     <div className="preview-tools space-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de vista previa" tabIndex={0}>
-    <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
-      <button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="control w-full">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button>
-      {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
-        onSceneChange={index => { drag.current = null; time.current = slides.slice(0, index).reduce((sum, slide) => sum + slide.duration, 0); setDisplayTime(time.current); setSelectedPhoto(0); }}
-        onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}
-    </fieldset>
+    {!framingControlsTarget && framingControls}
     {imageError && <p role="alert" className="text-sm text-amber-300">{imageError}</p>}
     <div className="mx-auto max-w-[350px] space-y-2">
       <input aria-label="Posición del video" type="range" min="0" max={total || 1} step="0.05" value={Math.min(displayTime,total)} disabled={disabled || !ready} onChange={e => { time.current = Number(e.target.value); setDisplayTime(time.current); if (playing.current) audioEngine.play(time.current); }} className="w-full accent-indigo-500" />
@@ -226,8 +235,8 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       <button type="button" disabled={disabled} onClick={() => { downloadBlob(pendingVideo.blob, pendingVideo.filename); setPendingVideo(null); setSaveMessage('Se inició la descarga con la configuración de tu navegador.'); }} className="quick-button">Descargar sin elegir ubicación</button>
     </div></div>}
     {saveMessage && <p role="status" className="text-xs text-emerald-200">{saveMessage}</p>}
-    <p className="text-xs text-neutral-500">Exportación local, hasta 5 minutos. En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
+    <p className="preview-export-note text-xs text-neutral-500">Exportación local, hasta 5 minutos. En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
     </div>
-  </section>;
+  </section></>;
 });
 

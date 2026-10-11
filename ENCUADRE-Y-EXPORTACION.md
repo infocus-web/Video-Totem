@@ -2,7 +2,7 @@
 
 ## Qué cambió
 
-- **Encuadrar foto**, debajo de la vista previa: arrastrar con mouse/dedo, flechas de teclado, posición y zoom por foto. Al terminar retoma la reproducción si estaba andando.
+- **Encuadrar foto**, en el panel Encuadre y giro: arrastrar con mouse/dedo, flechas de teclado, posición y zoom por foto. Al terminar retoma la reproducción si estaba andando.
 - **Aplicar giro a**: esta foto, fotos marcadas o todas las del montaje. Giros reales de 90° a izquierda/derecha. La posición, zoom y giro se guardan en el borrador/JSON, sobreviven a reconectar y se respetan en el video.
 - Exportación desde los **originales**, cargando únicamente la escena actual y la siguiente. Codificación por cuadros con prioridad de detalle y bitrate alternativo de unos 24,9 Mbps a Full HD/30 FPS; las copias de 1920 px quedan para la vista previa.
 - En Chrome/Edge compatibles, el MP4 se genera cuadro por cuadro con WebCodecs, sin saltos por demoras de carga o codificación. Puede exportar con otra pestaña activa. El modo compatible conserva grabación en tiempo real; WebM se pausa al ocultar la pestaña.
