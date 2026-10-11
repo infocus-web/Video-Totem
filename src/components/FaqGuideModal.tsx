@@ -10,6 +10,7 @@ export function FaqGuideModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
       <li>Grabá el video final o descargá el XML editable. El XML exporta una secuencia base; el video conserva todos los efectos.</li>
     </ol>
     <p className="text-sm text-neutral-400">Tu proyecto se guarda automáticamente en este navegador. También podés descargarlo como JSON. Al reabrir, reconectá las fotos y la música: los archivos multimedia no se incluyen en el JSON.</p>
+    <p className="text-sm text-neutral-400">En Ritmo, Estilo & Música, Rellenar cuadro (recortar) amplía y centra cada foto para cubrir su espacio sin franjas ni deformarla. Recorta lo que sobresale. Funciona en fotos individuales y apiladas, y se conserva en el video. Mostrar foto completa recupera el encuadre anterior. La separación de 0px quita la línea entre fotos apiladas.</p>
     <p className="text-sm text-neutral-400">Para Drive, descargá o sincronizá la carpeta y elegila desde tu computadora. La aplicación no pide credenciales ni tiene acceso directo a tu cuenta de Google.</p>
   </Modal>;
 }

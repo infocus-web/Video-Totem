@@ -68,7 +68,19 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 Aplicar selección reconstruye las escenas a partir del texto, la duración y la transición general configuradas. Editar el texto solo no modifica las escenas hasta pulsar Aplicar selección. Las tarjetas de agrupación redistribuyen las escenas inmediatamente. Cambiar la duración general actualiza todas las escenas.
 
-Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si el navegador no lo permite, pegá con Ctrl + V. Los campos de nombres están en Configurar formato de nombres y la separación del apilado tiene botones de 4, 8, 12 y 16 píxeles.
+Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si el navegador no lo permite, pegá con Ctrl + V. Los campos de nombres están en Configurar formato de nombres y la separación del apilado tiene botones de 0, 4, 8, 12 y 16 píxeles.
+
+## Rellenar las fotos sin márgenes
+
+En **Ritmo, Estilo & Música del Video → Cómo encuadrar las fotos**, elegí **Rellenar cuadro (recortar)**. La foto se amplía hasta cubrir todo su cuadro y se recorta centrada, sin estirarla. El recorte afecta los lados o la parte superior e inferior, según las proporciones de la foto y del cuadro.
+
+Se aplica a las fotos individuales y a cada espacio de las escenas 2 en 1 / 3 en 1, tanto en la vista previa como en el video descargado. Los movimientos también mantienen el cuadro cubierto. El fondo queda desactivado mientras el relleno está seleccionado.
+
+Para un apilado continuo sin líneas entre fotos, elegí **0px** en la separación. Para ver la imagen entera nuevamente, seleccioná **Mostrar foto completa**. La opción queda guardada en el JSON y en este navegador. Los proyectos anteriores se abren con Mostrar foto completa para conservar su encuadre.
+
+Rellenar puede cortar personas u objetos cerca de los bordes; revisá la vista previa antes de exportar. Los archivos originales permanecen intactos.
+
+La vista previa se actualiza al terminar de cargar las fotos. La grabación captura los fotogramas explícitamente para admitir imágenes estáticas; cuando elegís Sin música, la pista de audio queda en silencio para mantener estable el codificador. El formato MP4/WebM disponible se muestra antes de grabar.
 
 La búsqueda intenta primero el nombre exacto, sin distinguir mayúsculas. Si la entrada era un número, también busca el número al final de los nombres reales. Un nombre de archivo explícito nunca se sustituye por otro prefijo. Evitá pegar fechas, teléfonos u otros números ajenos a la selección.
 
@@ -100,6 +112,8 @@ El XML de intercambio xmeml contiene los originales, rutas, orden, duración y p
 
 **No incluye los fondos difuminados, textos, música, transiciones ni animaciones del navegador.** Verificá escala y posición en tu versión de Premiere. Para conservar todo el diseño, descargá el video final e importalo como un clip.
 
+El XML base sigue mostrando la foto completa: no incorpora el recorte de Rellenar cuadro. Ese recorte se conserva en el video exportado; importá ese video en Premiere si querés mantenerlo exactamente.
+
 En Premiere: Archivo → Importar → elegí el XML. Los originales deben existir en la ruta local indicada; si se movieron, usá la vinculación de medios de Premiere.
 
 El inspector lee XML de intercambio xmeml exportado desde Premiere y respeta tiempos de línea de tiempo y pistas simultáneas. Para un .prproj nativo, primero exportá Archivo → Exportar → Final Cut Pro XML. No se inventan clips ni versiones de Premiere cuando un archivo no puede interpretarse. FCPXML y límites de transición especiales con start/end -1 muestran un error descriptivo.
@@ -120,7 +134,7 @@ El campo de Drive guarda un enlace de referencia y permite abrirlo. Para usar la
 
 ## Pruebas y verificación
 
-npm test ejecuta 17 pruebas de regresión: extracción y deduplicación de selecciones, códigos de cámara, coincidencias ambiguas, rangos, agrupación, rutas, XML, validación del guardado y compatibilidad de Fade/Wipe en proyectos JSON. npm run build también verifica TypeScript en modo estricto.
+npm test ejecuta 18 pruebas de regresión: extracción y deduplicación de selecciones, códigos de cámara, coincidencias ambiguas, rangos, agrupación, rutas, XML, validación del guardado y compatibilidad de Fade/Wipe y encuadre en proyectos JSON. npm run build también verifica TypeScript en modo estricto.
 
 La prueba opcional de navegador está en scripts/browser-smoke.cjs. No agrega dependencias al producto. En un entorno de desarrollo, podés instalar Playwright temporalmente:
 
@@ -148,6 +162,7 @@ Los resultados quedan en artifacts, excluido de Git. El script también acepta l
 6. Recargá la página: el montaje debe conservarse y pedir reconectar las fotos.
 7. Revisá la consola del navegador y que Vercel haya completado el build.
 8. En Línea de tiempo, elegí Todas: Wipe y cambiá una escena a Fade. Comprobá la vista previa, la grabación y el guardado JSON.
+9. En Ritmo, Estilo & Música, activá Rellenar cuadro. Probá una foto horizontal sola, un apilado y la separación de 0px. El video descargado debe cubrir el cuadro. Al volver a Mostrar foto completa, debe recuperarse el encuadre anterior.
 
 La entrega fue verificada localmente; el despliegue en tu cuenta y la importación real en Adobe Premiere requieren estas comprobaciones.
 
@@ -160,7 +175,9 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 - src/utils/photoParser.ts: selección sin fotos de stock ni archivos inventados.
 - src/utils/importPhotos.ts: lectura local, orientación real, preparación de imágenes y limpieza de recursos.
 - src/utils/canvasRenderer.ts: motor visual compartido por vista previa y grabación.
-- src/utils/videoRecorder.ts y audioSynthesizer.ts: video en tiempo real y mezcla de audio.
+- src/types/index.ts, src/utils/config.ts y projectStorage.ts: opción de encuadre, guardado y compatibilidad con proyectos anteriores.
+- src/components/ClientInputPanel.tsx y FaqGuideModal.tsx: controles de encuadre, separación 0px y ayuda.
+- src/utils/videoRecorder.ts y audioSynthesizer.ts: video en tiempo real y mezcla de audio; captura explícita de fotos estáticas y pista silenciosa al grabar sin música.
 - src/utils/projectStorage.ts: JSON versionado, validación y recuperación del proyecto.
 - src/utils/premiereParser.ts y premiereXmlGenerator.ts: intercambio XML sin datos simulados.
 - package.json y package-lock.json: dependencias reducidas e instalación reproducible.
@@ -168,10 +185,13 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 - tests/core.test.ts: pruebas de los casos que fallaban en la versión anterior.
 - src/index.css y public/fonts: tipografía Plus Jakarta Sans servida localmente con su licencia y estilos del editor.
 - scripts/restoration-smoke.cjs y transitions-smoke.cjs: importación automática, controles, persistencia, píxeles de las transiciones y adaptación a móviles.
+- scripts/fit-smoke.cjs: recorte en fotos individuales/apiladas, persistencia y comprobación de los bordes del video exportado.
 
 Se mantiene React + Vite y la composición con una, dos o tres fotos. Se retiran las dependencias de IA, servidor y efectos que no se usaban, junto con los archivos de plantilla de AI Studio y el lockfile de Bun desactualizado.
 
-Commit sugerido: "fix: restore studio UI and add working fade and wipe transitions"
+Commit sugerido para esta función: "feat: fill photo frames with centered crop"
 
 
 Para probar también la compilación de producción: primero ejecutá browser-smoke.cjs para generar las fotos de prueba; luego mantené npm run preview activo en otra terminal y ejecutá node scripts/production-smoke.cjs y node scripts/restoration-smoke.cjs. Se comprueban música WAV cargada, transición Wipe, descarga de video desde el modal, inspector XML, montaje automático con 31 fotos y diseño a 390/320 píxeles. Con npm run dev activo, node scripts/transitions-smoke.cjs verifica los colores de Fade/Wipe/Pan, márgenes y controles guardados. Verificá VERIFICACION.md para conocer el alcance de la entrega.
+
+Con npm run preview activo en el puerto 4173, **node scripts/fit-smoke.cjs** genera sus propias fotos de prueba y comprueba la función de rellenar, sin depender de las otras pruebas de navegador.

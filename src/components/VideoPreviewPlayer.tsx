@@ -9,7 +9,8 @@ import { Download, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from '
 export interface PreviewHandle { record: () => void }
 interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; onBusy: (value: boolean) => void; onError: (message: string) => void; musicRevision: number; libraryCount: number; onUseAll: () => void }
 export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, onBusy, onError, musicRevision, libraryCount, onUseAll }, ref) {
-  const canvas = useRef<HTMLCanvasElement>(null), images = useRef<ImageMap>(new Map());
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [images, setImages] = useState<ImageMap>(() => new Map());
   const time = useRef(0), playing = useRef(false), abort = useRef<AbortController | null>(null);
   const [displayTime, setDisplayTime] = useState(0), [isPlaying, setPlaying] = useState(false);
   const [ready, setReady] = useState(false), [progress, setProgress] = useState(0), [muted, setMuted] = useState(false);
@@ -19,9 +20,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   useEffect(() => {
     const controller = new AbortController();
     setReady(false); setImageError(''); playing.current = false; setPlaying(false); audioEngine.stop();
-    time.current = 0; setDisplayTime(0); images.current = new Map();
+    time.current = 0; setDisplayTime(0); setImages(new Map());
     loadImages(slides, controller.signal).then(map => {
-      if (!controller.signal.aborted) { images.current = map; setReady(true); }
+      if (!controller.signal.aborted) { setImages(map); setReady(true); }
     }).catch(error => {
       if (!controller.signal.aborted) setImageError(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.');
     });
@@ -40,7 +41,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       }
       last = now;
       if (canvas.current && (playing.current || lastDraw !== time.current)) {
-        drawFrame(canvas.current, slides, config, images.current, time.current); lastDraw = time.current;
+        drawFrame(canvas.current, slides, config, images, time.current); lastDraw = time.current;
       }
       if (now - lastUi > 100) { setDisplayTime(time.current); lastUi = now; }
       frame = requestAnimationFrame(tick);
@@ -49,7 +50,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     const hidden = () => { if (document.hidden) { playing.current = false; setPlaying(false); audioEngine.stop(); } };
     document.addEventListener('visibilitychange', hidden);
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); };
-  }, [slides, config, total, ready]);
+  }, [slides, config, total, ready, images]);
   useEffect(() => () => { abort.current?.abort(); audioEngine.stop(); }, []);
   const toggle = async () => {
     if (!ready || !total || busy) return;
@@ -64,7 +65,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     playing.current = false; setPlaying(false); audioEngine.stop();
     abort.current = new AbortController(); onBusy(true); setProgress(0);
     try {
-      const result = await recordVideo(slides, config, images.current, abort.current.signal, setProgress);
+      const result = await recordVideo(slides, config, images, abort.current.signal, setProgress);
       downloadBlob(result.blob, (config.name || 'AutoReel') + '.' + result.extension);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) onError(error instanceof Error ? error.message : 'No se pudo grabar el video.');

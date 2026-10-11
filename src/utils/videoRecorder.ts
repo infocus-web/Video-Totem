@@ -20,10 +20,11 @@ export async function recordVideo(slides: SequenceSlide[], config: SequenceConfi
   await document.fonts.ready;
   await audioEngine.resume();
   if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-  drawFrame(canvas, slides, config, images, 0);
-  const stream = canvas.captureStream(config.fps);
+  const stream = canvas.captureStream(0);
+  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
   const audioTrack = audioEngine.getCaptureStream().getAudioTracks()[0];
-  if (audioTrack && config.musicTrack !== 'none') stream.addTrack(audioTrack.clone());
+  // A silent audio track keeps the encoder clock running even without music.
+  if (audioTrack) stream.addTrack(audioTrack.clone());
   let recorder: MediaRecorder;
   try {
     recorder = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: 8000000, audioBitsPerSecond: 192000 });
@@ -37,6 +38,7 @@ export async function recordVideo(slides: SequenceSlide[], config: SequenceConfi
       const chunks: Blob[] = [];
       let failure: Error | null = null, settled = false;
       const started = performance.now();
+      let lastCapture = -1;
       const cleanup = () => {
         cancelAnimationFrame(frame); window.clearTimeout(deadline);
         signal.removeEventListener('abort', abort); document.removeEventListener('visibilitychange', hidden);
@@ -62,12 +64,23 @@ export async function recordVideo(slides: SequenceSlide[], config: SequenceConfi
       };
       const tick = () => {
         if (recorder.state === 'inactive') return;
-        const elapsed = Math.min(duration, (performance.now() - started) / 1000);
-        try { drawFrame(canvas, slides, config, images, elapsed); } catch (error) { fail(error instanceof Error ? error : new Error('Falló el dibujo del video.')); return; }
+        const captureTime = performance.now() / 1000;
+        const elapsed = Math.min(duration, captureTime - started / 1000);
+        try {
+          if (lastCapture < 0 || captureTime - lastCapture >= 1 / config.fps) {
+            drawFrame(canvas, slides, config, images, elapsed);
+            // Static photos need an explicit frame request as well as canvas updates.
+            videoTrack?.requestFrame?.(); lastCapture = captureTime;
+          }
+        } catch (error) { fail(error instanceof Error ? error : new Error('Falló el dibujo del video.')); return; }
         progress(Math.min(99, Math.round(elapsed / duration * 100)));
         frame = requestAnimationFrame(tick);
       };
-      try { recorder.start(1000); audioEngine.play(0, false); frame = requestAnimationFrame(tick); }
+      try {
+        recorder.start(1000); audioEngine.play(0, false);
+        drawFrame(canvas, slides, config, images, 0); videoTrack?.requestFrame?.();
+        frame = requestAnimationFrame(tick);
+      }
       catch (error) { fail(error instanceof Error ? error : new Error('No se pudo iniciar la grabación.')); }
     });
   } finally {

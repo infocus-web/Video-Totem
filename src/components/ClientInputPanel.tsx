@@ -84,7 +84,7 @@ export function ClientInputPanel(props: Props) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-3">
         <span className="text-xs text-neutral-400">Línea divisoria / separación entre fotos apiladas:</span>
-        <div className="flex gap-2" role="group" aria-label="Separación entre fotos">{[4,8,12,16].map(gap => <button type="button" key={gap} aria-pressed={config.splitGapSize === gap}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Separación entre fotos">{[0,4,8,12,16].map(gap => <button type="button" key={gap} aria-pressed={config.splitGapSize === gap}
           onClick={() => change('splitGapSize', gap)} className={'rounded px-2 py-1 font-mono text-xs ' + (config.splitGapSize === gap ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white')}>{gap}px</button>)}</div>
       </div>
       <p className="text-xs text-neutral-500">Cambiar el modo redistribuye las escenas. Conserva el orden, los movimientos y usa la duración de la primera foto de cada grupo.</p>
@@ -123,9 +123,21 @@ export function ClientInputPanel(props: Props) {
         <input id="scene-duration" aria-label="Duración de las escenas" type="range" min="0.4" max={Math.max(5, config.defaultDuration)} step="0.1" value={config.defaultDuration} onChange={e => change('defaultDuration', Number(e.target.value))} className="w-full accent-amber-500" />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <p className="text-xs font-semibold text-neutral-300">Cómo encuadrar las fotos</p>
+          <div role="group" aria-label="Encuadre de las fotos" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button type="button" aria-pressed={config.photoFit === 'contain'} onClick={() => change('photoFit', 'contain')} className={'stack-option ' + (config.photoFit === 'contain' ? 'stack-option-selected' : '')}>
+              <span><span className="block text-xs font-bold">Mostrar foto completa</span><span className="mt-1 block text-xs text-neutral-400">Mantiene toda la foto y usa el fondo elegido en los márgenes.</span></span>
+            </button>
+            <button type="button" aria-pressed={config.photoFit === 'cover'} onClick={() => change('photoFit', 'cover')} className={'stack-option ' + (config.photoFit === 'cover' ? 'stack-option-selected' : '')}>
+              <span><span className="block text-xs font-bold">Rellenar cuadro (recortar)</span><span className="mt-1 block text-xs text-neutral-400">Cubre todo el cuadro sin franjas. Recorta los bordes sin deformar la foto.</span></span>
+            </button>
+          </div>
+          <p className="text-[11px] text-neutral-500">Se aplica a cada foto, también en 2 en 1 y 3 en 1, en la vista previa y el video. Para quitar la línea entre fotos, elegí 0px en la separación.</p>
+        </div>
         <label className="text-xs text-neutral-400">Música de fondo:<select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input mt-1">
           <option value="chill">Chill · Sintética (112 BPM)</option><option value="upbeat">Fiesta · Sintética (124 BPM)</option><option value="cinematic">Cinemática · Sintética (95 BPM)</option><option value="none">Sin música</option></select></label>
-        <label className="text-xs text-neutral-400">Fondo cuando sea 1 sola foto:<select aria-label="Fondo" value={config.backgroundStyle} onChange={e => change('backgroundStyle', e.target.value as SequenceConfig['backgroundStyle'])} className="studio-input mt-1">
+        <label className="text-xs text-neutral-400">Fondo al mostrar la foto completa:<select aria-label="Fondo" disabled={config.photoFit === 'cover'} value={config.backgroundStyle} onChange={e => change('backgroundStyle', e.target.value as SequenceConfig['backgroundStyle'])} className="studio-input mt-1 disabled:opacity-50">
           <option value="blur">Blur difuminado (Studio)</option><option value="black">Negro minimalista</option><option value="gradient">Gradiente moderno</option><option value="mirror">Espejo</option></select></label>
         <label className="text-xs text-neutral-400">Título en pantalla:<input aria-label="Título" maxLength={120} value={config.eventTitle} onChange={e => change('eventTitle', e.target.value)} placeholder="Ej: Boda Valentina & Mateo" className="studio-input mt-1" /></label>
         <label className="text-xs text-neutral-400">Marca de agua / Fotógrafo:<input aria-label="Marca de agua" maxLength={120} value={config.watermark} onChange={e => change('watermark', e.target.value)} placeholder="Ej: @tu_fotografia" className="studio-input mt-1" /></label>

@@ -44,6 +44,7 @@ export interface SequenceConfig {
   defaultDuration: number;
   defaultTransition: TransitionType;
   backgroundStyle: 'blur' | 'black' | 'mirror' | 'gradient';
+  photoFit: 'contain' | 'cover';
   horizontalGrouping: HorizontalGroupMode;
   splitGapSize: number; // gap between stacked photos in pixels (e.g. 6px)
   musicTrack: string;

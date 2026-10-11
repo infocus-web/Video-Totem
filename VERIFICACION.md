@@ -7,7 +7,7 @@ Fecha: 11 de octubre de 2026.
 - Instalación limpia con npm ci: correcta.
 - npm audit: 0 vulnerabilidades reportadas en las dependencias instaladas.
 - TypeScript estricto y compilación Vite de producción: correctos.
-- Pruebas automatizadas: 17 aprobadas, 0 fallidas.
+- Pruebas automatizadas: 18 aprobadas, 0 fallidas.
 - Flujo de navegador verificado en Google Chrome de escritorio.
 
 ## Evidencia de navegador
@@ -33,6 +33,21 @@ Fecha: 11 de octubre de 2026.
 - Compilación de producción: grabación con Wipe y música WAV, descarga MP4 e importación en el inspector XML correctas.
 - Móvil: editor y línea de tiempo sin desbordes a 390 y 320 píxeles.
 - Consola: sin errores en los flujos probados.
+
+## Verificación del relleno sin márgenes
+
+- Mostrar foto completa y Rellenar cuadro: conservan proporciones y cambian el encuadre visible.
+- Foto individual y apilados de 2 y 3 fotos: bordes superior e inferior cubiertos, comprobados por píxeles.
+- Separación 0px: disponible para quitar la línea entre fotos apiladas.
+- Movimiento vertical: limitado al excedente de la imagen para evitar franjas.
+- Guardado JSON, recarga y reconexión: conservan el relleno. Los JSON anteriores conservan el modo de foto completa.
+- Vista previa: se actualiza cuando termina la decodificación de las fotos, sin depender de tocar Reproducir.
+- Video MP4 sin música: 1080 × 1920, 1,492 segundos para un montaje de 1,5 segundos; bordes superior e inferior cubiertos. Incluye una pista de audio silenciosa para mantener estable el codificador.
+- Video con música WAV y Wipe, descarga XML e inspector: verificados después del ajuste de captura.
+- Editor sin desbordes a 390 y 320 píxeles; consola sin errores.
+- Instalación limpia, TypeScript, build y 18 pruebas: correctos. No se agregaron dependencias.
+
+Los cambios abarcan los tipos y valores iniciales del encuadre, su persistencia, el renderizador, los controles y la ayuda, la actualización de la vista previa, el grabador, las pruebas y esta documentación. El XML base conserva la foto completa; el recorte se aplica al video final.
 
 ## Alcance pendiente fuera del entorno local
 

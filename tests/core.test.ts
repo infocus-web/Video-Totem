@@ -106,3 +106,13 @@ test('reabre proyectos con Fade y Wipe y conserva transiciones al reagrupar', ()
   assert.deepEqual(regrouped.flatMap(slide => slide.photos.map(item => item.filename)), library.map(item => item.filename));
 });
 
+test('conserva el recorte y abre proyectos anteriores con la foto completa', () => {
+  const library = [photo('1.jpg')], slides = buildSlidesFromPhotos(library, 'single', 1.5);
+  const project: SavedProject = { version: 1, config: { ...DEFAULT_CONFIG, photoFit: 'cover' }, rawText: '', library, slides };
+  assert.equal(decodeProject(serializeProject(project)).config.photoFit, 'cover');
+  const older = JSON.parse(serializeProject(project)); delete older.config.photoFit;
+  assert.equal(decodeProject(JSON.stringify(older)).config.photoFit, 'contain');
+  older.config.photoFit = 'stretch';
+  assert.equal(decodeProject(JSON.stringify(older)).config.photoFit, 'contain');
+});
+

@@ -31,6 +31,7 @@ export function decodeProject(raw: string): SavedProject {
   config.splitGapSize = Math.max(0, Math.min(80, Number(data.config.splitGapSize) || 0));
   config.showOverlayText = data.config.showOverlayText === true;
   if (['blur','black','mirror','gradient'].includes(String(data.config.backgroundStyle))) config.backgroundStyle = data.config.backgroundStyle as SequenceConfig['backgroundStyle'];
+  if (data.config.photoFit === 'cover') config.photoFit = 'cover';
   if (['chill','upbeat','cinematic','none'].includes(String(data.config.musicTrack))) config.musicTrack = String(data.config.musicTrack);
   if (['single','auto-split-2','auto-split-3','auto-adaptive'].includes(String(data.config.horizontalGrouping))) config.horizontalGrouping = data.config.horizontalGrouping as SequenceConfig['horizontalGrouping'];
   if (transitions.includes(String(data.config.defaultTransition))) config.defaultTransition = data.config.defaultTransition as SequenceConfig['defaultTransition'];

@@ -22,6 +22,7 @@ export function ExportModal({ isOpen, onClose, slides, config, onTriggerDirectVi
     <section className="rounded-2xl border border-violet-800 p-4 space-y-3"><h3 className="font-bold">Secuencia editable para Premiere · XML</h3>
       <p className="text-sm text-neutral-400">Exporta nombres, rutas, orden, duración y pistas de fotos. Los grupos de dos o tres fotos se distribuyen en pistas simultáneas con escala y posición básicas.</p>
       <p className="text-xs text-amber-200">El XML no incluye el fondo difuminado, textos, música ni transiciones y animaciones del navegador. Verificá escala y posición al importar en tu versión de Premiere. Para conservar todo el diseño, descargá el video final.</p>
+      {config.photoFit === 'cover' && <p className="text-xs text-amber-200">Rellenar cuadro se conserva en el video final. El XML base usa la foto completa.</p>}
       <button disabled={!slides.length} onClick={downloadXml} className="control">Descargar XML de Premiere</button>
       <p className="text-xs text-neutral-500">En Premiere: Archivo → Importar. Los originales deben existir en la ruta de carpeta que indicaste.</p>
     </section>

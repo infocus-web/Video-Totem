@@ -9,6 +9,15 @@ let browser;
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{if(response.status()>=400)errors.push(response.url()+' '+response.status());});
   await page.goto('http://127.0.0.1:4173',{waitUntil:'networkidle'});
+  if (![1,2].every(number => fs.existsSync('artifacts/fixture-' + number + '.jpg'))) {
+    const fixtures = await page.evaluate(() => ['#db2777','#4f46e5'].map((color, index) => {
+      const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0,0,1200,800);
+      ctx.fillStyle = 'white'; ctx.font = 'bold 100px sans-serif'; ctx.fillText('FOTO ' + (index + 1),50,200);
+      return canvas.toDataURL('image/jpeg').split(',')[1];
+    }));
+    fixtures.forEach((data, index) => fs.writeFileSync('artifacts/fixture-' + (index + 1) + '.jpg',Buffer.from(data,'base64')));
+  }
   await page.getByLabel('Elegir fotos',{exact:true}).setInputFiles([
     {name:'IMG_001.jpg',mimeType:'image/jpeg',buffer:fs.readFileSync('artifacts/fixture-1.jpg')},
     {name:'IMG_002.jpg',mimeType:'image/jpeg',buffer:fs.readFileSync('artifacts/fixture-2.jpg')}

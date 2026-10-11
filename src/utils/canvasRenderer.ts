@@ -42,7 +42,7 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   if (!current) return;
   const drawImage = (ctx: CanvasRenderingContext2D, image: HTMLImageElement, photo: PhotoItem, x: number, y: number, w: number, h: number, progress: number) => {
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    if (config.backgroundStyle === 'blur' || config.backgroundStyle === 'mirror') {
+    if (config.photoFit !== 'cover' && (config.backgroundStyle === 'blur' || config.backgroundStyle === 'mirror')) {
       ctx.save();
       if (config.backgroundStyle === 'blur') ctx.filter = 'blur(' + Math.round(width / 24) + 'px) brightness(0.6)';
       if (config.backgroundStyle === 'mirror') { ctx.translate(x + w, 0); ctx.scale(-1, 1); }
@@ -50,15 +50,17 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
       ctx.drawImage(image, config.backgroundStyle === 'mirror' ? 0 : x + (w - image.naturalWidth * scale) / 2,
         y + (h - image.naturalHeight * scale) / 2, image.naturalWidth * scale, image.naturalHeight * scale);
       ctx.restore();
-    } else if (config.backgroundStyle === 'gradient') {
+    } else if (config.photoFit !== 'cover' && config.backgroundStyle === 'gradient') {
       const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
       gradient.addColorStop(0, '#312e81'); gradient.addColorStop(1, '#09090b');
       ctx.fillStyle = gradient; ctx.fillRect(x, y, w, h);
     }
     const zoom = photo.kenBurns === 'zoom-in' ? 1 + progress * 0.1 : photo.kenBurns === 'zoom-out' ? 1.1 - progress * 0.1 : photo.kenBurns === 'static' ? 1 : 1.06;
-    const scale = Math.min(w / image.naturalWidth, h / image.naturalHeight) * zoom;
+    const scale = (config.photoFit === 'cover' ? Math.max(w / image.naturalWidth, h / image.naturalHeight) : Math.min(w / image.naturalWidth, h / image.naturalHeight)) * zoom;
     const imageW = image.naturalWidth * scale, imageH = image.naturalHeight * scale;
-    const pan = photo.kenBurns === 'pan-up' ? (0.5 - progress) * h * 0.04 : photo.kenBurns === 'pan-down' ? (progress - 0.5) * h * 0.04 : 0;
+    const desiredPan = photo.kenBurns === 'pan-up' ? (0.5 - progress) * h * 0.04 : photo.kenBurns === 'pan-down' ? (progress - 0.5) * h * 0.04 : 0;
+    const maxPan = Math.max(0, (imageH - h) / 2);
+    const pan = config.photoFit === 'cover' ? Math.max(-maxPan, Math.min(maxPan, desiredPan)) : desiredPan;
     ctx.drawImage(image, x + (w - imageW) / 2, y + (h - imageH) / 2 + pan, imageW, imageH);
     ctx.restore();
   };
