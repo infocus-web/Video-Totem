@@ -7,9 +7,9 @@ let browser;
   browser=await chromium.launch({headless:true,...(process.argv[3]?{executablePath:process.argv[3]}:{}),args:['--autoplay-policy=no-user-gesture-required']});
   const page=await browser.newPage({viewport:{width:1280,height:900},acceptDownloads:true});
   const goToSection = async title => {
-    const section = page.locator('.editor-section').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
+    const section = page.locator('.editor-section').filter({ has: page.getByRole('heading', { name: title, exact: true, includeHidden: true }) });
     const id = await section.getAttribute('id');
-    await page.getByRole('navigation', { name: 'Accesos a herramientas' }).locator('button[aria-controls="' + id + '"]').click();
+    await page.getByRole('tablist', { name: 'Herramientas de edición' }).locator('button[aria-controls="' + id + '"]').click();
   };
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   page.on('response',response=>{if(response.status()>=400)errors.push(response.url()+' '+response.status());});

@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode, type ChangeEvent } from 'react';
+import { useRef, type ReactNode, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Camera, Check, Copy, Crop, ExternalLink, FileCode2, FolderOpen, Heart, House, Images, Layers, LayoutTemplate, Maximize, Music2, PartyPopper, PlusCircle, RefreshCw, Sparkles, Timer, Trash2, Type } from 'lucide-react';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorTool, EditorToolButton } from './EditorTool';
@@ -7,6 +7,7 @@ import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
 
 interface Props {
+  activeSection: number; onSectionChange: (section: number) => void;
   onFramingTargetChange: (target: HTMLDivElement | null) => void;
   rawText: string; onRawTextChange: (value: string) => void;
   config: SequenceConfig; onConfigChange: (config: SequenceConfig) => void;
@@ -34,6 +35,7 @@ const shortcuts = [
   { label: 'Fotos', icon: Images }, { label: 'Formato', icon: LayoutTemplate }, { label: 'Encuadre', icon: Crop }, { label: 'Escenas', icon: Layers },
   { label: 'Ritmo', icon: Timer }, { label: 'Textos', icon: Type }, { label: 'Música', icon: Music2 }, { label: 'Premiere', icon: FileCode2 },
 ];
+const tabs = shortcuts.map((shortcut, index) => ({ ...shortcut, section: index + 1 }));
 
 function LayoutGlyph({ slots }: { slots: number }) {
   if (!slots) return <Sparkles aria-hidden="true" />;
@@ -43,36 +45,27 @@ function LayoutGlyph({ slots }: { slots: number }) {
   </svg>;
 }
 
-function EditorSection({ number, title, detail, children }: { number: number; title: string; detail: string; children: ReactNode }) {
-  return <section id={'editor-section-' + number} className="editor-section">
-    <div className="editor-section-heading" title={detail}><span className="step-badge step-indigo">{number}</span><h3 tabIndex={-1} className="text-xs font-semibold">{title}</h3></div>
+function EditorSection({ number, activeSection, title, detail, children }: { number: number; activeSection: number; title: string; detail: string; children: ReactNode }) {
+  return <section id={'editor-section-' + number} className="editor-section" hidden={activeSection !== number}
+    role="tabpanel" aria-labelledby={'editor-tab-' + number} tabIndex={0}>
+    <div className="editor-section-heading" title={detail}><span className="step-badge step-indigo">{number}</span><h3 id={'editor-heading-' + number} tabIndex={-1} className="text-xs font-semibold">{title}</h3></div>
     <div className="editor-section-body">{children}</div>
   </section>;
 }
 
 export function ClientInputPanel(props: Props) {
-  const { config, onConfigChange, busy } = props;
+  const { config, onConfigChange, busy, activeSection, onSectionChange } = props;
   const tools = useRef<HTMLDivElement>(null);
-  const [activeSection, setActiveSection] = useState(1);
-  const updateActiveSection = () => {
-    const panel = tools.current;
-    if (!panel) return;
-    if (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2) return;
-    const top = panel.getBoundingClientRect().top;
-    const sections = [...panel.querySelectorAll<HTMLElement>('.editor-section')];
-    const visible = sections.filter(section => {
-      const box = section.getBoundingClientRect();
-      return box.top <= top + 12 && box.bottom > top + 12;
-    });
-    if (visible.some(section => section.id === 'editor-section-' + activeSection)) return;
-    if (visible[0]) setActiveSection(Number(visible[0].id.split('-').at(-1)));
+  const selectSection = (number: number) => {
+    onSectionChange(number);
+    tools.current?.scrollTo({ top: 0 });
   };
-  const jumpToSection = (number: number) => {
-    const panel = tools.current, section = panel?.querySelector<HTMLElement>('#editor-section-' + number);
-    if (!panel || !section) return;
-    panel.scrollTo({ top: panel.scrollTop + section.getBoundingClientRect().top - panel.getBoundingClientRect().top });
-    setActiveSection(number);
-    section.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
+  const navigateTabs = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    selectSection(tabs[next].section);
+    event.currentTarget.closest('[role="tablist"]')?.querySelector<HTMLButtonElement>('#editor-tab-' + tabs[next].section)?.focus();
   };
   const output = videoOutput(config);
   const change = <K extends keyof SequenceConfig>(key: K, value: SequenceConfig[K]) => onConfigChange({ ...config, [key]: value });
@@ -91,13 +84,14 @@ export function ClientInputPanel(props: Props) {
       <h2 className="text-sm font-bold">Herramientas de edición</h2>
       <div className="editor-counts"><span className="count-badge count-indigo">{props.selectedCount} fotos</span><span className="count-badge count-green">{props.sceneCount} escenas</span></div>
     </div>
-    <nav className="editor-shortcuts" aria-label="Accesos a herramientas">
-      {shortcuts.map(({ label, icon: Icon }, index) => <EditorToolButton key={label} label={label} aria-controls={'editor-section-' + (index + 1)} aria-current={activeSection === index + 1 ? 'location' : undefined} onClick={() => jumpToSection(index + 1)} className="editor-shortcut"><Icon aria-hidden="true" /></EditorToolButton>)}
-      <span className="editor-tool-context" aria-hidden="true">{shortcuts[activeSection - 1]?.label}</span>
-    </nav>
-    <div ref={tools} onScroll={updateActiveSection} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
+    <div className="editor-shortcuts" role="tablist" aria-label="Herramientas de edición">
+      {tabs.map(({ label, icon: Icon, section }, index) => <EditorToolButton key={label} label={label} role="tab" id={'editor-tab-' + section}
+        aria-controls={'editor-section-' + section} aria-selected={activeSection === section} tabIndex={activeSection === section ? 0 : -1}
+        onClick={() => selectSection(section)} onKeyDown={event => navigateTabs(event, index)} className="editor-shortcut"><Icon aria-hidden="true" /></EditorToolButton>)}
+    </div>
+    <div ref={tools} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
     <fieldset disabled={busy} className="editor-section-grid min-w-0 text-sm disabled:opacity-60">
-    <EditorSection number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
+    <EditorSection activeSection={activeSection} number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
       <EditorPropertyRow label="Archivos" help="Las fotos se procesan en tu navegador, sin subirse a un servidor.">
         <EditorTool label="Subir fotos locales"><label className="editor-icon-button"><PlusCircle aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Fotos</span>
           <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
@@ -124,7 +118,7 @@ export function ClientInputPanel(props: Props) {
         </div>
       </EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={2} title="Formato de salida" detail="Tótem TV, vertical u horizontal y cuadros por segundo.">
+    <EditorSection activeSection={activeSection} number={2} title="Formato de salida" detail="Tótem TV, vertical u horizontal y cuadros por segundo.">
       <EditorPropertyRow label="Proyecto"><input aria-label="Nombre del proyecto" maxLength={120} value={config.name} onChange={e => change('name', e.target.value)} className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Formato">
         <select aria-label="Formato" value={output.rotation ? 'totem-' + output.rotation : config.width + 'x' + config.height} onChange={e => {
@@ -145,7 +139,7 @@ export function ClientInputPanel(props: Props) {
         {output.rotation !== 0 && <span className="property-note" title="Editás en vertical; fotos, textos y fondos se giran juntos al exportar. No hace falta girar todas las fotos.">Salida Tótem: {output.width} × {output.height}</span>}
       </EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={3} title="Encuadre y giro" detail="Rellenar el cuadro, mover, ampliar y girar cada foto.">
+    <EditorSection activeSection={activeSection} number={3} title="Encuadre y giro" detail="Rellenar el cuadro, mover, ampliar y girar cada foto.">
         <EditorPropertyRow label="Ajuste">
           <div role="group" aria-label="Encuadre de las fotos" className="property-buttons">
             <EditorToolButton label="Mostrar foto completa" caption="Completa" hint="Mostrar foto completa: conserva los bordes y usa el fondo." aria-pressed={config.photoFit === 'contain'} onClick={() => change('photoFit', 'contain')}><Maximize aria-hidden="true" /></EditorToolButton>
@@ -157,7 +151,7 @@ export function ClientInputPanel(props: Props) {
 
       <div ref={props.onFramingTargetChange} />
     </EditorSection>
-    <EditorSection number={4} title="Composición de escenas" detail="Una, dos o tres fotos por escena y separación.">
+    <EditorSection activeSection={activeSection} number={4} title="Composición de escenas" detail="Una, dos o tres fotos por escena y separación.">
       <EditorPropertyRow label="Agrupación" help="Redistribuye las escenas conservando el orden y los movimientos.">
         <div className="property-buttons" role="group" aria-label="Agrupar fotos horizontales">
           {modes.map(mode => <EditorToolButton key={mode.value} label={mode.title} caption={mode.caption} hint={mode.title + ': ' + mode.detail} aria-pressed={config.horizontalGrouping === mode.value} onClick={() => change('horizontalGrouping', mode.value)} className="layout-choice"><LayoutGlyph slots={mode.slots} /></EditorToolButton>)}
@@ -169,7 +163,7 @@ export function ClientInputPanel(props: Props) {
       </EditorPropertyRow>
       <EditorPropertyRow label="Reagrupar"><EditorToolButton label="Reagrupar montaje con este modo" caption="Reagrupar" hint="Reagrupar con el modo elegido. Conserva el orden y los ajustes de las fotos." onClick={props.onRegroup} disabled={!props.sceneCount}><RefreshCw aria-hidden="true" /></EditorToolButton></EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={5} title="Ritmo y estilo" detail="Duración de las escenas y estilos rápidos.">
+    <EditorSection activeSection={activeSection} number={5} title="Ritmo y estilo" detail="Duración de las escenas y estilos rápidos.">
       <EditorPropertyRow label="Estilo"><div className="property-buttons">{presets.map((preset, index) => { const Icon = presetIcons[index]; return <EditorToolButton key={preset.name} label={preset.name} caption={presetCaptions[index]} hint={preset.name + ' · ' + preset.detail} aria-pressed={config.defaultDuration === preset.duration && config.musicTrack === preset.music && config.horizontalGrouping === preset.group && config.backgroundStyle === preset.background}
         onClick={() => onConfigChange({ ...config, defaultDuration: preset.duration, musicTrack: preset.music, horizontalGrouping: preset.group, backgroundStyle: preset.background })}>
         <Icon aria-hidden="true" />
@@ -179,20 +173,20 @@ export function ClientInputPanel(props: Props) {
         <output htmlFor="scene-duration" className="property-value text-amber-400" title={Math.round(config.defaultDuration * config.fps) + ' cuadros'}>{config.defaultDuration.toFixed(1)}s</output>
       </EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={6} title="Textos y marca" detail="Título, subtítulo y firma del fotógrafo.">
+    <EditorSection activeSection={activeSection} number={6} title="Textos y marca" detail="Título, subtítulo y firma del fotógrafo.">
       <EditorPropertyRow label="Título"><input aria-label="Título" maxLength={120} value={config.eventTitle} onChange={e => change('eventTitle', e.target.value)} placeholder="Ej: Boda Valentina & Mateo" className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Subtítulo"><input aria-label="Subtítulo" maxLength={120} value={config.eventSubtitle} onChange={e => change('eventSubtitle', e.target.value)} className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Marca de agua"><input aria-label="Marca de agua" maxLength={120} value={config.watermark} onChange={e => change('watermark', e.target.value)} placeholder="Ej: @tu_fotografia" className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Visibilidad"><EditorTool label={config.showOverlayText ? 'Ocultar textos' : 'Mostrar textos'}><label className="editor-switch"><input aria-label="Mostrar textos" type="checkbox" checked={config.showOverlayText} onChange={e => change('showOverlayText', e.target.checked)} /><span aria-hidden="true" className="editor-switch-track"><span /></span></label></EditorTool></EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={7} title="Música y volumen" detail="Elegir música, cargar un archivo y ajustar su volumen.">
+    <EditorSection activeSection={activeSection} number={7} title="Música y volumen" detail="Elegir música, cargar un archivo y ajustar su volumen.">
       <EditorPropertyRow label="Música"><select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input">
           <option value="chill">Chill · Sintética (112 BPM)</option><option value="upbeat">Fiesta · Sintética (124 BPM)</option><option value="cinematic">Cinemática · Sintética (95 BPM)</option><option value="none">Sin música</option></select></EditorPropertyRow>
       <EditorPropertyRow label="Audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><EditorTool label="Cargar música"><label className="editor-icon-button"><Music2 aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Cargar</span><input aria-label="Cargar música" type="file" accept="audio/*" onChange={props.onMusicUpload} className="sr-only" /></label></EditorTool>
         {props.musicName && <><span className="property-note break-all">{props.musicName}</span><EditorToolButton label="Quitar música cargada" caption="Quitar" onClick={props.onClearMusic}><Trash2 aria-hidden="true" /></EditorToolButton></>}</EditorPropertyRow>
       <EditorPropertyRow label="Volumen"><input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(config.musicVolume * 100)}%</span></EditorPropertyRow>
     </EditorSection>
-    <EditorSection number={8} title="Premiere y Google Drive" detail="Opcional: vincular los originales en el proyecto XML.">
+    <EditorSection activeSection={activeSection} number={8} title="Premiere y Google Drive" detail="Opcional: vincular los originales en el proyecto XML.">
       <EditorPropertyRow label="Ruta local" help="Solo para el XML de Premiere. Copiá la ruta del Explorador; no hace falta para grabar el video.">
         <input aria-label="Ruta de esa carpeta" value={config.localBasePath} onChange={e => change('localBasePath', e.target.value)} placeholder="D:\Fotos\Bodas_2024\FamiliaPerez\" className="studio-input font-mono" />
       </EditorPropertyRow>

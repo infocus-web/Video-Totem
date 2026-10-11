@@ -8,7 +8,7 @@ El modo se guarda en el borrador y JSON. El XML de Premiere conserva la secuenci
 
 Editor de fotos a video para fotógrafos. React 19, TypeScript, Vite y Tailwind CSS. Funciona como aplicación estática en Vercel; las fotos y la música se procesan en el navegador.
 
-Conserva el estilo visual de Google AI Studio con las herramientas reunidas en un panel con herramientas visibles; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
+Conserva el estilo visual de Google AI Studio con herramientas organizadas por pestañas, vista previa con marco de teléfono y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
 
 ## Ejecutar localmente
 
@@ -63,9 +63,9 @@ La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En e
 
 Las propiedades se editan en filas: etiqueta a la izquierda y control a la derecha. La selección de archivos usa una caja de una línea que podés ampliar desde la esquina inferior; conserva mensajes largos y rangos. Los botones de ajuste, agrupación y estilo ocupan una fila compacta. Posición, zoom, duración y volumen muestran sus valores junto al deslizador. Las explicaciones ampliadas están en la guía y en las ayudas al pasar el puntero.
 
-La barra y las acciones usan miniaturas con icono y texto corto dentro del botón. Los ajustes activos se resaltan. El apilado muestra sus divisiones y nombre; las fotos apiladas se seleccionan por su imagen y número. La visibilidad de textos usa un interruptor. Las ayudas completas aparecen con el cursor o Tab y se cierran con Escape, clic o desplazamiento. Los grupos aprovechan dos columnas cuando el panel tiene al menos 880px de ancho; en áreas más chicas usan una columna.
+La barra y las acciones usan miniaturas con icono y texto corto dentro del botón. Los ajustes activos se resaltan. El apilado muestra sus divisiones y nombre; las fotos apiladas se seleccionan por su imagen y número. La visibilidad de textos usa un interruptor. Las ayudas completas aparecen con el cursor o Tab y se cierran con Escape, clic o desplazamiento. Dentro de cada panel, los controles aprovechan dos columnas cuando hay al menos 880px de ancho; en áreas más chicas usan una columna.
 
-Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Todas las secciones están visibles. La barra fija de accesos desplaza el panel hasta el grupo elegido, sin ocultar controles. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
+Ocho pestañas, en este orden: **Fotos → Formato → Encuadre → Escenas → Ritmo → Textos → Música → Premiere**. Cada botón reemplaza el contenido por su propio panel; no necesitás desplazarte para encontrar otro grupo. La pestaña activa se resalta y conserva los ajustes al cambiar. Las flechas izquierda/derecha, Inicio y Fin recorren las pestañas con teclado. La vista previa permanece visible y, en pantallas chicas, aparece arriba.
 
 En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).
 

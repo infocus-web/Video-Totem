@@ -38,6 +38,7 @@ function initialProject(): SavedProject {
 export default function App() {
   const [project, setProject] = useState(initialProject);
   const [tab, setTab] = useState<ViewTab>('editor');
+  const [editorSection, setEditorSection] = useState(1);
   const [premiereOpen, setPremiereOpen] = useState(false), [exportOpen, setExportOpen] = useState(false), [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false), [importing, setImporting] = useState(false);
   const [previewReady, setPreviewReady] = useState(false);
@@ -157,7 +158,7 @@ export default function App() {
       const restored = decodeProject(await file.text());
       urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear();
       audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
-      setPreviewReady(false); setPreviewSession(value => value + 1);
+      setPreviewReady(false); setPreviewSession(value => value + 1); setEditorSection(1);
       setProject(restored); notify('Proyecto abierto. Volvé a conectar su carpeta de fotos y su música.');
     } catch (error) { notify(error instanceof Error ? error.message : 'Proyecto inválido.'); }
   };
@@ -177,7 +178,7 @@ export default function App() {
     audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
     const fresh: SavedProject = { version:1, rawText:'', config:{ ...DEFAULT_CONFIG, name: trimmedName }, library:[], slides:[] };
     setPreviewReady(false); setPreviewSession(value => value + 1);
-    setProject(fresh); setTab('editor'); setNewProjectOpen(false);
+    setProject(fresh); setTab('editor'); setEditorSection(1); setNewProjectOpen(false);
     try { localStorage.setItem(STORAGE_KEY, serializeProject(fresh)); setSaveStatus('Guardado en este navegador'); }
     catch { setSaveStatus('No se pudo guardar automáticamente. Descargá el proyecto JSON.'); }
     notify('Proyecto «' + trimmedName + '» creado. Cargá sus fotos.' + (backedUp ? ' Se descargó el respaldo JSON del proyecto anterior.' : ''));
@@ -198,14 +199,14 @@ export default function App() {
       </div>}
       <div className="editor-workspace">
         <div className="editor-column min-w-0">
-          {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
+          {tab === 'editor' ? <ClientInputPanel activeSection={editorSection} onSectionChange={setEditorSection} rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
             libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onMusicUpload={event => void uploadMusic(event)} musicName={musicName} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
+        <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} framingToolsVisible={tab !== 'editor' || editorSection === 3} /></div>
       </div>
     </main>
     <footer className="app-footer text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>

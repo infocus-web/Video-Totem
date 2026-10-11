@@ -16,9 +16,9 @@ import { videoOutput } from '../utils/videoOutput';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
-interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null }
+interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
-export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount, framingControlsTarget }, ref) {
+export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
   const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
   const media = useRef<HTMLDivElement>(null);
@@ -127,6 +127,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     time.current = slides.slice(0, current.index).reduce((sum, slide) => sum + slide.duration, 0);
     setDisplayTime(time.current); setSelectedPhoto(0); setFramingMode(true);
   };
+  useEffect(() => {
+    if (!framingToolsVisible && framingMode) toggleFraming();
+  }, [framingToolsVisible, framingMode]);
   const startFramingDrag = (event: PointerEvent<HTMLCanvasElement>) => {
     if (!framingMode || disabled || !ready || event.button !== 0 || drag.current) return;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -235,7 +238,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     </div>
     <div className="preview-tools space-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de vista previa" tabIndex={0}>
     {!framingControlsTarget && framingControls}
-    {imageError && <p role="alert" className="text-sm text-amber-300">{imageError}</p>}
+    {slides.length > 0 && imageError && <p role="alert" className="text-sm text-amber-300">{imageError}</p>}
     <div className="mx-auto max-w-[350px] space-y-2">
       <input aria-label="Posición del video" type="range" min="0" max={total || 1} step="0.05" value={Math.min(displayTime,total)} disabled={disabled || !ready} onChange={e => { time.current = Number(e.target.value); setDisplayTime(time.current); if (playing.current) audioEngine.play(time.current); }} className="w-full accent-indigo-500" />
       <div className="flex justify-between gap-2 font-mono text-[11px] text-neutral-400"><span>{displayTime.toFixed(1)}s</span><span className="text-neutral-500">{slides.length} escenas · {total.toFixed(1)}s</span><span>{total.toFixed(1)}s</span></div>

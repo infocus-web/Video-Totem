@@ -3,7 +3,7 @@ export function FaqGuideModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
   return <Modal open={isOpen} onClose={onClose} title="Cómo usar AutoReel Studio">
     <ol className="list-decimal pl-5 space-y-3 text-sm">
       <li>Seleccioná la carpeta o las fotos de tu sesión. Con una selección vacía y sin escenas previas, se arma el montaje automáticamente. JPG, PNG, WebP y AVIF; hasta 400 fotos, 50 MB por archivo. RAW y HEIC requieren conversión previa.</li>
-      <li>El panel Herramientas de edición reúne Fotos, Formato, Encuadre y giro, Composición, Ritmo, Textos, Música y Premiere. Todas las secciones están visibles. Usá la barra fija de accesos para ir directamente a un grupo, sin perder de vista la foto.</li>
+      <li>Herramientas de edición tiene ocho pestañas: Fotos, Formato, Encuadre, Escenas, Ritmo, Textos, Música y Premiere. Cada botón muestra su propio panel, sin desplazarte entre grupos. Los ajustes se conservan y la vista previa sigue visible.</li>
       <li>Pegá la selección del cliente y pulsá Aplicar selección, o usá todas las fotos. Revisá el aviso de faltantes y nombres ambiguos.</li>
       <li>Configurá el formato, la duración, los textos y la música. Las tarjetas de apilado cambian la distribución del montaje al seleccionarlas. Al reagrupar se conservan el orden y los movimientos; cada grupo usa la duración de su primera foto.</li>
       <li>En Línea de tiempo podés reordenar, eliminar, dividir escenas y ajustar duración, transición y movimiento. Fundido, Zoom y Wipe se aplican por escena o a todo el montaje y se conservan en el video exportado. Los proyectos anteriores con Fade se muestran como Fundido.</li>

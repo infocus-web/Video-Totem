@@ -1,6 +1,6 @@
 # Panel de edición y navegación de fotos
 
-Las herramientas se reúnen en un panel con secciones visibles, en orden de uso: Fotos, Formato, Encuadre y giro, Composición, Ritmo, Textos, Música y Premiere. Exportar permanece en la barra superior. La vista previa muestra la imagen y los controles de reproducción.
+Las herramientas se reúnen en ocho pestañas: Fotos, Formato, Encuadre, Escenas, Ritmo, Textos, Música y Premiere. Cada botón muestra su propio panel y oculta los demás, sin desplazamiento entre grupos. Exportar permanece en la barra superior. La vista previa muestra la imagen y los controles de reproducción.
 
 Anterior y Siguiente recorren las fotos del montaje, incluidas las que comparten una escena. Se desactivan al llegar al principio o al final. Cambian la foto visible sin modificar su encuadre ni volver a decodificar las imágenes. Al terminar de encuadrar, se retoma la reproducción si estaba activa.
 
@@ -30,11 +30,19 @@ Para probar: recorré la barra con Tab, verificá las ayudas y usá Escape; camb
 
 ## Distribución en dos columnas
 
-Cuando el área de herramientas tiene al menos 880px de ancho, los grupos se distribuyen en dos columnas. Al encuadrar, los controles de la foto ocupan la izquierda y Composición, Ritmo y Textos aprovechan la derecha. Los campos se limitan a 440px. En áreas más angostas se usa una columna y, en celulares, la barra de accesos se desliza horizontalmente para conservar espacio de edición. Todas las secciones siguen abiertas.
+Cuando el área de herramientas tiene al menos 880px de ancho, los controles del panel elegido se distribuyen en dos columnas. El encuadre usa ese mismo ancho para posición, zoom y giro. Los campos se limitan a 440px. En áreas más angostas se usa una columna y, en celulares, la barra de pestañas se desliza horizontalmente para conservar espacio de edición. Solo se muestra el grupo elegido.
 
 Archivos de esta mejora: `EditorTool.tsx` comparte el texto dentro de las miniaturas; `ClientInputPanel.tsx` aplica nombres cortos y navegación compatible con dos columnas; `PhotoFramingControls.tsx` y `VideoPreviewPlayer.tsx` identifican las acciones de encuadre; `index.css` define miniaturas y distribución; `scripts/workspace-layout-smoke.cjs` comprueba texto dentro del botón y dos columnas. Este documento y `README.md` describen el uso. Los botones ocupan más altura que los iconos anteriores; la distribución aprovecha el ancho disponible. No cambia el guardado ni la exportación.
 
 ## Archivos
+
+### Pestañas de herramientas
+
+`src/components/ClientInputPanel.tsx` cambia el contenido con ocho pestañas accesibles, estado seleccionado y navegación con flechas/Inicio/Fin. Los grupos se mantienen montados para conservar sus controles, pero quedan ocultos fuera de la pestaña elegida. `src/App.tsx` guarda la pestaña activa y vuelve a Fotos al crear o abrir un proyecto. `src/components/VideoPreviewPlayer.tsx` termina el encuadre al salir de su panel y retoma la reproducción si estaba activa antes de editar. `src/index.css` distribuye los controles dentro de cada panel. `src/components/FaqGuideModal.tsx`, `README.md` y este documento actualizan el uso.
+
+Los scripts de navegador usan las pestañas reales. `scripts/workspace-layout-smoke.cjs` verifica que cada botón muestra exactamente un panel, conserva el zoom, no interrumpe la reproducción y funciona con teclado y siete tamaños de pantalla. `scripts/framing-smoke.cjs` conserva las comprobaciones de arrastre, giro, reset, navegación y exportación; `scripts/new-project-smoke.cjs` verifica Nuevo y limpieza de avisos. Los demás scripts actualizan la navegación de sus flujos.
+
+Para probar localmente, recargá con Ctrl + F5 y recorré los ocho botones: debe cambiar el título y los controles. Modificá un valor, cambiá de pestaña y volvé: debe conservarse. Solo hace falta desplazar dentro de un panel si sus controles exceden la altura disponible. En producción, repetí después de Commit/Push y del despliegue. No cambia el proyecto guardado, el exportador ni las dependencias.
 
 ### Nuevo proyecto
 
@@ -56,7 +64,7 @@ En local, recargá y probá Nuevo → nombre → Crear, Cancelar y Escape. El pr
 
 ## Probar localmente
 
-Ejecutá `npm test`, `npm run build` y `npm run dev` en la carpeta del proyecto. Cargá tres fotos y entrá a Encuadre y giro → Encuadrar foto. Modificá la primera, avanzá con Siguiente y volvé con Anterior: sus ajustes se conservan. Repetí con 2 en 1 y verificá que Siguiente pase de la segunda foto apilada a la siguiente escena. Desplazá el panel hasta Música y comprobá que la foto siga visible. Usá la barra fija para ir a Textos, Música o Premiere; el encabezado del grupo debe quedar visible debajo de los accesos.
+Ejecutá `npm test`, `npm run build` y `npm run dev` en la carpeta del proyecto. Cargá tres fotos y entrá a Encuadre → Encuadrar foto. Modificá la primera, avanzá con Siguiente y volvé con Anterior: sus ajustes se conservan. Repetí con 2 en 1 desde Escenas y verificá que Siguiente pase de la segunda foto apilada a la siguiente escena. Elegí Música y comprobá que cambie el panel y la foto siga visible. Probá Textos y Premiere y volvé a Encuadre para comprobar los valores conservados.
 
 Las pruebas de navegador necesitan Playwright y Chrome externos; no se agregan dependencias a la app. Los scripts admiten el módulo Playwright, el ejecutable del navegador y la URL local como argumentos. Las capturas y videos de prueba quedan en `artifacts/`, excluido de Git.
 
@@ -66,4 +74,4 @@ Después de Commit y Push origin, esperá el despliegue y recargá con Ctrl + F5
 
 ## Alcance
 
-Todas las secciones quedan abiertas. También se muestran los campos de nombres y el botón Reagrupar. El panel tiene más contenido para desplazar; los ocho accesos permanecen visibles. La edición y el exportador mantienen su comportamiento: reagrupar redistribuye escenas y Aplicar selección reconstruye el montaje. Los originales, proyectos guardados, giro de salida y calidad de codificación se conservan. No se agregan paquetes ni servicios.
+Se muestra un panel por pestaña. Los campos de nombres siguen en Fotos y Reagrupar en Escenas. No se usan acordeones. La edición y el exportador mantienen su comportamiento: reagrupar redistribuye escenas y Aplicar selección reconstruye el montaje. Los originales, proyectos guardados, giro de salida y calidad de codificación se conservan. No se agregan paquetes ni servicios.
