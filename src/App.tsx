@@ -4,6 +4,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Navbar } from './components/Navbar';
+import { FolderOpen, Plus, Save } from 'lucide-react';
 import { ClientInputPanel } from './components/ClientInputPanel';
 import { VideoPreviewPlayer, type PreviewHandle } from './components/VideoPreviewPlayer';
 import { PreparationProgress } from './components/PreparationProgress';
@@ -170,32 +171,33 @@ export default function App() {
     setProject({ version:1, rawText:'', config:{ ...DEFAULT_CONFIG }, library:[], slides:[] }); setTab('editor');
     notify('Proyecto nuevo. Si había un montaje, se descargó su respaldo JSON.');
   };
-  return <div className="min-h-screen bg-neutral-950 text-neutral-100">
-    <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && !importing && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={selectedCount} totalDuration={totalDuration} formatLabel={config.width + ' × ' + config.height} busy={busy || importing} />
-    <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-neutral-500">{saveStatus}</span>
-          <button className="control" disabled={busy || importing} onClick={newProject}>Nuevo proyecto</button>
-          <button className="control" disabled={busy || importing} onClick={() => downloadBlob(new Blob([serializeProject(project)],{ type:'application/json' }), (config.name || 'AutoReel') + '.autoreel.json')}>Guardar proyecto JSON</button>
-          <label className="control">Abrir proyecto<input aria-label="Abrir proyecto" type="file" accept=".json" disabled={busy || importing} className="sr-only" onChange={event => void loadProject(event)} /></label>
-        </div>
-      </div>
-      {message && <div role="status" className="flex justify-between gap-3 rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-100"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
-      {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
-      {reconnect > 0 && !importing && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir las fotos o su carpeta para recuperar la vista previa.</p>}
-      <div className="editor-workspace grid grid-cols-1 items-start gap-5 lg:grid-cols-12">
-        <div className="editor-column min-w-0 lg:col-span-7">
+  return <div className="app-shell bg-neutral-950 text-neutral-100">
+    <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && !importing && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={selectedCount} totalDuration={totalDuration} formatLabel={config.width + ' × ' + config.height} busy={busy || importing}
+      projectActions={<>
+        <span className="project-save-status" title={saveStatus} aria-label={saveStatus}>{saveStatus === 'Guardado en este navegador' ? 'Guardado' : saveStatus === 'Guardando…' ? 'Guardando…' : 'Sin guardar'}</span>
+        <button className="project-button" aria-label="Nuevo proyecto" title="Nuevo proyecto" disabled={busy || importing} onClick={newProject}><Plus aria-hidden="true" /><span className="project-button-label">Nuevo</span></button>
+        <button className="project-button" aria-label="Guardar proyecto JSON" title="Guardar proyecto JSON" disabled={busy || importing} onClick={() => downloadBlob(new Blob([serializeProject(project)],{ type:'application/json' }), (config.name || 'AutoReel') + '.autoreel.json')}><Save aria-hidden="true" /><span className="project-button-label">Guardar</span></button>
+        <label className="project-button" title="Abrir proyecto"><FolderOpen aria-hidden="true" /><span className="project-button-label">Abrir</span><input aria-label="Abrir proyecto" type="file" accept=".json" disabled={busy || importing} className="sr-only" onChange={event => void loadProject(event)} /></label>
+      </>} />
+    <main className="app-main">
+      {(message || importing || reconnect > 0) && <div className="app-notices">
+        {message && <div role="status" className="app-notice"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
+        {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
+        {reconnect > 0 && !importing && <p role="status" className="app-notice text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir las fotos o su carpeta para recuperar la vista previa.</p>}
+      </div>}
+      <div className="editor-workspace">
+        <div className="editor-column min-w-0">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
             libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onMusicUpload={event => void uploadMusic(event)} musicName={musicName} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
-            : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
+            : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="preview-column min-w-0 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
+        <div className="preview-column min-w-0"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} /></div>
       </div>
     </main>
-    <footer className="mx-auto max-w-7xl px-4 py-6 text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>
+    <footer className="app-footer text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>
     <DeferredDialog open={premiereOpen}><PremiereInspectorModal isOpen={premiereOpen} onClose={() => setPremiereOpen(false)} onApplyPremiereSettings={applyPremiere} /></DeferredDialog>
     <DeferredDialog open={exportOpen}><ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} canRecord={previewReady && !busy && !importing} onTriggerDirectVideoRender={chooseLocation => preview.current?.record(chooseLocation)} /></DeferredDialog>
     <DeferredDialog open={guideOpen}><FaqGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} /></DeferredDialog>

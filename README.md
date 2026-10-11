@@ -57,6 +57,8 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 ## Panel de edición
 
+La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En escritorio, el espacio de trabajo ocupa la altura disponible: dos tercios del ancho para edición y un tercio para la vista previa ampliada. Cada panel se desplaza de forma independiente. Los avisos ocupan una línea compacta. En celulares, la cabecera usa dos filas y los paneles se distribuyen verticalmente. [Archivos y pruebas del panel](PANEL-DE-EDICION.md).
+
 Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Todas las secciones están visibles. La barra fija de accesos desplaza el panel hasta el grupo elegido, sin ocultar controles. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
 
 En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).
@@ -155,7 +157,7 @@ El campo de Drive guarda un enlace de referencia y permite abrirlo. Para usar la
 
 ## Pruebas y verificación
 
-npm test ejecuta 38 pruebas de regresión: selección, agrupación, rutas, XML, guardado, reconexión, giros por selección, compatibilidad de proyectos anteriores y encuadre manual sin franjas durante los movimientos. npm run build también verifica TypeScript en modo estricto.
+npm test ejecuta las pruebas de regresión de selección, agrupación, rutas, XML, guardado, reconexión, giros por selección, compatibilidad de proyectos anteriores y encuadre manual sin franjas durante los movimientos. npm run build también verifica TypeScript en modo estricto.
 
 La prueba opcional de navegador está en scripts/browser-smoke.cjs. No agrega dependencias al producto. En un entorno de desarrollo, podés instalar Playwright temporalmente:
 

@@ -19,6 +19,15 @@ interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: 
 export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount, framingControlsTarget }, ref) {
   const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const media = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = media.current;
+    if (!element) return;
+    const resize = () => element.style.setProperty('--preview-media-height', Math.max(90, element.getBoundingClientRect().height - 28) + 'px');
+    resize();
+    const observer = new ResizeObserver(resize); observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   const [images, setImages] = useState<ImageMap>(() => new Map());
   const imageCache = useRef<ImageMap>(new Map());
   const time = useRef(0), playing = useRef(false), abort = useRef<AbortController | null>(null);
@@ -195,7 +204,8 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   <section className="panel preview-panel">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-indigo-500" />Previsualización {config.aspectRatio} en Vivo</h2><span className="font-mono text-[11px] text-neutral-400">{config.width} × {config.height} · {config.fps} FPS</span></div>
     {output.rotation !== 0 && <p className="text-xs text-indigo-300">Tótem TV · Vista derecha como en tu TV vertical. Archivo final: {output.width} × {output.height}, girado 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}.</p>}
-    <div className="preview-device" style={{ width: `min(${config.width >= config.height ? '100%' : '350px'}, calc(var(--preview-screen-height) * ${config.width / config.height} + 28px))` }}>
+    <div ref={media} className="preview-media">
+    <div className="preview-device" style={{ width: `min(100%, calc(var(--preview-screen-height) * ${config.width / config.height} + 28px))` }}>
       <div aria-hidden="true" className="preview-notch"><span className="h-2.5 w-2.5 rounded-full border border-neutral-700 bg-neutral-950" /><span className="h-1 w-10 rounded-full bg-neutral-800" /></div>
       <div className="preview-screen" style={{ aspectRatio: config.width / config.height }}>
         <canvas ref={canvas} width={Math.min(720,config.width)} height={Math.round(config.height * Math.min(720,config.width) / config.width)} aria-label="Vista previa del montaje" role="img" tabIndex={framingMode ? 0 : undefined} aria-describedby={framingMode ? 'photo-framing-help' : undefined}
@@ -213,6 +223,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
         </button>}
         {busy && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/75 p-6 text-center"><span className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" /><p className="text-sm font-bold">{savingVideo ? 'Guardando video' : recordPhase}…</p>{!savingVideo && <p className="font-mono text-xs text-indigo-300">{progress}%</p>}</div>}
       </div>
+    </div>
     </div>
     <div className="preview-tools space-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de vista previa" tabIndex={0}>
     {!framingControlsTarget && framingControls}

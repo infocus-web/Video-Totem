@@ -56,11 +56,11 @@ export function ClientInputPanel(props: Props) {
     }
   };
   return <section className="panel editor-panel !p-0" aria-label="Panel de edición">
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-4 sm:px-5">
-      <div><h2 className="text-base font-bold">Herramientas de edición</h2><p className="mt-1 text-xs text-neutral-400">Todos los ajustes a la vista. Saltá al grupo que necesitás.</p></div>
+    <div className="editor-panel-heading">
+      <h2 className="text-sm font-bold">Herramientas de edición</h2>
       <div className="editor-counts"><span className="count-badge count-indigo">{props.selectedCount} fotos</span><span className="count-badge count-green">{props.sceneCount} escenas</span></div>
     </div>
-    <nav className="editor-shortcuts grid grid-cols-4 gap-1 border-b border-neutral-800 p-2" aria-label="Accesos a herramientas">
+    <nav className="editor-shortcuts" aria-label="Accesos a herramientas">
       {['Fotos', 'Formato', 'Encuadre', 'Escenas', 'Ritmo', 'Textos', 'Música', 'Premiere'].map((label, index) => <button type="button" key={label} aria-controls={'editor-section-' + (index + 1)} onClick={() => jumpToSection(index + 1)} className="editor-shortcut">{label}</button>)}
     </nav>
     <div ref={tools} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>

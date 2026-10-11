@@ -4,6 +4,14 @@ Las herramientas se reúnen en un panel con secciones visibles, en orden de uso:
 
 Anterior y Siguiente recorren las fotos del montaje, incluidas las que comparten una escena. Se desactivan al llegar al principio o al final. Cambian la foto visible sin modificar su encuadre ni volver a decodificar las imágenes. Al terminar de encuadrar, se retoma la reproducción si estaba activa.
 
+## Espacio de trabajo
+
+Nuevo, Guardar y Abrir están en la cabecera junto al estado del guardado. Los avisos usan una línea compacta. En escritorio, el editor ocupa dos tercios del ancho y la vista previa el tercio restante; ambos aprovechan la altura disponible. La imagen crece con el espacio del panel, sin el límite anterior de tamaño. Cada panel se desplaza por separado, manteniendo visibles la cabecera, los accesos y la foto. En celulares se conserva la distribución vertical y la cabecera usa dos filas.
+
+Los cambios de esta distribución están en `src/App.tsx` (estructura y avisos), `src/components/Navbar.tsx` (acciones del proyecto), `src/components/ClientInputPanel.tsx` (accesos compactos), `src/components/VideoPreviewPlayer.tsx` (tamaño de la imagen) y `src/index.css` (proporciones y desplazamiento). No cambian los datos ni la codificación del video.
+
+`scripts/workspace-layout-smoke.cjs` verifica siete tamaños de pantalla, las proporciones, controles accesibles sin recortar la cabecera, desplazamiento de la línea de tiempo y guardar/abrir/reconectar un proyecto de 30 fotos.
+
 ## Archivos
 
 - `src/components/ClientInputPanel.tsx`: panel único, secciones visibles y accesos directos; fondo junto al encuadre y formato de nombres junto a la selección.
