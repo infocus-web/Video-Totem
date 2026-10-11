@@ -8,6 +8,40 @@ import type { PhotoItem } from '../src/types/index.ts';
 import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from '../src/utils/projectConfig.ts';
 import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
 import { normalizeFraming, photoGeometry, photoSlots } from '../src/utils/photoFraming.ts';
+import { videoOutput } from '../src/utils/videoOutput.ts';
+
+test('tótem exporta horizontal y mantiene el tamaño vertical de edición', () => {
+  for (const rotation of [90, 270] as const) {
+    const config = { ...DEFAULT_CONFIG, outputRotation: rotation };
+    assert.deepEqual(videoOutput(config), { width: 1920, height: 1080, rotation });
+    assert.equal(config.width, 1080); assert.equal(config.height, 1920);
+  }
+  assert.deepEqual(videoOutput(DEFAULT_CONFIG), { width: 1080, height: 1920, rotation: 0 });
+  assert.deepEqual(videoOutput({ width: 1920, height: 1080, outputRotation: 90 }), { width: 1920, height: 1080, rotation: 0 });
+});
+
+test('tótem conserva encuadres, giros individuales, escenas y configuración al guardar', () => {
+  const original = updatePhotoFraming(editedProject(), 0, 0, { x: 0.2, y: 0.7, zoom: 1.4, rotation: 90 });
+  for (const rotation of [90, 270] as const) {
+    const changed = updateProjectConfig(original, { ...original.config, outputRotation: rotation });
+    assert.equal(changed.slides, original.slides); assert.equal(changed.library, original.library);
+    const restored = decodeProject(serializeProject(changed));
+    assert.deepEqual(videoOutput(restored.config), { width: 1920, height: 1080, rotation });
+    assert.deepEqual(restored.slides[0].photos[0].framing, original.slides[0].photos[0].framing);
+    assert.equal(restored.slides[0].duration, 2.3); assert.equal(restored.slides[0].transition, 'fade');
+  }
+});
+
+test('proyectos anteriores y giros de salida malformados se abren sin girar', () => {
+  const saved = JSON.parse(serializeProject(editedProject()));
+  for (const rotation of [undefined, -90, 180, '90', null]) {
+    saved.config.outputRotation = rotation;
+    assert.equal(decodeProject(JSON.stringify(saved)).config.outputRotation, 0);
+  }
+  saved.config.width = 1920; saved.config.height = 1080; saved.config.outputRotation = 90;
+  const restored = decodeProject(JSON.stringify(saved));
+  assert.equal(restored.config.outputRotation, 0); assert.equal(restored.config.aspectRatio, '16:9');
+});
 
 const options = { localBasePath: 'D:\\Fotos', prefix: 'IMG_', padding: 3, extension: '.jpg', defaultDuration: 1.5 };
 const photo = (name: string, orientation: PhotoItem['orientation'] = 'horizontal'): PhotoItem => ({

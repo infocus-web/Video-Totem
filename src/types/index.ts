@@ -50,6 +50,7 @@ export interface SequenceConfig {
   width: number;
   height: number;
   fps: number;
+  outputRotation?: 0 | 90 | 270;
   defaultDuration: number;
   defaultTransition: TransitionType;
   backgroundStyle: 'blur' | 'black' | 'mirror' | 'gradient';

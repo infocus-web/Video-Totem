@@ -9,12 +9,14 @@ import { audioEngine } from '../utils/audioSynthesizer';
 import { downloadBlob } from '../utils/download';
 import { saveVideoAs } from '../utils/saveVideo';
 import { supportsBackgroundRecording } from '../utils/recordingSource';
+import { videoOutput } from '../utils/videoOutput';
 import { Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
 interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
 export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount }, ref) {
+  const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [images, setImages] = useState<ImageMap>(() => new Map());
   const imageCache = useRef<ImageMap>(new Map());
@@ -178,6 +180,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
   return <section className="panel space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-indigo-500" />Previsualización {config.aspectRatio} en Vivo</h2><span className="font-mono text-[11px] text-neutral-400">{config.width} × {config.height} · {config.fps} FPS</span></div>
+    {output.rotation !== 0 && <p className="text-xs text-indigo-300">Tótem TV · Vista derecha como en tu TV vertical. Archivo final: {output.width} × {output.height}, girado 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}.</p>}
     <div className="preview-device" style={config.width >= config.height ? { width: '100%' } : undefined}>
       <div aria-hidden="true" className="preview-notch"><span className="h-2.5 w-2.5 rounded-full border border-neutral-700 bg-neutral-950" /><span className="h-1 w-10 rounded-full bg-neutral-800" /></div>
       <div className="preview-screen" style={{ aspectRatio: config.width / config.height }}>

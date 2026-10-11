@@ -27,6 +27,8 @@ export function decodeProject(raw: string): SavedProject {
   const fps = Number(data.config.fps);
   if (![24, 25, 30, 50, 60].includes(fps)) throw new Error('FPS no compatibles. Usá 24, 25, 30, 50 o 60.');
   config.fps = fps;
+  config.aspectRatio = config.width === config.height ? '1:1' : config.width > config.height ? '16:9' : config.height / config.width === 1.25 ? '4:5' : '9:16';
+  if (config.width < config.height && (data.config.outputRotation === 90 || data.config.outputRotation === 270)) config.outputRotation = data.config.outputRotation;
   config.defaultDuration = clampDuration(Number(data.config.defaultDuration));
   config.musicVolume = Math.max(0, Math.min(1, Number(data.config.musicVolume) || 0));
   config.splitGapSize = Math.max(0, Math.min(80, Number(data.config.splitGapSize) || 0));

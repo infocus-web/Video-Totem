@@ -1,5 +1,11 @@
 # AutoReel Studio
 
+## Tótem TV
+
+En **Ritmo, Estilo & Música → Formato**, elegí **Tótem TV · Giro 90° a la derecha** (como el ejemplo `aylu.mp4`) o a la izquierda según cómo esté montada la pantalla. Editás derecho en vertical, 1080 × 1920, y el video final sale horizontal, 1920 × 1080, con fotos, fondos, transiciones y textos girados juntos. No necesitás girar todas las fotos: el giro individual sirve para corregir cada imagen y se suma al giro final del tótem. Cambiar a Vertical 9:16 vuelve a exportar sin giro.
+
+El modo se guarda en el borrador y JSON. El XML de Premiere conserva la secuencia vertical sin aplicar el giro del tótem. [Archivos y verificación](TOTEM-TV.md).
+
 Editor de fotos a video para fotógrafos. React 19, TypeScript, Vite y Tailwind CSS. Funciona como aplicación estática en Vercel; las fotos y la música se procesan en el navegador.
 
 Conserva el diseño de Google AI Studio: tarjetas de selección, apilado y estilos; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.

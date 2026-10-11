@@ -2,6 +2,8 @@ const { chromium } = require(process.argv[2] || 'playwright');
 const { spawn } = require('node:child_process');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
 let chrome, browser, page;
+const totem = process.argv[6] === 'totem' || process.argv[6] === 'totem-left';
+const outputRotation = process.argv[6] === 'totem-left' ? 270 : totem ? 90 : 0;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   fs.mkdirSync('artifacts', { recursive: true });
@@ -97,6 +99,19 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   await page.getByRole('button', { name: 'Listo, volver a la vista previa', exact: true }).click(); await pause(750);
   await page.reload(); await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(inputs);
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+  if (totem) {
+    await page.getByLabel('Formato', { exact: true }).selectOption('totem-' + outputRotation);
+    await page.getByLabel('Título', { exact: true }).fill('TOTEM TV');
+    await page.getByRole('checkbox', { name: 'Mostrar textos', exact: true }).check();
+    await pause(750);
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
+    assert.equal(before.config.outputRotation, outputRotation); assert.equal(before.config.width, 1080);
+    const canvasSize = await page.getByLabel('Vista previa del montaje', { exact: true }).evaluate(canvas => ({ width: canvas.width, height: canvas.height }));
+    assert.ok(canvasSize.width < canvasSize.height, 'La edición sigue vertical');
+    await page.reload(); await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(inputs);
+    await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+    assert.equal(await page.getByLabel('Formato', { exact: true }).inputValue(), 'totem-' + outputRotation);
+  }
   await page.getByRole('button', { name: /Exportar \(/ }).click();
   await page.getByRole('checkbox', { name: 'Elegir dónde guardar al terminar' }).check();
   assert.equal(await page.evaluate(() => document.hidden), false);
@@ -135,7 +150,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.ok(probe.decodes.filter(image => image.width === 4000 && image.height === 2400).length >= 8, 'Se vuelven a decodificar originales para exportar, no solo al importar');
   const extension = probe.saved.name.split('.').pop(); assert.equal(probe.picker[2].options.types[0].accept['video/' + extension][0], '.' + extension);
   const exported = 'artifacts/background-video.' + extension; fs.writeFileSync(exported, Buffer.from(probe.saved.data, 'base64'));
-  const video = await page.evaluate(async ({ data, extension }) => {
+  const video = await page.evaluate(async ({ data, extension, outputRotation }) => {
     const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(data), char => char.charCodeAt(0))], { type: 'video/' + extension }));
     const video = document.createElement('video'); video.src = url;
     await new Promise((resolve, reject) => { video.onloadeddata = resolve; video.onerror = reject; });
@@ -143,10 +158,15 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const ctx = canvas.getContext('2d'), samples = [];
     for (const time of [0.6, 3.3, 5.8, 8.3]) {
       video.currentTime = time; await new Promise(resolve => { video.onseeked = resolve; }); ctx.drawImage(video, 0, 0);
-      const center = Array.from(ctx.getImageData(540, 960, 1, 1).data).slice(0, 3);
-      const line = ctx.getImageData(540, 600, 1, 600).data;
+      const center = Array.from(ctx.getImageData(outputRotation ? 960 : 540, outputRotation ? 540 : 960, 1, 1).data).slice(0, 3);
+      const line = outputRotation ? ctx.getImageData(outputRotation === 90 ? 720 : 600, 540, 600, 1).data : ctx.getImageData(540, 600, 1, 600).data;
       const values = Array.from({ length: 600 }, (_, index) => line[index * 4]);
-      samples.push({ time, center, contrast: Math.max(...values) - Math.min(...values) });
+      let titlePixels = 0;
+      if (outputRotation && time === 3.3) {
+        const title = ctx.getImageData(outputRotation === 90 ? 1700 : 40, 0, 180, 1080).data;
+        for (let index = 0; index < title.length; index += 4) if (title[index] > 220 && title[index + 1] > 220 && title[index + 2] > 220) titlePixels++;
+      }
+      samples.push({ time, center, contrast: Math.max(...values) - Math.min(...values), titlePixels });
     }
     const audioContext = new AudioContext();
     const audio = await audioContext.decodeAudioData(Uint8Array.from(atob(data), char => char.charCodeAt(0)).buffer);
@@ -168,9 +188,10 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       duration = video.currentTime;
     }
     await audioContext.close(); URL.revokeObjectURL(url); return { width: video.videoWidth, height: video.videoHeight, duration, samples, audioRms, audioDuration: audio.duration };
-  }, { data: probe.saved.data, extension });
+  }, { data: probe.saved.data, extension, outputRotation });
   fs.writeFileSync('artifacts/export-video-metadata.json', JSON.stringify(video, null, 2));
-  assert.equal(video.width, 1080); assert.equal(video.height, 1920);
+  assert.equal(video.width, totem ? 1920 : 1080); assert.equal(video.height, totem ? 1080 : 1920);
+  if (totem) assert.ok(video.samples[1].titlePixels > 500, 'El título se gira con todo el montaje hacia el lado elegido');
   assert.ok(video.duration > 9.6 && video.duration < 10.5, 'Cambiar de pestaña conserva la duración');
   assert.ok(video.audioDuration >= 9.5 && video.audioDuration < 10.5, 'La pista de audio conserva su duración, con margen para el arranque del dispositivo');
   assert.ok(video.audioRms.every(value => value > 0.0001), 'La música conserva señal durante las escenas grabadas con la pestaña oculta');
@@ -186,7 +207,13 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   await pause(500);
   assert.equal(await page.getByRole('button', { name: 'Cancelar grabación', exact: true }).count(), 0);
   assert.equal(await save.count(), 0); assert.deepEqual(errors, []);
+  if (totem) {
+    await page.getByLabel('Formato', { exact: true }).selectOption('1080x1920'); await pause(750);
+    const normal = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
+    assert.equal(normal.config.outputRotation, 0); assert.equal(normal.slides[0].photos[0].framing.rotation, 90);
+  }
   fs.writeFileSync('artifacts/export-report.json', JSON.stringify({ status: 'passed', rotationCurrentSelectedAll: true, reconnect: true, whileHidden, quality: { bitrate: probe.recorders[0].videoBitsPerSecond, originalDecodes: probe.decodes.filter(image => image.width === 4000).length }, picker: probe.picker, video, errors }, null, 2));
+  if (totem) fs.copyFileSync('artifacts/export-report.json', 'artifacts/totem-' + outputRotation + '-' + extension + '-report.json');
   console.log('PASS: giro individual/selección/todas, persistencia, originales, video real en pestaña oculta, Guardar como con cancelar/error/reintentar y cancelación de grabación');
 })().catch(async error => {
   console.error(error); process.exitCode = 1;

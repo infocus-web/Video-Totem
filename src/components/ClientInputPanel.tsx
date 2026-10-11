@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { CheckCircle2, Clock, Copy, FolderOpen, HardDrive, Link2, PlusCircle, SlidersHorizontal, Sparkles, SplitSquareVertical } from 'lucide-react';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
+import { videoOutput } from '../utils/videoOutput';
 
 interface Props {
   rawText: string; onRawTextChange: (value: string) => void;
@@ -27,6 +28,7 @@ const presets: { name: string; detail: string; duration: number; music: string; 
 
 export function ClientInputPanel(props: Props) {
   const { config, onConfigChange, busy } = props;
+  const output = videoOutput(config);
   const [namingOpen, setNamingOpen] = useState(false);
   const change = <K extends keyof SequenceConfig>(key: K, value: SequenceConfig[K]) => onConfigChange({ ...config, [key]: value });
   const drive = parseGoogleDriveLink(config.driveLink);
@@ -150,11 +152,21 @@ export function ClientInputPanel(props: Props) {
       <label className="block text-xs text-neutral-400">Volumen · {Math.round(config.musicVolume * 100)}%<input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="mt-2 w-full accent-indigo-500" /></label>
       <div className="grid grid-cols-1 gap-3 border-t border-neutral-800 pt-4 sm:grid-cols-2">
         <label className="text-xs text-neutral-400 sm:col-span-2">Nombre del proyecto<input maxLength={120} value={config.name} onChange={e => change('name', e.target.value)} className="studio-input mt-1" /></label>
-        <label className="text-xs text-neutral-400">Formato<select aria-label="Formato" value={config.width + 'x' + config.height} onChange={e => { const [width,height] = e.target.value.split('x').map(Number); onConfigChange({ ...config, width, height, aspectRatio: width === height ? '1:1' : width > height ? '16:9' : height === 1350 ? '4:5' : '9:16' }); }} className="studio-input mt-1">
+        <label className="text-xs text-neutral-400">Formato<select aria-label="Formato" value={output.rotation ? 'totem-' + output.rotation : config.width + 'x' + config.height} onChange={e => {
+          if (e.target.value.startsWith('totem-')) {
+            onConfigChange({ ...config, width: 1080, height: 1920, aspectRatio: '9:16', outputRotation: e.target.value === 'totem-90' ? 90 : 270 });
+            return;
+          }
+          const [width,height] = e.target.value.split('x').map(Number);
+          onConfigChange({ ...config, width, height, outputRotation: 0, aspectRatio: width === height ? '1:1' : width > height ? '16:9' : height === 1350 ? '4:5' : '9:16' });
+        }} className="studio-input mt-1">
+          <option value="totem-90">Tótem TV · Giro 90° a la derecha</option>
+          <option value="totem-270">Tótem TV · Giro 90° a la izquierda</option>
           {[[1080,1920,'Vertical 9:16'],[1080,1080,'Cuadrado 1:1'],[1920,1080,'Horizontal 16:9'],[1080,1350,'Retrato 4:5']].map(([w,h,label]) => <option key={String(w) + 'x' + h} value={String(w) + 'x' + h}>{label}</option>)}
           {!['1080x1920','1080x1080','1920x1080','1080x1350'].includes(config.width + 'x' + config.height) && <option value={config.width + 'x' + config.height}>{config.width} × {config.height}</option>}
         </select></label>
         <label className="text-xs text-neutral-400">FPS<select aria-label="FPS" value={config.fps} onChange={e => change('fps', Number(e.target.value))} className="studio-input mt-1">{[24,25,30,50,60].map(fps => <option key={fps}>{fps}</option>)}</select></label>
+        {output.rotation !== 0 && <p className="text-xs text-indigo-300 sm:col-span-2">Tótem TV: editás en vertical. El video sale {output.width} × {output.height}, con fotos, textos y fondos girados 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}. No hace falta girar todas las fotos.</p>}
       </div>
     </section>
   </fieldset>;

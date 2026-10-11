@@ -1,5 +1,6 @@
 import type { SequenceConfig, SequenceSlide } from '../types';
-import { drawFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
+import { drawVideoFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
+import { videoOutput } from './videoOutput';
 import { audioEngine } from './audioSynthesizer';
 import { RecordingImages } from './recordingImages';
 import { createRecordingSource, supportsBackgroundRecording } from './recordingSource';
@@ -55,7 +56,8 @@ function hasVideoTrack(blob: Blob, config: SequenceConfig, signal: AbortSignal):
     const finish = (valid: boolean) => { cleanup(); resolve(valid); };
     const abort = () => { cleanup(); reject(new DOMException('Cancelado', 'AbortError')); };
     const timeout = window.setTimeout(() => finish(false), 5000);
-    video.onloadedmetadata = () => finish(video.videoWidth === config.width && video.videoHeight === config.height);
+    const output = videoOutput(config);
+    video.onloadedmetadata = () => finish(video.videoWidth === output.width && video.videoHeight === output.height);
     video.onerror = () => finish(false);
     signal.addEventListener('abort', abort, { once: true });
     video.preload = 'metadata'; video.src = url;
@@ -70,7 +72,10 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
   onPhase('Preparando originales');
   try { await originals.prepare(0); } catch (error) { originals.clear(); throw error; }
   const canvas = document.createElement('canvas');
-  canvas.width = config.width; canvas.height = config.height;
+  const output = videoOutput(config);
+  canvas.width = output.width; canvas.height = output.height;
+  const composition = output.rotation ? document.createElement('canvas') : canvas;
+  composition.width = config.width; composition.height = config.height;
   try {
     await document.fonts.ready; await audioEngine.resume();
     if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
@@ -164,7 +169,7 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
           // Keep capture and audio continuous while the next original loads.
           if (!originals.hasScene(scene) || (needsNext && !originals.hasScene(scene + 1))) { progress(Math.min(99, Math.round(elapsed / duration * 100))); return; }
           if (lastCapture < 0 || captureTime - lastCapture >= 1 / config.fps - 0.002) {
-            drawFrame(canvas, slides, config, originals.images, elapsed);
+            drawVideoFrame(canvas, composition, slides, config, originals.images, elapsed);
             // Static photos need an explicit frame request as well as canvas updates.
             void source.capture().catch(error => fail(error instanceof Error ? error : new Error('No se pudo capturar el fotograma.'))); lastCapture = captureTime;
           }
@@ -180,7 +185,7 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
       try {
         onPhase('Grabando video');
         recorder.start(1000); audioEngine.play(0, false);
-        drawFrame(canvas, slides, config, originals.images, 0);
+        drawVideoFrame(canvas, composition, slides, config, originals.images, 0);
         void source.capture().catch(error => fail(error instanceof Error ? error : new Error('No se pudo capturar el fotograma.')));
         if (!source.background && document.hidden) visibilityChanged();
         // The audio rendering clock avoids background timer throttling; older browsers keep a worker fallback.

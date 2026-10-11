@@ -1,7 +1,7 @@
 import type { SequenceConfig } from '../types';
 
 export const DEFAULT_CONFIG: SequenceConfig = {
-  name: 'Mi_Reel', aspectRatio: '9:16', width: 1080, height: 1920, fps: 30,
+  name: 'Mi_Reel', aspectRatio: '9:16', width: 1080, height: 1920, fps: 30, outputRotation: 0,
   defaultDuration: 1.5, defaultTransition: 'dissolve', backgroundStyle: 'blur', photoFit: 'contain',
   horizontalGrouping: 'auto-split-2', splitGapSize: 10, musicTrack: 'chill',
   musicVolume: 0.35, showOverlayText: true, eventTitle: '', eventSubtitle: '',

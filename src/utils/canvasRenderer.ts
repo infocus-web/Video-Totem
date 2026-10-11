@@ -1,6 +1,18 @@
 import type { SequenceConfig, SequenceSlide, PhotoItem, FilePreparationProgress } from '../types';
 import { normalizeFraming, photoGeometry, photoSlots } from './photoFraming.ts';
+import { videoOutput } from './videoOutput.ts';
 export type ImageMap = Map<string, HTMLImageElement>;
+
+export function drawVideoFrame(canvas: HTMLCanvasElement, composition: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number) {
+  drawFrame(composition, slides, config, images, time);
+  if (canvas === composition) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Tu navegador no ofrece Canvas 2D.');
+  const { rotation } = videoOutput(config);
+  ctx.resetTransform(); ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(rotation * Math.PI / 180);
+  ctx.drawImage(composition, -composition.width / 2, -composition.height / 2); ctx.restore();
+}
 const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
 export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void, cached: ImageMap = new Map()): Promise<ImageMap> {
