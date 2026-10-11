@@ -24,21 +24,33 @@ let browser, page;
     ctx.putImageData(image, 0, 0); return canvas.toDataURL('image/png').split(',')[1];
   });
   const inputs = [1, 2, 3].map(index => ({ name: 'IMG_00' + index + '.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') }));
-  const openSection = async title => {
-    const summary = page.locator('.editor-section > summary').filter({ hasText: title });
-    if (!await summary.evaluate(summary => summary.parentElement.open)) await summary.click();
+  const goToSection = async title => {
+    const section = page.locator('.editor-section').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
+    const id = await section.getAttribute('id');
+    await page.getByRole('navigation', { name: 'Accesos a herramientas' }).locator('button[aria-controls="' + id + '"]').click();
   };
   assert.equal(await page.getByRole('region', { name: 'Panel de edición', exact: true }).count(), 1);
-  assert.deepEqual(await page.locator('.editor-section > summary').evaluateAll(items => items.map(item => item.children[1].children[0].textContent)),
+  assert.deepEqual(await page.locator('.editor-section-heading h3').allTextContents(),
     ['Fotos del proyecto', 'Formato de salida', 'Encuadre y giro', 'Composición de escenas', 'Ritmo y estilo', 'Textos y marca', 'Música y volumen', 'Premiere y Google Drive']);
+  assert.equal(await page.locator('.editor-panel details').count(), 0, 'Las herramientas no están detrás de desplegables');
+  assert.equal(await page.getByRole('navigation', { name: 'Accesos a herramientas' }).getByRole('button').count(), 8);
+  const previewBeforeJump = await page.getByLabel('Vista previa del montaje', { exact: true }).boundingBox();
+  await goToSection('Música y volumen');
+  await page.getByLabel('Música', { exact: true }).waitFor({ state: 'visible' });
+  const previewAfterJump = await page.getByLabel('Vista previa del montaje', { exact: true }).boundingBox();
+  assert.ok(Math.abs(previewAfterJump.y - previewBeforeJump.y) < 1, 'Ir a una herramienta no mueve la vista previa');
+  const musicHeader = await page.getByRole('heading', { name: 'Música y volumen', exact: true }).boundingBox();
+  const shortcuts = await page.getByRole('navigation', { name: 'Accesos a herramientas' }).boundingBox();
+  assert.ok(musicHeader.y >= shortcuts.y + shortcuts.height, 'La barra fija no tapa la sección elegida');
+  await goToSection('Fotos del proyecto');
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(inputs);
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
-  await openSection('Composición de escenas');
+  await goToSection('Composición de escenas');
   await page.getByRole('button', { name: /Individual \(1 foto por escena\)/ }).click();
   await page.getByRole('button', { name: /Rellenar cuadro \(recortar\)/ }).click();
-  await openSection('Textos y marca');
+  await goToSection('Textos y marca');
   await page.getByRole('checkbox', { name: 'Mostrar textos', exact: true }).uncheck();
-  await openSection('Música y volumen');
+  await goToSection('Música y volumen');
   await page.getByLabel('Música', { exact: true }).selectOption('none');
   await page.getByRole('button', { name: 'Línea de tiempo', exact: true }).click();
   await page.getByRole('button', { name: 'Todas: corte directo', exact: true }).click();
@@ -94,7 +106,7 @@ let browser, page;
   await page.getByRole('button', { name: 'Pausar', exact: true }).click();
   await page.getByLabel('Posición del video').press('Home');
   // Render the actual download and inspect its decoded pixels, not just the canvas.
-  await openSection('Ritmo y estilo');
+  await goToSection('Ritmo y estilo');
   await page.getByLabel('Duración de las escenas').press('Home');
   for (let i = 0; i < 4; i++) await page.getByLabel('Duración de las escenas').press('ArrowRight');
   await page.getByRole('button', { name: /Exportar \(/ }).click();
@@ -112,7 +124,7 @@ let browser, page;
   }, { base64: fs.readFileSync(path).toString('base64'), mime: path.endsWith('.mp4') ? 'video/mp4' : 'video/webm' });
   assert.equal(metadata.width, 1080); assert.equal(metadata.height, 1920);
   assert.ok(Math.abs(metadata.center[0] - 32) < 15 && Math.abs(metadata.center[2] - 153) < 15, 'El video conserva el encuadre manual');
-  await openSection('Composición de escenas');
+  await goToSection('Composición de escenas');
   await page.getByRole('button', { name: /2 en 1 \(Arriba y Abajo\)/ }).click();
   await page.getByRole('button', { name: 'Encuadrar foto', exact: true }).click();
   await page.getByRole('button', { name: 'Foto 2', exact: true }).click();
@@ -165,7 +177,7 @@ let browser, page;
     if (viewport.width === 390) await page.screenshot({ path: 'artifacts/editor-panel-mobile-screen.png' });
   }
   assert.deepEqual(errors, []);
-  fs.writeFileSync('artifacts/framing-report.json', JSON.stringify({ status: 'passed', unifiedPanel: true, photoNavigation: true, stackedNavigation: true, mouse: true, touch: true, keyboard: true, persistent: true, preservedPlayback: true, resetAll: true, layout, metadata, errors }, null, 2));
+  fs.writeFileSync('artifacts/framing-report.json', JSON.stringify({ status: 'passed', unifiedPanel: true, visibleTools: true, fixedShortcuts: true, photoNavigation: true, stackedNavigation: true, mouse: true, touch: true, keyboard: true, persistent: true, preservedPlayback: true, resetAll: true, layout, metadata, errors }, null, 2));
   console.log('PASS: arrastre, teclado, zoom, reconexión, reproducción, píxeles del video exportado, fotos apiladas y táctil');
   await browser.close();
 })().catch(async error => {

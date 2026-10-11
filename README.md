@@ -8,7 +8,7 @@ El modo se guarda en el borrador y JSON. El XML de Premiere conserva la secuenci
 
 Editor de fotos a video para fotógrafos. React 19, TypeScript, Vite y Tailwind CSS. Funciona como aplicación estática en Vercel; las fotos y la música se procesan en el navegador.
 
-Conserva el estilo visual de Google AI Studio con las herramientas reunidas en un panel desplegable; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
+Conserva el estilo visual de Google AI Studio con las herramientas reunidas en un panel con herramientas visibles; vista previa con marco de teléfono; y transiciones Fundido, Zoom y Wipe. Las rutas de Premiere están en una sección opcional. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
 
 ## Ejecutar localmente
 
@@ -57,7 +57,7 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 ## Panel de edición
 
-Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Cada título abre o cierra su sección. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
+Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Todas las secciones están visibles. La barra fija de accesos desplaza el panel hasta el grupo elegido, sin ocultar controles. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
 
 En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).
 
@@ -68,7 +68,7 @@ En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior
 3. Pegá la selección del cliente: números, nombres, códigos de cámara o rangos. Ejemplo: 004, 012, 025-028, DSC_1020.jpg.
 4. Pulsá Aplicar selección. Si hay fotos faltantes o nombres ambiguos, se muestra el problema y se conserva el montaje anterior. También podés usar todas las fotos.
 5. Elegí formato, estilo, duración, música y textos. Los presets Boda, Fiesta, Portfolio e Inmobiliaria ajustan estilo y ritmo.
-6. Las tarjetas 2 en 1, 3 en 1, Inteligente e Individual aplican el modo al elegirlo. En Opciones de agrupación, Reagrupar montaje permite restablecer ese modo después de editar cuadros individuales. Conservan el orden y los movimientos; cada grupo toma la duración y transición de su primera foto. La distribución de escenas cambia.
+6. Las tarjetas 2 en 1, 3 en 1, Inteligente e Individual aplican el modo al elegirlo. En Composición de escenas, Reagrupar montaje permite restablecer ese modo después de editar cuadros individuales. Conservan el orden y los movimientos; cada grupo toma la duración y transición de su primera foto. La distribución de escenas cambia.
 7. En Línea de tiempo, cambiá el orden, duración, transición y movimiento. Fundido, Zoom y Wipe pueden aplicarse a todas las escenas o desde el selector de cada escena. Los proyectos anteriores con Fade siguen funcionando y se muestran como Fundido. Elegir un diseño con más fotos consume fotos de escenas siguientes; elegir una foto por escena divide el grupo sin perder fotos.
 8. Abrí Exportar para grabar el video final o descargar el XML para Premiere.
 9. Usá Guardar proyecto JSON para llevarte el montaje. Nuevo proyecto descarga un respaldo del anterior antes de abrir una sesión vacía.

@@ -1,4 +1,4 @@
-import type { ReactNode, ChangeEvent } from 'react';
+import { useRef, type ReactNode, type ChangeEvent } from 'react';
 import { CheckCircle2, Clock, Copy, FolderOpen, HardDrive, Link2, PlusCircle, Sparkles } from 'lucide-react';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
@@ -27,15 +27,22 @@ const presets: { name: string; detail: string; duration: number; music: string; 
   { name: '🏡 Inmobiliaria / Tour', detail: '2.2s · 2 en 1 · Fondo negro', duration: 2.2, music: 'chill', group: 'auto-split-2', background: 'black' },
 ];
 
-function EditorSection({ number, title, detail, open = false, children }: { number: number; title: string; detail: string; open?: boolean; children: ReactNode }) {
-  return <details className="editor-section" open={open}>
-    <summary className="editor-section-heading"><span className="step-badge step-indigo">{number}</span><span className="min-w-0 flex-1"><span className="block text-sm font-bold">{title}</span><span className="mt-0.5 block text-xs font-normal text-neutral-400">{detail}</span></span><span aria-hidden="true" className="editor-section-chevron">⌄</span></summary>
+function EditorSection({ number, title, detail, children }: { number: number; title: string; detail: string; children: ReactNode }) {
+  return <section id={'editor-section-' + number} className="editor-section">
+    <div className="editor-section-heading"><span className="step-badge step-indigo">{number}</span><div className="min-w-0 flex-1"><h3 tabIndex={-1} className="text-sm font-bold">{title}</h3><p className="mt-0.5 text-xs text-neutral-400">{detail}</p></div></div>
     <div className="space-y-4 px-4 pb-5 sm:px-5">{children}</div>
-  </details>;
+  </section>;
 }
 
 export function ClientInputPanel(props: Props) {
   const { config, onConfigChange, busy } = props;
+  const tools = useRef<HTMLDivElement>(null);
+  const jumpToSection = (number: number) => {
+    const panel = tools.current, section = panel?.querySelector<HTMLElement>('#editor-section-' + number);
+    if (!panel || !section) return;
+    panel.scrollTo({ top: panel.scrollTop + section.getBoundingClientRect().top - panel.getBoundingClientRect().top });
+    section.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
+  };
   const output = videoOutput(config);
   const change = <K extends keyof SequenceConfig>(key: K, value: SequenceConfig[K]) => onConfigChange({ ...config, [key]: value });
   const drive = parseGoogleDriveLink(config.driveLink);
@@ -50,12 +57,15 @@ export function ClientInputPanel(props: Props) {
   };
   return <section className="panel editor-panel !p-0" aria-label="Panel de edición">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 px-4 py-4 sm:px-5">
-      <div><h2 className="text-base font-bold">Herramientas de edición</h2><p className="mt-1 text-xs text-neutral-400">Abrí el ajuste que necesitás. La vista previa queda a la vista.</p></div>
-      <div className="editor-counts flex flex-wrap gap-2"><span className="count-badge count-indigo">{props.selectedCount} fotos</span><span className="count-badge count-green">{props.sceneCount} escenas</span></div>
+      <div><h2 className="text-base font-bold">Herramientas de edición</h2><p className="mt-1 text-xs text-neutral-400">Todos los ajustes a la vista. Saltá al grupo que necesitás.</p></div>
+      <div className="editor-counts"><span className="count-badge count-indigo">{props.selectedCount} fotos</span><span className="count-badge count-green">{props.sceneCount} escenas</span></div>
     </div>
-    <div className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
+    <nav className="editor-shortcuts grid grid-cols-4 gap-1 border-b border-neutral-800 p-2" aria-label="Accesos a herramientas">
+      {['Fotos', 'Formato', 'Encuadre', 'Escenas', 'Ritmo', 'Textos', 'Música', 'Premiere'].map((label, index) => <button type="button" key={label} aria-controls={'editor-section-' + (index + 1)} onClick={() => jumpToSection(index + 1)} className="editor-shortcut">{label}</button>)}
+    </nav>
+    <div ref={tools} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
     <fieldset disabled={busy} className="min-w-0 text-sm disabled:opacity-60">
-    <EditorSection number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente." open>
+    <EditorSection number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
       <div className="flex flex-wrap items-center gap-2">
         <label className="quick-button !border-indigo-500/30 !text-indigo-300"><PlusCircle aria-hidden="true" />Subir fotos locales
           <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label>
@@ -76,15 +86,15 @@ export function ClientInputPanel(props: Props) {
         </div>
       </div>
       {!props.libraryCount && <p className="text-xs text-indigo-300">Empezá con Subir fotos locales o Elegir carpeta. Si la selección está vacía, armamos el montaje con todas.</p>}
-      <details className="text-xs text-neutral-400"><summary>Formato de nombres para la selección</summary><div className="mt-3 space-y-3">
+      <div className="space-y-2"><h4 className="text-xs font-semibold text-neutral-300">Formato de nombres para la selección</h4>
       <div id="filename-options" className="grid grid-cols-1 gap-3 rounded-xl border border-neutral-800 bg-neutral-950 p-3 sm:grid-cols-3">
         <label className="text-xs text-neutral-400">Prefijo<input value={config.filenamePrefix} onChange={e => change('filenamePrefix', e.target.value)} className="studio-input mt-1 font-mono" /></label>
         <label className="text-xs text-neutral-400">Dígitos<select value={config.filenamePadding} onChange={e => change('filenamePadding', Number(e.target.value))} className="studio-input mt-1">{[0,3,4,5,6].map(n => <option key={n} value={n}>{n || 'Exactos'}</option>)}</select></label>
         <label className="text-xs text-neutral-400">Extensión<select value={config.filenameExtension} onChange={e => change('filenameExtension', e.target.value)} className="studio-input mt-1">{['.jpg','.jpeg','.png','.webp','.avif'].map(ext => <option key={ext}>{ext}</option>)}</select></label>
       </div>
-      </div></details>
+      </div>
     </EditorSection>
-    <EditorSection number={2} title="Formato de salida" detail="Tótem TV, vertical u horizontal y cuadros por segundo." open>
+    <EditorSection number={2} title="Formato de salida" detail="Tótem TV, vertical u horizontal y cuadros por segundo.">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="text-xs text-neutral-400 sm:col-span-2">Nombre del proyecto<input maxLength={120} value={config.name} onChange={e => change('name', e.target.value)} className="studio-input mt-1" /></label>
         <label className="text-xs text-neutral-400">Formato<select aria-label="Formato" value={output.rotation ? 'totem-' + output.rotation : config.width + 'x' + config.height} onChange={e => {
@@ -104,7 +114,7 @@ export function ClientInputPanel(props: Props) {
         {output.rotation !== 0 && <p className="text-xs text-indigo-300 sm:col-span-2">Tótem TV: editás en vertical. El video sale {output.width} × {output.height}, con fotos, textos y fondos girados 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}. No hace falta girar todas las fotos.</p>}
       </div>
     </EditorSection>
-    <EditorSection number={3} title="Encuadre y giro" detail="Rellenar el cuadro, mover, ampliar y girar cada foto." open>
+    <EditorSection number={3} title="Encuadre y giro" detail="Rellenar el cuadro, mover, ampliar y girar cada foto.">
         <div className="space-y-2 sm:col-span-2">
           <p className="text-xs font-semibold text-neutral-300">Cómo encuadrar las fotos</p>
           <div role="group" aria-label="Encuadre de las fotos" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -138,7 +148,7 @@ export function ClientInputPanel(props: Props) {
           onClick={() => change('splitGapSize', gap)} className={'rounded px-2 py-1 font-mono text-xs ' + (config.splitGapSize === gap ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white')}>{gap}px</button>)}</div>
       </div>
       <p className="text-xs text-neutral-500">Cambiar el modo redistribuye las escenas. Conserva el orden, los movimientos y usa la duración de la primera foto de cada grupo.</p>
-      <details className="text-xs text-neutral-400"><summary className="cursor-pointer">Opciones de agrupación</summary><p className="my-2">Si cambiaste cuadros en la línea de tiempo, podés volver a aplicar este modo a todo el montaje.</p><button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button">Reagrupar montaje con este modo</button></details>
+      <div className="space-y-2 text-xs text-neutral-400"><button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button">Reagrupar montaje con este modo</button><p>Volvé a aplicar este modo si cambiaste cuadros en la línea de tiempo.</p></div>
     </EditorSection>
     <EditorSection number={5} title="Ritmo y estilo" detail="Duración de las escenas y estilos rápidos.">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{presets.map(preset => <button type="button" key={preset.name} className="preset-card"
