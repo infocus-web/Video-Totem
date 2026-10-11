@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { FilePreparationProgress, PhotoFraming, SequenceConfig, SequenceSlide } from '../types';
 import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
+import { EditorPropertyRow } from './EditorPropertyRow';
 import { drawFrame, loadImages, sceneAtTime, type ImageMap } from '../utils/canvasRenderer';
 import { normalizeFraming, photoGeometry, photoSlots } from '../utils/photoFraming';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
@@ -194,7 +195,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
   const framingControls = <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
-    <button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="control w-full">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button>
+    <EditorPropertyRow label="Edición manual"><button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="quick-button">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button></EditorPropertyRow>
     {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
       onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
       onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}

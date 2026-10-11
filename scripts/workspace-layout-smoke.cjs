@@ -16,13 +16,20 @@ let browser, page;
   });
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(Array.from({ length: 30 }, (_, index) => ({ name: 'IMG_' + String(index + 1).padStart(3, '0') + '.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(data, 'base64') })));
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+  const selection = page.getByLabel('Selección del cliente', { exact: true });
+  await selection.fill('001,\n003');
+  assert.equal(await selection.inputValue(), '001,\n003', 'La caja compacta conserva una selección de varias líneas');
+  await page.getByRole('button', { name: 'Aplicar selección', exact: true }).click();
+  assert.ok(await page.locator('.editor-counts').getByText('2 fotos', { exact: true }).isVisible());
+  await selection.fill('');
+  await page.getByRole('button', { name: 'Usar todas las fotos', exact: true }).click();
   const layout = [];
   for (const viewport of [{ width: 1920, height: 1080 }, { width: 1440, height: 900 }, { width: 1280, height: 720 }, { width: 1024, height: 768 }, { width: 1200, height: 650 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
     await page.setViewportSize(viewport);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const measure = await page.evaluate(() => {
       const box = selector => { const b = document.querySelector(selector).getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; };
-      return { header: box('header'), workspace: box('.editor-workspace'), editor: box('.editor-panel'), preview: box('.preview-panel'), photo: box('canvas'), notice: box('.app-notice'), pageHeight: document.documentElement.scrollHeight, pageWidth: document.documentElement.scrollWidth, windowY: scrollY };
+      return { header: box('header'), workspace: box('.editor-workspace'), editor: box('.editor-panel'), preview: box('.preview-panel'), photo: box('canvas'), notice: box('.app-notice'), selection: box('textarea'), photoSection: box('#editor-section-1'), pageHeight: document.documentElement.scrollHeight, pageWidth: document.documentElement.scrollWidth, windowY: scrollY };
     });
     assert.ok(measure.pageWidth <= viewport.width, 'Sin desborde horizontal: ' + JSON.stringify(viewport));
     if (viewport.width >= 1024) {
@@ -34,6 +41,12 @@ let browser, page;
       assert.equal(measure.header.y, 0);
       assert.ok(measure.photo.y + measure.photo.height <= viewport.height);
       assert.ok(measure.notice.height <= 32, 'El aviso corto ocupa una línea compacta');
+      const selectionBox = await selection.boundingBox();
+      const labelBox = await selection.locator('xpath=ancestor::*[contains(@class,"property-row")]').locator('.property-label').boundingBox();
+      assert.ok(selectionBox.height <= 32, 'La selección empieza en una sola línea');
+      assert.ok(labelBox.x + labelBox.width <= selectionBox.x && Math.abs(labelBox.y - selectionBox.y) < 20, 'Etiqueta a la izquierda y selección a la derecha');
+      assert.ok(await page.locator('#editor-section-1').evaluate(section => section.getBoundingClientRect().height <= 190), 'La selección deja espacio para otras herramientas');
+      assert.ok(await page.locator('.editor-tools').evaluate(panel => panel.scrollWidth <= panel.clientWidth && panel.scrollLeft === 0), 'Sin etiquetas ni controles recortados');
       await page.getByRole('button', { name: 'Música', exact: true }).click();
       await page.getByLabel('Volumen', { exact: true }).press('End');
       assert.equal(await page.locator('header').evaluate(header => header.getBoundingClientRect().top), 0, 'La cabecera no se recorta al editar controles finales');

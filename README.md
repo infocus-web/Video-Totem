@@ -59,6 +59,8 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En escritorio, el espacio de trabajo ocupa la altura disponible: dos tercios del ancho para edición y un tercio para la vista previa ampliada. Cada panel se desplaza de forma independiente. Los avisos ocupan una línea compacta. En celulares, la cabecera usa dos filas y los paneles se distribuyen verticalmente. [Archivos y pruebas del panel](PANEL-DE-EDICION.md).
 
+Las propiedades se editan en filas: etiqueta a la izquierda y control a la derecha. La selección de archivos usa una caja de una línea que podés ampliar desde la esquina inferior; conserva mensajes largos y rangos. Los botones de ajuste, agrupación y estilo ocupan una fila compacta. Posición, zoom, duración y volumen muestran sus valores junto al deslizador. Las explicaciones ampliadas están en la guía y en las ayudas al pasar el puntero.
+
 Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Todas las secciones están visibles. La barra fija de accesos desplaza el panel hasta el grupo elegido, sin ocultar controles. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
 
 En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).

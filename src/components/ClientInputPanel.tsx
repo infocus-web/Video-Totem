@@ -1,5 +1,6 @@
 import { useRef, type ReactNode, type ChangeEvent } from 'react';
-import { CheckCircle2, Clock, Copy, FolderOpen, HardDrive, Link2, PlusCircle, Sparkles } from 'lucide-react';
+import { Copy, FolderOpen, PlusCircle } from 'lucide-react';
+import { EditorPropertyRow } from './EditorPropertyRow';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
@@ -29,8 +30,8 @@ const presets: { name: string; detail: string; duration: number; music: string; 
 
 function EditorSection({ number, title, detail, children }: { number: number; title: string; detail: string; children: ReactNode }) {
   return <section id={'editor-section-' + number} className="editor-section">
-    <div className="editor-section-heading"><span className="step-badge step-indigo">{number}</span><div className="min-w-0 flex-1"><h3 tabIndex={-1} className="text-sm font-bold">{title}</h3><p className="mt-0.5 text-xs text-neutral-400">{detail}</p></div></div>
-    <div className="space-y-4 px-4 pb-5 sm:px-5">{children}</div>
+    <div className="editor-section-heading" title={detail}><span className="step-badge step-indigo">{number}</span><h3 tabIndex={-1} className="text-xs font-semibold">{title}</h3></div>
+    <div className="editor-section-body">{children}</div>
   </section>;
 }
 
@@ -66,133 +67,110 @@ export function ClientInputPanel(props: Props) {
     <div ref={tools} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
     <fieldset disabled={busy} className="min-w-0 text-sm disabled:opacity-60">
     <EditorSection number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
-      <div className="flex flex-wrap items-center gap-2">
+      <EditorPropertyRow label="Archivos" help="Las fotos se procesan en tu navegador, sin subirse a un servidor.">
         <label className="quick-button !border-indigo-500/30 !text-indigo-300"><PlusCircle aria-hidden="true" />Subir fotos locales
           <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label>
         <label className="quick-button"><FolderOpen aria-hidden="true" />Elegir carpeta
           <input aria-label="Elegir carpeta" type="file" multiple {...{ webkitdirectory: '', directory: '' }} onChange={props.onUploadPhotos} className="sr-only" /></label>
-      </div>
-      <textarea aria-label="Selección del cliente" value={props.rawText} onChange={e => props.onRawTextChange(e.target.value)} rows={4} maxLength={20000}
-        placeholder="004, 012, 025-028, DSC_1020.jpg · o pegá el mensaje completo" className="studio-input min-h-28 resize-y p-3.5 font-mono text-xs" />
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => void paste()} className="quick-button"><Copy aria-hidden="true" />Pegar mensaje de WhatsApp</button>
-        <button type="button" onClick={() => props.onRawTextChange('')} className="quick-button">Limpiar lista</button>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-3">
-        <span className="text-xs text-neutral-400"><span>{props.libraryCount} fotos conectadas</span> · se procesan en tu navegador</span>
-        <div className="flex flex-wrap gap-2">
+        <span className="property-note">{props.libraryCount} fotos conectadas</span>
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Selección" help="Pegá números, rangos o nombres. Podés ampliar la caja desde su esquina inferior.">
+        <textarea aria-label="Selección del cliente" value={props.rawText} onChange={e => props.onRawTextChange(e.target.value)} rows={1} maxLength={20000}
+          placeholder="004, 012, 025-028, DSC_1020.jpg" className="studio-input selection-input font-mono" />
+        <button type="button" onClick={() => void paste()} className="quick-button" aria-label="Pegar mensaje de WhatsApp" title="Pegar mensaje de WhatsApp"><Copy aria-hidden="true" />Pegar</button>
+        <button type="button" onClick={() => props.onRawTextChange('')} className="quick-button" aria-label="Limpiar lista">Limpiar</button>
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Montaje">
           <button type="button" onClick={props.onApplySelection} disabled={!props.libraryCount || !props.rawText.trim()} className="primary-button">Aplicar selección</button>
           <button type="button" onClick={props.onUseAll} disabled={!props.libraryCount} className="control">Usar todas las fotos</button>
+        {!props.libraryCount && <span className="property-note">Cargá las fotos para empezar.</span>}
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Nombres" help="Formato de nombres para interpretar los números de la selección.">
+        <div id="filename-options" className="property-inline-fields">
+          <label>Prefijo<input aria-label="Prefijo" value={config.filenamePrefix} onChange={e => change('filenamePrefix', e.target.value)} className="studio-input font-mono" /></label>
+          <label>Dígitos<select aria-label="Dígitos" value={config.filenamePadding} onChange={e => change('filenamePadding', Number(e.target.value))} className="studio-input">{[0,3,4,5,6].map(n => <option key={n} value={n}>{n || 'Exactos'}</option>)}</select></label>
+          <label>Extensión<select aria-label="Extensión" value={config.filenameExtension} onChange={e => change('filenameExtension', e.target.value)} className="studio-input">{['.jpg','.jpeg','.png','.webp','.avif'].map(ext => <option key={ext}>{ext}</option>)}</select></label>
         </div>
-      </div>
-      {!props.libraryCount && <p className="text-xs text-indigo-300">Empezá con Subir fotos locales o Elegir carpeta. Si la selección está vacía, armamos el montaje con todas.</p>}
-      <div className="space-y-2"><h4 className="text-xs font-semibold text-neutral-300">Formato de nombres para la selección</h4>
-      <div id="filename-options" className="grid grid-cols-1 gap-3 rounded-xl border border-neutral-800 bg-neutral-950 p-3 sm:grid-cols-3">
-        <label className="text-xs text-neutral-400">Prefijo<input value={config.filenamePrefix} onChange={e => change('filenamePrefix', e.target.value)} className="studio-input mt-1 font-mono" /></label>
-        <label className="text-xs text-neutral-400">Dígitos<select value={config.filenamePadding} onChange={e => change('filenamePadding', Number(e.target.value))} className="studio-input mt-1">{[0,3,4,5,6].map(n => <option key={n} value={n}>{n || 'Exactos'}</option>)}</select></label>
-        <label className="text-xs text-neutral-400">Extensión<select value={config.filenameExtension} onChange={e => change('filenameExtension', e.target.value)} className="studio-input mt-1">{['.jpg','.jpeg','.png','.webp','.avif'].map(ext => <option key={ext}>{ext}</option>)}</select></label>
-      </div>
-      </div>
+      </EditorPropertyRow>
     </EditorSection>
     <EditorSection number={2} title="Formato de salida" detail="Tótem TV, vertical u horizontal y cuadros por segundo.">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="text-xs text-neutral-400 sm:col-span-2">Nombre del proyecto<input maxLength={120} value={config.name} onChange={e => change('name', e.target.value)} className="studio-input mt-1" /></label>
-        <label className="text-xs text-neutral-400">Formato<select aria-label="Formato" value={output.rotation ? 'totem-' + output.rotation : config.width + 'x' + config.height} onChange={e => {
+      <EditorPropertyRow label="Proyecto"><input aria-label="Nombre del proyecto" maxLength={120} value={config.name} onChange={e => change('name', e.target.value)} className="studio-input" /></EditorPropertyRow>
+      <EditorPropertyRow label="Formato">
+        <select aria-label="Formato" value={output.rotation ? 'totem-' + output.rotation : config.width + 'x' + config.height} onChange={e => {
           if (e.target.value.startsWith('totem-')) {
             onConfigChange({ ...config, width: 1080, height: 1920, aspectRatio: '9:16', outputRotation: e.target.value === 'totem-90' ? 90 : 270 });
             return;
           }
           const [width,height] = e.target.value.split('x').map(Number);
           onConfigChange({ ...config, width, height, outputRotation: 0, aspectRatio: width === height ? '1:1' : width > height ? '16:9' : height === 1350 ? '4:5' : '9:16' });
-        }} className="studio-input mt-1">
+        }} className="studio-input">
           <option value="totem-90">Tótem TV · Giro 90° a la derecha</option>
           <option value="totem-270">Tótem TV · Giro 90° a la izquierda</option>
           {[[1080,1920,'Vertical 9:16'],[1080,1080,'Cuadrado 1:1'],[1920,1080,'Horizontal 16:9'],[1080,1350,'Retrato 4:5']].map(([w,h,label]) => <option key={String(w) + 'x' + h} value={String(w) + 'x' + h}>{label}</option>)}
           {!['1080x1920','1080x1080','1920x1080','1080x1350'].includes(config.width + 'x' + config.height) && <option value={config.width + 'x' + config.height}>{config.width} × {config.height}</option>}
-        </select></label>
-        <label className="text-xs text-neutral-400">FPS<select aria-label="FPS" value={config.fps} onChange={e => change('fps', Number(e.target.value))} className="studio-input mt-1">{[24,25,30,50,60].map(fps => <option key={fps}>{fps}</option>)}</select></label>
-        {output.rotation !== 0 && <p className="text-xs text-indigo-300 sm:col-span-2">Tótem TV: editás en vertical. El video sale {output.width} × {output.height}, con fotos, textos y fondos girados 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}. No hace falta girar todas las fotos.</p>}
-      </div>
+        </select>
+      </EditorPropertyRow>
+      <EditorPropertyRow label="FPS"><select aria-label="FPS" value={config.fps} onChange={e => change('fps', Number(e.target.value))} className="studio-input property-small-input">{[24,25,30,50,60].map(fps => <option key={fps}>{fps}</option>)}</select>
+        {output.rotation !== 0 && <span className="property-note" title="Editás en vertical; fotos, textos y fondos se giran juntos al exportar. No hace falta girar todas las fotos.">Salida Tótem: {output.width} × {output.height}</span>}
+      </EditorPropertyRow>
     </EditorSection>
     <EditorSection number={3} title="Encuadre y giro" detail="Rellenar el cuadro, mover, ampliar y girar cada foto.">
-        <div className="space-y-2 sm:col-span-2">
-          <p className="text-xs font-semibold text-neutral-300">Cómo encuadrar las fotos</p>
-          <div role="group" aria-label="Encuadre de las fotos" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button type="button" aria-pressed={config.photoFit === 'contain'} onClick={() => change('photoFit', 'contain')} className={'stack-option ' + (config.photoFit === 'contain' ? 'stack-option-selected' : '')}>
-              <span><span className="block text-xs font-bold">Mostrar foto completa</span><span className="mt-1 block text-xs text-neutral-400">Mantiene toda la foto y usa el fondo elegido en los márgenes.</span></span>
-            </button>
-            <button type="button" aria-pressed={config.photoFit === 'cover'} onClick={() => change('photoFit', 'cover')} className={'stack-option ' + (config.photoFit === 'cover' ? 'stack-option-selected' : '')}>
-              <span><span className="block text-xs font-bold">Rellenar cuadro (recortar)</span><span className="mt-1 block text-xs text-neutral-400">Cubre todo el cuadro sin franjas. Recorta los bordes sin deformar la foto.</span></span>
-            </button>
+        <EditorPropertyRow label="Ajuste de imagen">
+          <div role="group" aria-label="Encuadre de las fotos" className="property-buttons">
+            <button type="button" aria-pressed={config.photoFit === 'contain'} onClick={() => change('photoFit', 'contain')} className="property-choice" title="Mantiene toda la foto y usa el fondo elegido en los márgenes.">Mostrar foto completa</button>
+            <button type="button" aria-pressed={config.photoFit === 'cover'} onClick={() => change('photoFit', 'cover')} className="property-choice" title="Cubre el cuadro sin franjas. Recorta los bordes sin deformar la foto.">Rellenar cuadro (recortar)</button>
           </div>
-          <p className="text-[11px] text-neutral-500">Se aplica a cada foto, también en 2 en 1 y 3 en 1, en la vista previa y el video. Para quitar la línea entre fotos, elegí 0px en la separación.</p>
-        </div>
-        <label className="text-xs text-neutral-400">Fondo al mostrar la foto completa:<select aria-label="Fondo" disabled={config.photoFit === 'cover'} value={config.backgroundStyle} onChange={e => change('backgroundStyle', e.target.value as SequenceConfig['backgroundStyle'])} className="studio-input mt-1 disabled:opacity-50">
-          <option value="blur">Blur difuminado (Studio)</option><option value="black">Negro minimalista</option><option value="gradient">Gradiente moderno</option><option value="mirror">Espejo</option></select></label>
+        </EditorPropertyRow>
+        <EditorPropertyRow label="Fondo" help="Se usa cuando mostrás la foto completa. Rellenar cuadro cubre los márgenes."><select aria-label="Fondo" disabled={config.photoFit === 'cover'} value={config.backgroundStyle} onChange={e => change('backgroundStyle', e.target.value as SequenceConfig['backgroundStyle'])} className="studio-input disabled:opacity-50">
+          <option value="blur">Blur difuminado (Studio)</option><option value="black">Negro minimalista</option><option value="gradient">Gradiente moderno</option><option value="mirror">Espejo</option></select></EditorPropertyRow>
 
       <div ref={props.onFramingTargetChange} />
     </EditorSection>
     <EditorSection number={4} title="Composición de escenas" detail="Una, dos o tres fotos por escena y separación.">
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2" role="group" aria-label="Agrupar fotos horizontales">
-        {modes.map(mode => <button type="button" key={mode.value} aria-pressed={config.horizontalGrouping === mode.value} onClick={() => change('horizontalGrouping', mode.value)}
-          className={'stack-option ' + (config.horizontalGrouping === mode.value ? 'stack-option-selected' : '')}>
-          <span aria-hidden="true" className={'stack-icon ' + (mode.slots === 1 ? 'justify-center' : '')}>
-            {mode.slots ? Array.from({ length: mode.slots }, (_, i) => <span key={i} className={mode.slots === 1 ? 'h-4 w-full rounded-sm bg-neutral-500' : 'min-h-0 flex-1 rounded-sm bg-indigo-400/80'} />) : <Sparkles className="m-auto h-5 w-5 text-amber-400" />}
-          </span>
-          <span><span className="block text-xs font-bold text-neutral-100">{mode.title}</span><span className="mt-1 block text-xs leading-snug text-neutral-400">{mode.detail}</span></span>
-        </button>)}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-800 pt-3">
-        <span className="text-xs text-neutral-400">Línea divisoria / separación entre fotos apiladas:</span>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Separación entre fotos">{[0,4,8,12,16].map(gap => <button type="button" key={gap} aria-pressed={config.splitGapSize === gap}
-          onClick={() => change('splitGapSize', gap)} className={'rounded px-2 py-1 font-mono text-xs ' + (config.splitGapSize === gap ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white')}>{gap}px</button>)}</div>
-      </div>
-      <p className="text-xs text-neutral-500">Cambiar el modo redistribuye las escenas. Conserva el orden, los movimientos y usa la duración de la primera foto de cada grupo.</p>
-      <div className="space-y-2 text-xs text-neutral-400"><button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button">Reagrupar montaje con este modo</button><p>Volvé a aplicar este modo si cambiaste cuadros en la línea de tiempo.</p></div>
+      <EditorPropertyRow label="Agrupación" help="Redistribuye las escenas conservando el orden y los movimientos.">
+        <div className="property-buttons" role="group" aria-label="Agrupar fotos horizontales">
+          {modes.map(mode => <button type="button" key={mode.value} aria-label={mode.title} title={mode.detail} aria-pressed={config.horizontalGrouping === mode.value} onClick={() => change('horizontalGrouping', mode.value)} className="property-choice">{mode.slots === 1 ? 'Individual' : mode.slots ? mode.slots + ' en 1' : 'Adaptativo'}</button>)}
+        </div>
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Separación" help="Elegí 0px para quitar la línea entre las fotos.">
+        <div className="property-buttons" role="group" aria-label="Separación entre fotos">{[0,4,8,12,16].map(gap => <button type="button" key={gap} aria-pressed={config.splitGapSize === gap}
+          onClick={() => change('splitGapSize', gap)} className="property-choice font-mono">{gap}px</button>)}</div>
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Reagrupar"><button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button" title="Volvé a aplicar este modo si cambiaste cuadros en la línea de tiempo.">Reagrupar montaje con este modo</button></EditorPropertyRow>
     </EditorSection>
     <EditorSection number={5} title="Ritmo y estilo" detail="Duración de las escenas y estilos rápidos.">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{presets.map(preset => <button type="button" key={preset.name} className="preset-card"
+      <EditorPropertyRow label="Estilo rápido"><div className="property-buttons">{presets.map(preset => <button type="button" key={preset.name} className="quick-button" title={preset.detail}
         onClick={() => onConfigChange({ ...config, defaultDuration: preset.duration, musicTrack: preset.music, horizontalGrouping: preset.group, backgroundStyle: preset.background })}>
-        <span className="block text-xs font-semibold text-neutral-200">{preset.name}</span><span className="mt-1 block text-xs text-neutral-400">{preset.detail}</span>
-      </button>)}</div>
-      <div className="space-y-2 pt-1">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs"><label htmlFor="scene-duration" className="flex items-center gap-1.5 font-medium text-neutral-300"><Clock aria-hidden="true" className="h-3.5 w-3.5" />Duración por escena:</label>
-          <span className="font-mono font-bold text-amber-400">{config.defaultDuration.toFixed(1)}s <span className="font-normal text-neutral-500">({Math.round(config.defaultDuration * config.fps)} frames)</span></span></div>
-        <input id="scene-duration" aria-label="Duración de las escenas" type="range" min="0.4" max={Math.max(5, config.defaultDuration)} step="0.1" value={config.defaultDuration} onChange={e => change('defaultDuration', Number(e.target.value))} className="w-full accent-amber-500" />
-      </div>
+        {preset.name}
+      </button>)}</div></EditorPropertyRow>
+      <EditorPropertyRow label="Duración por escena">
+        <input id="scene-duration" aria-label="Duración de las escenas" type="range" min="0.4" max={Math.max(5, config.defaultDuration)} step="0.1" value={config.defaultDuration} onChange={e => change('defaultDuration', Number(e.target.value))} className="property-range accent-amber-500" />
+        <output htmlFor="scene-duration" className="property-value text-amber-400" title={Math.round(config.defaultDuration * config.fps) + ' cuadros'}>{config.defaultDuration.toFixed(1)}s</output>
+      </EditorPropertyRow>
     </EditorSection>
     <EditorSection number={6} title="Textos y marca" detail="Título, subtítulo y firma del fotógrafo.">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="text-xs text-neutral-400">Título en pantalla:<input aria-label="Título" maxLength={120} value={config.eventTitle} onChange={e => change('eventTitle', e.target.value)} placeholder="Ej: Boda Valentina & Mateo" className="studio-input mt-1" /></label>
-        <label className="text-xs text-neutral-400">Marca de agua / Fotógrafo:<input aria-label="Marca de agua" maxLength={120} value={config.watermark} onChange={e => change('watermark', e.target.value)} placeholder="Ej: @tu_fotografia" className="studio-input mt-1" /></label>
-        <label className="text-xs text-neutral-400">Subtítulo:<input maxLength={120} value={config.eventSubtitle} onChange={e => change('eventSubtitle', e.target.value)} className="studio-input mt-1" /></label>
-        <label className="flex items-center gap-2 text-xs text-neutral-300"><input type="checkbox" checked={config.showOverlayText} onChange={e => change('showOverlayText', e.target.checked)} className="accent-indigo-500" />Mostrar textos</label>
-
-      </div>
+      <EditorPropertyRow label="Título"><input aria-label="Título" maxLength={120} value={config.eventTitle} onChange={e => change('eventTitle', e.target.value)} placeholder="Ej: Boda Valentina & Mateo" className="studio-input" /></EditorPropertyRow>
+      <EditorPropertyRow label="Subtítulo"><input aria-label="Subtítulo" maxLength={120} value={config.eventSubtitle} onChange={e => change('eventSubtitle', e.target.value)} className="studio-input" /></EditorPropertyRow>
+      <EditorPropertyRow label="Marca de agua"><input aria-label="Marca de agua" maxLength={120} value={config.watermark} onChange={e => change('watermark', e.target.value)} placeholder="Ej: @tu_fotografia" className="studio-input" /></EditorPropertyRow>
+      <EditorPropertyRow label="Visibilidad"><label className="inline-flex items-center gap-2"><input type="checkbox" checked={config.showOverlayText} onChange={e => change('showOverlayText', e.target.checked)} className="accent-indigo-500" />Mostrar textos</label></EditorPropertyRow>
     </EditorSection>
     <EditorSection number={7} title="Música y volumen" detail="Elegir música, cargar un archivo y ajustar su volumen.">
-        <label className="text-xs text-neutral-400">Música de fondo:<select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input mt-1">
-          <option value="chill">Chill · Sintética (112 BPM)</option><option value="upbeat">Fiesta · Sintética (124 BPM)</option><option value="cinematic">Cinemática · Sintética (95 BPM)</option><option value="none">Sin música</option></select></label>
-      <div className="flex flex-wrap items-center gap-2"><label className="quick-button">Cargar música<input aria-label="Cargar música" type="file" accept="audio/*" onChange={props.onMusicUpload} className="sr-only" /></label>
-        {props.musicName && <><span className="max-w-full break-all text-xs text-neutral-300">{props.musicName}</span><button type="button" className="quick-button" onClick={props.onClearMusic}>Quitar música cargada</button></>}</div>
-      <p className="text-xs text-neutral-500">El archivo cargado reemplaza la música sintética. Usá música con permiso de uso.</p>
-      <label className="block text-xs text-neutral-400">Volumen · {Math.round(config.musicVolume * 100)}%<input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="mt-2 w-full accent-indigo-500" /></label>
+      <EditorPropertyRow label="Música"><select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input">
+          <option value="chill">Chill · Sintética (112 BPM)</option><option value="upbeat">Fiesta · Sintética (124 BPM)</option><option value="cinematic">Cinemática · Sintética (95 BPM)</option><option value="none">Sin música</option></select></EditorPropertyRow>
+      <EditorPropertyRow label="Archivo de audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><label className="quick-button">Cargar música<input aria-label="Cargar música" type="file" accept="audio/*" onChange={props.onMusicUpload} className="sr-only" /></label>
+        {props.musicName && <><span className="property-note break-all">{props.musicName}</span><button type="button" className="quick-button" onClick={props.onClearMusic}>Quitar música cargada</button></>}</EditorPropertyRow>
+      <EditorPropertyRow label="Volumen"><input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(config.musicVolume * 100)}%</span></EditorPropertyRow>
     </EditorSection>
     <EditorSection number={8} title="Premiere y Google Drive" detail="Opcional: vincular los originales en el proyecto XML.">
-      <p className="text-xs text-neutral-400">Para vincular los originales con Premiere Pro y tu disco.</p>
-      <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-neutral-300"><HardDrive aria-hidden="true" className="h-3.5 w-3.5" />Ruta local en tu PC / Mac:</span>
-        <input aria-label="Ruta de esa carpeta" value={config.localBasePath} onChange={e => change('localBasePath', e.target.value)} placeholder="D:\Fotos\Bodas_2024\FamiliaPerez\" className="studio-input font-mono text-xs" /></label>
-      <p className="text-xs text-neutral-400">Solo para el XML de Premiere. Copiá la ruta del Explorador de archivos; no hace falta para grabar el video.</p>
-      <div>
-        <label className="block"><span className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-neutral-300"><span className="flex items-center gap-1.5"><Link2 aria-hidden="true" className="h-3.5 w-3.5" />Link de Google Drive de la sesión:</span>
-          {drive.isValid && <span className="flex items-center gap-1 text-emerald-400"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" />Enlace válido de Drive</span>}</span>
-          <input type="url" value={config.driveLink} onChange={e => change('driveLink', e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className="studio-input font-mono text-xs" /></label>
-        <p className="mt-2 text-xs text-neutral-500">Descargá o sincronizá la carpeta y cargá las fotos locales. El enlace queda como referencia del proyecto.</p>
-        {drive.isValid && <a href={config.driveLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs text-indigo-300 underline">Abrir carpeta en Drive ↗</a>}
-      </div>
+      <EditorPropertyRow label="Ruta de originales" help="Solo para el XML de Premiere. Copiá la ruta del Explorador; no hace falta para grabar el video.">
+        <input aria-label="Ruta de esa carpeta" value={config.localBasePath} onChange={e => change('localBasePath', e.target.value)} placeholder="D:\Fotos\Bodas_2024\FamiliaPerez\" className="studio-input font-mono" />
+      </EditorPropertyRow>
+      <EditorPropertyRow label="Google Drive" help="Enlace de referencia. Para usar las fotos, descargá o sincronizá la carpeta y cargalas desde tu computadora.">
+        <input aria-label="Link de Google Drive de la sesión" type="url" value={config.driveLink} onChange={e => change('driveLink', e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className="studio-input font-mono" />
+        {drive.isValid && <a href={config.driveLink} target="_blank" rel="noopener noreferrer" className="quick-button text-indigo-300" title="Enlace válido de Drive">Abrir carpeta en Drive ↗</a>}
+      </EditorPropertyRow>
     </EditorSection>
     </fieldset>
-    <p className="border-t border-neutral-800 px-4 py-4 text-xs text-neutral-400 sm:px-5">Cuando esté listo, usá <strong className="text-neutral-200">Exportar</strong> en la barra superior para guardar el video o el XML de Premiere.</p>
     </div>
   </section>;
 }

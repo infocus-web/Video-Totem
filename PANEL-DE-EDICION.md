@@ -12,6 +12,14 @@ Los cambios de esta distribución están en `src/App.tsx` (estructura y avisos),
 
 `scripts/workspace-layout-smoke.cjs` verifica siete tamaños de pantalla, las proporciones, controles accesibles sin recortar la cabecera, desplazamiento de la línea de tiempo y guardar/abrir/reconectar un proyecto de 30 fotos.
 
+## Propiedades compactas
+
+Los títulos de sección ocupan una línea. Cada herramienta usa una fila con etiqueta a la izquierda y su control a la derecha, siguiendo la organización de propiedades de editores como Premiere. La caja de selección empieza con una sola línea (30px) y conserva hasta 20.000 caracteres, desplazamiento interno y ampliación manual. Pegar, Limpiar y Aplicar siguen disponibles sin desplegar menús.
+
+Encuadre, agrupación y estilos usan botones compactos. Posición X/Y, zoom, duración y volumen muestran sus valores junto a los controles deslizantes. Las explicaciones complementarias están en los títulos de ayuda al pasar el puntero y en la guía; los avisos necesarios permanecen visibles. Se mantienen los nombres accesibles, el uso con teclado y los controles en celulares.
+
+Esta compactación modifica `ClientInputPanel.tsx`, `PhotoFramingControls.tsx`, `VideoPreviewPlayer.tsx` e `index.css`, y agrega `EditorPropertyRow.tsx` para compartir la alineación de etiquetas y controles. No modifica los eventos de edición, el guardado ni el exportador. En local, cargá fotos, pegá una selección larga, probá los ocho accesos y verificá encuadre, giros, música y guardado. En Vercel, repetí después de Commit → Push y del despliegue.
+
 ## Archivos
 
 - `src/components/ClientInputPanel.tsx`: panel único, secciones visibles y accesos directos; fondo junto al encuadre y formato de nombres junto a la selección.
