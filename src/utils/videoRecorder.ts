@@ -1,6 +1,12 @@
 import type { SequenceConfig, SequenceSlide } from '../types';
-import { drawFrame, type ImageMap } from './canvasRenderer';
+import { drawFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
 import { audioEngine } from './audioSynthesizer';
+import { RecordingImages } from './recordingImages';
+import { createRecordingSource, supportsBackgroundRecording } from './recordingSource';
+
+export function recordingBitrate(config: Pick<SequenceConfig, 'width' | 'height' | 'fps'>) {
+  return Math.max(4000000, Math.min(40000000, Math.round(config.width * config.height * config.fps * 0.25)));
+}
 
 export function recordingFormat(preference?: 'webm') {
   if (typeof MediaRecorder === 'undefined') return null;
@@ -11,19 +17,34 @@ export function recordingFormat(preference?: 'webm') {
 
 export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
   const format = recordingFormat();
-  if (!format || !HTMLCanvasElement.prototype.captureStream) throw new Error('Este navegador no permite grabar video. Probá con Chrome o Edge actualizado.');
+  if (!format || (!supportsBackgroundRecording() && !HTMLCanvasElement.prototype.captureStream)) throw new Error('Este navegador no permite grabar video. Probá con Chrome o Edge actualizado.');
   onPhase('Grabando video');
-  let result = await recordWithFormat(slides, config, images, signal, progress, format);
+  let result = await recordWithFormat(slides, config, images, signal, progress, format, onPhase);
+  if (document.hidden) onPhase('Grabación completa: volvé a esta pestaña para verificar y guardar');
+  await waitForVisible(signal);
   onPhase('Verificando archivo');
   if (!await hasVideoTrack(result.blob, config, signal)) {
     const fallback = format.extension === 'mp4' ? recordingFormat('webm') : null;
     if (!fallback) throw new Error('El navegador generó un archivo sin imagen. Probá de nuevo en Chrome o Edge.');
     onPhase('Reintentando video en WebM'); progress(0);
-    result = await recordWithFormat(slides, config, images, signal, progress, fallback);
+    result = await recordWithFormat(slides, config, images, signal, progress, fallback, onPhase);
+    if (document.hidden) onPhase('Grabación completa: volvé a esta pestaña para verificar y guardar');
+    await waitForVisible(signal);
     onPhase('Verificando archivo');
     if (!await hasVideoTrack(result.blob, config, signal)) throw new Error('El navegador no pudo generar la pista de video. Probá en otro navegador.');
   }
   progress(100); return result;
+}
+
+function waitForVisible(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(new DOMException('Cancelado', 'AbortError'));
+  if (!document.hidden) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const cleanup = () => { document.removeEventListener('visibilitychange', changed); signal.removeEventListener('abort', abort); };
+    const changed = () => { if (!document.hidden) { cleanup(); resolve(); } };
+    const abort = () => { cleanup(); reject(new DOMException('Cancelado', 'AbortError')); };
+    document.addEventListener('visibilitychange', changed); signal.addEventListener('abort', abort, { once: true });
+  });
 }
 
 function hasVideoTrack(blob: Blob, config: SequenceConfig, signal: AbortSignal): Promise<boolean> {
@@ -41,47 +62,77 @@ function hasVideoTrack(blob: Blob, config: SequenceConfig, signal: AbortSignal):
   });
 }
 
-async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, format: { mime: string; extension: string }) {
+async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, format: { mime: string; extension: string }, onPhase: (message: string) => void) {
   const duration = slides.reduce((sum, slide) => sum + slide.duration, 0);
   if (!duration || duration > 300) throw new Error('La grabación admite montajes de hasta 5 minutos.');
-  if (signal.aborted || document.hidden) throw new Error('Dejá esta pestaña visible para grabar.');
+  if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+  const originals = new RecordingImages(slides, images, signal);
+  onPhase('Preparando originales');
+  try { await originals.prepare(0); } catch (error) { originals.clear(); throw error; }
   const canvas = document.createElement('canvas');
   canvas.width = config.width; canvas.height = config.height;
-  await document.fonts.ready;
-  await audioEngine.resume();
-  if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-  const stream = canvas.captureStream(0);
-  const videoTrack = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
+  try {
+    await document.fonts.ready; await audioEngine.resume();
+    if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+  } catch (error) { originals.clear(); throw error; }
+  let source: ReturnType<typeof createRecordingSource>;
+  // Native WebM capture stays visible to avoid dropped frames in Chrome's background encoder.
+  try { source = createRecordingSource(canvas, format.extension); } catch (error) { originals.clear(); throw error; }
+  const stream = source.stream;
+  const stopCaptureClock = audioEngine.startCaptureClock();
   const audioTrack = audioEngine.getCaptureStream().getAudioTracks()[0];
   // A silent audio track keeps the encoder clock running even without music.
   if (audioTrack) stream.addTrack(audioTrack.clone());
   let recorder: MediaRecorder;
   try {
-    recorder = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: 8000000, audioBitsPerSecond: 192000 });
+    recorder = new MediaRecorder(stream, { mimeType: format.mime, videoBitsPerSecond: recordingBitrate(config), audioBitsPerSecond: 192000 });
   } catch (error) {
-    stream.getTracks().forEach(track => track.stop()); throw error;
+    stopCaptureClock(); originals.clear(); source.close(); stream.getTracks().forEach(track => track.stop()); throw error;
   }
   audioEngine.setStyle(config.musicTrack); audioEngine.setVolume(config.musicVolume);
-  let frame = 0;
+  let clock: Worker | undefined;
+  let stopFrameClock: (() => void) | null = null;
+  let tickHandler = () => {};
   try {
+    onPhase('Preparando reloj de grabación');
+    stopFrameClock = await audioEngine.startRecordingClock(config.fps, () => tickHandler());
+    if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
     return await new Promise<{ blob: Blob; extension: string }>((resolve, reject) => {
       const chunks: Blob[] = [];
       let failure: Error | null = null, settled = false;
       const started = performance.now();
-      let lastCapture = -1;
+      let lastCapture = -1, pausedMs = 0, loading = false, finishing = false, pauseStarted: number | null = null;
       const cleanup = () => {
-        cancelAnimationFrame(frame); window.clearTimeout(deadline);
-        signal.removeEventListener('abort', abort); document.removeEventListener('visibilitychange', hidden);
+        clock?.terminate();
+        stopFrameClock?.();
+        signal.removeEventListener('abort', abort);
+        document.removeEventListener('visibilitychange', visibilityChanged);
       };
       const fail = (error: Error) => {
+        if (settled) return;
         failure = error;
         if (recorder.state !== 'inactive') recorder.stop();
         else { cleanup(); settled = true; reject(error); }
       };
       const abort = () => fail(new DOMException('Grabación cancelada', 'AbortError'));
-      const hidden = () => { if (document.hidden) fail(new Error('Se canceló la grabación porque la pestaña dejó de estar visible.')); };
-      const deadline = window.setTimeout(() => { if (recorder.state !== 'inactive') recorder.stop(); }, duration * 1000);
-      signal.addEventListener('abort', abort, { once: true }); document.addEventListener('visibilitychange', hidden);
+      const pauseRecording = () => {
+        if (recorder.state !== 'recording') return;
+        pauseStarted = performance.now(); recorder.pause(); audioEngine.pause();
+      };
+      const resumeRecording = () => {
+        if (settled || signal.aborted || recorder.state !== 'paused') return;
+        if (!source.background && document.hidden) { onPhase('Grabación en pausa: volvé a esta pestaña para continuar'); return; }
+        if (pauseStarted !== null) pausedMs += performance.now() - pauseStarted;
+        pauseStarted = null; recorder.resume();
+        audioEngine.play((performance.now() - started - pausedMs) / 1000, false); onPhase('Grabando video');
+      };
+      const visibilityChanged = () => {
+        if (source.background) return;
+        if (document.hidden) { pauseRecording(); onPhase('Grabación en pausa: volvé a esta pestaña para continuar'); }
+        else resumeRecording();
+      };
+      signal.addEventListener('abort', abort, { once: true });
+      document.addEventListener('visibilitychange', visibilityChanged);
       recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       recorder.onerror = () => fail(new Error('El navegador no pudo codificar el video.'));
       recorder.onstop = () => {
@@ -93,28 +144,57 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
         resolve({ blob, extension: format.extension });
       };
       const tick = () => {
-        if (recorder.state === 'inactive') return;
+        if (recorder.state !== 'recording' || finishing) return;
         const captureTime = performance.now() / 1000;
-        const elapsed = Math.min(duration, captureTime - started / 1000);
+        const elapsed = Math.min(duration, captureTime - (started + pausedMs) / 1000);
+        const scene = sceneAtTime(slides, elapsed).index;
+        if (!originals.isReady(scene) && !loading) {
+          loading = true;
+          onPhase('Preparando escena ' + (scene + 1) + ' de ' + slides.length);
+          void originals.prepare(scene).then(() => {
+            if (signal.aborted || settled) return;
+            loading = false; onPhase('Grabando video');
+          }).catch(error => fail(error instanceof Error ? error : new Error('Falló la preparación del original.')));
+        }
         try {
-          if (lastCapture < 0 || captureTime - lastCapture >= 1 / config.fps) {
-            drawFrame(canvas, slides, config, images, elapsed);
+          audioEngine.tick();
+          const current = slides[scene], position = sceneAtTime(slides, elapsed);
+          const transitionWindow = Math.min(0.35, current.duration / 2);
+          const needsNext = !!slides[scene + 1] && current.transition !== 'none' && position.progress * current.duration > current.duration - transitionWindow;
+          // Keep capture and audio continuous while the next original loads.
+          if (!originals.hasScene(scene) || (needsNext && !originals.hasScene(scene + 1))) { progress(Math.min(99, Math.round(elapsed / duration * 100))); return; }
+          if (lastCapture < 0 || captureTime - lastCapture >= 1 / config.fps - 0.002) {
+            drawFrame(canvas, slides, config, originals.images, elapsed);
             // Static photos need an explicit frame request as well as canvas updates.
-            videoTrack?.requestFrame?.(); lastCapture = captureTime;
+            void source.capture().catch(error => fail(error instanceof Error ? error : new Error('No se pudo capturar el fotograma.'))); lastCapture = captureTime;
           }
         } catch (error) { fail(error instanceof Error ? error : new Error('Falló el dibujo del video.')); return; }
         progress(Math.min(99, Math.round(elapsed / duration * 100)));
-        frame = requestAnimationFrame(tick);
+        if (elapsed >= duration) {
+          finishing = true; onPhase('Finalizando video');
+          void source.finish().then(() => { if (!settled && recorder.state !== 'inactive') recorder.stop(); })
+            .catch(error => fail(error instanceof Error ? error : new Error('No se pudo completar el último fotograma.')));
+        }
       };
+      tickHandler = tick;
       try {
+        onPhase('Grabando video');
         recorder.start(1000); audioEngine.play(0, false);
-        drawFrame(canvas, slides, config, images, 0); videoTrack?.requestFrame?.();
-        frame = requestAnimationFrame(tick);
+        drawFrame(canvas, slides, config, originals.images, 0);
+        void source.capture().catch(error => fail(error instanceof Error ? error : new Error('No se pudo capturar el fotograma.')));
+        if (!source.background && document.hidden) visibilityChanged();
+        // The audio rendering clock avoids background timer throttling; older browsers keep a worker fallback.
+        if (!stopFrameClock) {
+          clock = new Worker(new URL('./recordingClock.worker.ts', import.meta.url), { type: 'module' });
+          clock.onmessage = tick;
+          clock.onerror = () => fail(new Error('No se pudo mantener el reloj de grabación. Volvé a intentarlo.'));
+          clock.postMessage(config.fps);
+        }
       }
       catch (error) { fail(error instanceof Error ? error : new Error('No se pudo iniciar la grabación.')); }
     });
   } finally {
-    cancelAnimationFrame(frame); audioEngine.stop(); stream.getTracks().forEach(track => track.stop());
+    clock?.terminate(); stopFrameClock?.(); stopCaptureClock(); source.close(); originals.clear(); audioEngine.stop(); stream.getTracks().forEach(track => track.stop());
   }
 }
 

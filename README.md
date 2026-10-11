@@ -69,7 +69,13 @@ Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si
 
 ## Rellenar las fotos sin márgenes
 
-En **Ritmo, Estilo & Música del Video → Cómo encuadrar las fotos**, elegí **Rellenar cuadro (recortar)**. La foto se amplía hasta cubrir todo su cuadro y se recorta centrada, sin estirarla. El recorte afecta los lados o la parte superior e inferior, según las proporciones de la foto y del cuadro.
+En **Ritmo, Estilo & Música del Video → Cómo encuadrar las fotos**, elegí **Rellenar cuadro (recortar)**. La foto se amplía hasta cubrir todo su cuadro sin estirarla. El recorte empieza centrado y afecta los lados o la parte superior e inferior según las proporciones.
+
+Para moverlo, tocá **Encuadrar foto** debajo de la vista previa y arrastrá la imagen con el mouse o el dedo. También hay controles de encuadre horizontal, vertical y zoom (100–300%). Si un eje no tiene espacio para desplazarse, aumentá el zoom. Elegí la escena y, en fotos apiladas, la foto que querés ajustar; también podés tocar directamente esa foto en la vista previa. Con el canvas enfocado, las flechas desplazan el encuadre y Shift aumenta el paso.
+
+**Listo, volver a la vista previa** retoma la reproducción si estaba andando. El encuadre se guarda por foto en el borrador y en el JSON, se conserva al reconectar o reagrupar y se aplica al video final. El XML base de Premiere conserva su alcance anterior: el encuadre manual se debe ajustar allí o importar el video final.
+
+En el mismo panel, **Aplicar giro a** permite elegir **Esta foto**, **Fotos que marque** o **Todas las fotos del montaje**. Marcá las fotos por nombre y pulsá **Girar 90° a la izquierda/derecha**. Cada clic agrega un cuarto de vuelta; cuatro clics recuperan el giro inicial. Se gira la imagen real, conservando su posición y zoom. No redistribuye las escenas ni modifica los archivos originales. Restablecer encuadre centra y quita el zoom, conservando el giro.
 
 Se aplica a las fotos individuales y a cada espacio de las escenas 2 en 1 / 3 en 1, tanto en la vista previa como en el video descargado. Los movimientos también mantienen el cuadro cubierto. El fondo queda desactivado mientras el relleno está seleccionado.
 
@@ -87,7 +93,7 @@ Al elegir una carpeta se conserva la estructura de subcarpetas debajo de su raí
 
 - Fotos: JPG, JPEG, PNG, WebP y AVIF; hasta 400 archivos por biblioteca, 50 MB por foto y 100 megapíxeles por imagen.
 - RAW y HEIC: convertí a JPG o PNG antes de cargarlos.
-- Se preparan copias locales de hasta 1920 píxeles en su lado largo para reducir memoria. El XML referencia los archivos originales con sus dimensiones originales.
+- Se preparan copias locales de hasta 1920 píxeles en su lado largo para la vista previa. La exportación de video decodifica los originales de la escena actual y la siguiente (hasta seis fotos), libera los anteriores y conserva la resolución necesaria para recortar y ampliar. El XML referencia los originales con sus dimensiones originales.
 - Audio: música sintética integrada o un archivo de audio compatible con el navegador, hasta 50 MB. La música cargada reemplaza la sintética y se repite si es más corta que el montaje.
 - Sin música elimina el audio del montaje. El control Silenciar afecta la escucha de la vista previa; la exportación usa el volumen configurado.
 - Para sesiones grandes, la memoria y la velocidad dependen de tu computadora. Dividí el trabajo en montajes cortos si el navegador se queda sin memoria.
@@ -97,7 +103,11 @@ Al elegir una carpeta se conserva la estructura de subcarpetas debajo de su raí
 
 La aplicación elige MP4 con H.264/AAC cuando MediaRecorder lo admite. Si no está disponible, ofrece WebM y muestra el formato antes de grabar. Antes de descargar, verifica que el archivo tenga una pista de video con la resolución configurada. Si Chrome entrega un MP4 sin imagen, descarta ese archivo y reintenta en WebM, mostrando la etapa y un aviso al finalizar. Ese reintento vuelve a grabar el montaje y puede demorar otra duración completa. Recomendamos Chrome o Edge actualizado en una computadora.
 
-Se graba en tiempo real, hasta 5 minutos, con la resolución y FPS configurados. Mantené la pestaña visible; ocultarla cancela la grabación para evitar un archivo incompleto. La cadencia real depende de la capacidad de codificación de tu equipo. Podés cancelar la grabación.
+Se graba en tiempo real, hasta 5 minutos, con la resolución y FPS configurados. En MP4 con Chrome/Edge y captura directa de fotogramas podés cambiar de pestaña sin cancelar ni depender de las animaciones del canvas. Al terminar, volvé a la app para verificar el archivo y guardarlo: la decodificación de comprobación necesita una pestaña visible. En WebM o navegadores sin captura directa se pausa automáticamente al ocultarla y continúa al volver. La app muestra la etapa y el porcentaje; no cierres ni recargues la página durante el proceso. La cadencia real depende del equipo, y suspender la computadora o descartar la pestaña puede interrumpir el trabajo. Podés cancelar explícitamente.
+
+El video usa los originales y un bitrate ajustado a resolución/FPS (aproximadamente **15,6 Mbps en 1080 × 1920 a 30 FPS**, antes 8 Mbps; máximo 40 Mbps). Los archivos pueden pesar más. Una foto pequeña o un zoom excesivo sigue limitado por su detalle original; exportar no puede recuperar detalle que no exista.
+
+Para elegir la carpeta y el nombre, activá **Elegir dónde guardar al terminar** en Exportar. Cuando esté listo, pulsá **Elegir ubicación y guardar video**. Este nuevo clic abre el selector nativo en navegadores compatibles y HTTPS/localhost. Cancelar o recibir un error de escritura conserva el video para reintentar, sin volver a grabar. También podés descargarlo con la configuración habitual del navegador. Si el selector no está disponible, configurá el navegador para preguntar dónde guardar las descargas. El archivo terminado permanece en memoria hasta guardarlo, reemplazarlo por otra grabación o cerrar la página.
 
 El video incluye fotos apiladas, fondos, movimientos, transiciones, títulos, marca de agua y audio. No cambia la extensión de un WebM para hacerlo pasar por MP4.
 
@@ -107,7 +117,7 @@ Fundido mezcla escenas completas para evitar fondos oscuros. Wipe reemplaza la e
 
 El XML de intercambio xmeml contiene los originales, rutas, orden, duración y pistas simultáneas para escenas con dos o tres fotos. Incluye escala y posición básicas.
 
-**No incluye los fondos difuminados, textos, música, transiciones ni animaciones del navegador.** Verificá escala y posición en tu versión de Premiere. Para conservar todo el diseño, descargá el video final e importalo como un clip.
+**No incluye encuadre manual, giros, fondos difuminados, textos, música, transiciones ni animaciones del navegador.** Verificá escala y posición en tu versión de Premiere. Para conservar todo el diseño, descargá el video final e importalo como un clip.
 
 El XML base sigue mostrando la foto completa: no incorpora el recorte de Rellenar cuadro. Ese recorte se conserva en el video exportado; importá ese video en Premiere si querés mantenerlo exactamente.
 
@@ -131,7 +141,7 @@ El campo de Drive guarda un enlace de referencia y permite abrirlo. Para usar la
 
 ## Pruebas y verificación
 
-npm test ejecuta 22 pruebas de regresión: extracción y deduplicación de selecciones, códigos de cámara, coincidencias ambiguas, rangos, agrupación, rutas, XML, validación del guardado, compatibilidad de Fade/Wipe y encuadre en proyectos JSON y conservación de las fotos y ediciones al cambiar ajustes. npm run build también verifica TypeScript en modo estricto.
+npm test ejecuta 38 pruebas de regresión: selección, agrupación, rutas, XML, guardado, reconexión, giros por selección, compatibilidad de proyectos anteriores y encuadre manual sin franjas durante los movimientos. npm run build también verifica TypeScript en modo estricto.
 
 La prueba opcional de navegador está en scripts/browser-smoke.cjs. No agrega dependencias al producto. En un entorno de desarrollo, podés instalar Playwright temporalmente:
 
@@ -186,7 +196,7 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 
 Se mantiene React + Vite y la composición con una, dos o tres fotos. Se retiran las dependencias de IA, servidor y efectos que no se usaban, junto con los archivos de plantilla de AI Studio y el lockfile de Bun desactualizado.
 
-Commit sugerido: "perf: keep playback active and reuse decoded photos"
+Commit sugerido: "feat: add photo framing and batch rotation, improve video export"
 
 
 Para probar también la compilación de producción: primero ejecutá browser-smoke.cjs para generar las fotos de prueba; luego mantené npm run preview activo en otra terminal y ejecutá node scripts/production-smoke.cjs y node scripts/restoration-smoke.cjs. Se comprueban música WAV cargada, transición Wipe, descarga de video desde el modal, inspector XML, montaje automático con 31 fotos y diseño a 390/320 píxeles. Con npm run dev activo, node scripts/transitions-smoke.cjs verifica los colores de Fade/Wipe/Pan, márgenes y controles guardados. Verificá VERIFICACION.md para conocer el alcance de la entrega.

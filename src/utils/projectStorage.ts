@@ -1,5 +1,6 @@
 import type { PhotoItem, SequenceConfig, SequenceSlide } from '../types';
 import { DEFAULT_CONFIG, clampDuration } from './config.ts';
+import { normalizeFraming } from './photoFraming.ts';
 
 export interface SavedProject { version: 1; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
 export const STORAGE_KEY = 'autoreel-project-v1';
@@ -9,7 +10,7 @@ const object = (value: unknown): value is Record<string, unknown> => !!value && 
 const string = (value: unknown) => typeof value === 'string' ? value.slice(0, 20000) : '';
 
 export function serializeProject(project: SavedProject) {
-  return JSON.stringify(project, (key, value: unknown) => key === 'previewUrl' ? '' : value);
+  return JSON.stringify(project, (key, value: unknown) => key === 'previewUrl' || key === 'sourceUrl' ? '' : value);
 }
 export function decodeProject(raw: string): SavedProject {
   if (raw.length > 2000000) throw new Error('El proyecto excede el tamaño permitido.');
@@ -42,6 +43,7 @@ export function decodeProject(raw: string): SavedProject {
     const relativePath = string(value.relativePath) || value.filename;
     if (/(^|[/\\])\.\.([/\\]|$)/.test(relativePath) || /^[/\\]|^[A-Za-z]:/.test(relativePath)) throw new Error('Ruta relativa de foto inválida.');
     return { id: string(value.id), filename: value.filename, relativePath, fullLocalPath: string(value.fullLocalPath), previewUrl: '',
+      ...(value.framing === undefined ? {} : { framing: normalizeFraming(value.framing) }),
       number: string(value.number), orientation: value.orientation === 'horizontal' ? 'horizontal' : value.orientation === 'vertical' ? 'vertical' : 'square',
       width: Math.max(1, Math.min(50000, Number(value.width) || 1080)), height: Math.max(1, Math.min(50000, Number(value.height) || 1920)),
       duration: clampDuration(Number(value.duration)), transition: transitions.includes(String(value.transition)) ? value.transition as PhotoItem['transition'] : 'dissolve',

@@ -1,3 +1,5 @@
+import recordingClockUrl from './recordingClock.worklet.ts?worker&url';
+
 class BackgroundAudioEngine {
   private ctx: AudioContext | null = null;
   private gain: GainNode | null = null;
@@ -9,6 +11,9 @@ class BackgroundAudioEngine {
   private nextTime = 0;
   private step = 0;
   private nodes = new Set<AudioScheduledSourceNode>();
+  private schedule: (() => void) | null = null;
+  private recordingWorkletReady: Promise<void> | null = null;
+  public tick() { this.schedule?.(); }
   public init() {
     if (!this.ctx) {
       this.ctx = new AudioContext();
@@ -31,6 +36,22 @@ class BackgroundAudioEngine {
     this.init(); this.gain!.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx!.currentTime);
   }
   public getCaptureStream() { this.init(); return this.destination!.stream; }
+  public startCaptureClock() {
+    // Keep audio capture producing samples between notes and when music is off.
+    const silence = this.init().createConstantSource();
+    silence.offset.value = 0; silence.connect(this.destination!); silence.start();
+    return () => { silence.stop(); silence.disconnect(); };
+  }
+  public async startRecordingClock(fps: number, tick: () => void) {
+    const ctx = this.init();
+    if (!ctx.audioWorklet || typeof AudioWorkletNode === 'undefined') return null;
+    this.recordingWorkletReady ??= ctx.audioWorklet.addModule(recordingClockUrl).catch(error => { this.recordingWorkletReady = null; throw error; });
+    await this.recordingWorkletReady;
+    const node = new AudioWorkletNode(ctx, 'autoreel-recording-clock', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [1] });
+    node.port.onmessage = tick; node.port.postMessage(fps); node.connect(this.destination!);
+    let closed = false;
+    return () => { if (closed) return; closed = true; node.port.postMessage('stop'); node.port.onmessage = null; node.disconnect(); node.port.close(); };
+  }
   public play(offset = 0, monitor = true) {
     this.stop();
     const ctx = this.init();
@@ -51,12 +72,14 @@ class BackgroundAudioEngine {
         this.nextTime += stepDuration; this.step++;
       }
     };
-    schedule(); this.timer = window.setInterval(schedule, 25);
+    this.schedule = schedule;
+    schedule(); if (monitor) this.timer = window.setInterval(schedule, 25);
   }
   public pause() { this.stop(); }
   public stop() {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
+    this.schedule = null;
     if (this.source) { this.source.stop(); this.source.disconnect(); this.source = null; }
     this.nodes.forEach(node => { try { node.stop(); node.disconnect(); } catch { /* Already ended. */ } });
     this.nodes.clear();

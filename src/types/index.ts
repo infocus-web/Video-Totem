@@ -6,12 +6,16 @@ export interface FilePreparationProgress {
   total: number;
 }
 
+export interface PhotoFraming { x: number; y: number; zoom: number; rotation?: 0 | 90 | 180 | 270 }
+
 export interface PhotoItem {
   id: string;
   number: string;
   filename: string;
   fullLocalPath: string;
   previewUrl: string;
+  sourceUrl?: string;
+  framing?: PhotoFraming;
   relativePath?: string;
   width?: number;
   height?: number;

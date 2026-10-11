@@ -1,4 +1,5 @@
 import type { SequenceConfig, SequenceSlide, PhotoItem, FilePreparationProgress } from '../types';
+import { normalizeFraming, photoGeometry, photoSlots } from './photoFraming.ts';
 export type ImageMap = Map<string, HTMLImageElement>;
 const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
@@ -39,36 +40,41 @@ export function sceneAtTime(slides: SequenceSlide[], time: number) {
   return { index: 0, progress: 0 };
 }
 
-export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number) {
+export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number, editing = false) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Tu navegador no ofrece Canvas 2D.');
   const width = canvas.width, height = canvas.height;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   ctx.resetTransform(); ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, width, height);
   const scene = sceneAtTime(slides, time), current = slides[scene.index];
   if (!current) return;
   const drawImage = (ctx: CanvasRenderingContext2D, image: HTMLImageElement, photo: PhotoItem, x: number, y: number, w: number, h: number, progress: number) => {
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    const rotation = normalizeFraming(photo.framing).rotation || 0;
+    const quarterTurn = rotation === 90 || rotation === 270;
+    const imageWidth = quarterTurn ? image.naturalHeight : image.naturalWidth;
+    const imageHeight = quarterTurn ? image.naturalWidth : image.naturalHeight;
+    const paint = (left: number, top: number, width: number, height: number) => {
+      ctx.save(); ctx.translate(left + width / 2, top + height / 2); ctx.rotate(rotation * Math.PI / 180);
+      const drawWidth = quarterTurn ? height : width, drawHeight = quarterTurn ? width : height;
+      ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); ctx.restore();
+    };
     if (config.photoFit !== 'cover' && (config.backgroundStyle === 'blur' || config.backgroundStyle === 'mirror')) {
       ctx.save();
       if (config.backgroundStyle === 'blur') ctx.filter = 'blur(' + Math.round(width / 24) + 'px) brightness(0.6)';
       if (config.backgroundStyle === 'mirror') { ctx.translate(x + w, 0); ctx.scale(-1, 1); }
-      const scale = Math.max(w / image.naturalWidth, h / image.naturalHeight) * 1.2;
-      ctx.drawImage(image, config.backgroundStyle === 'mirror' ? 0 : x + (w - image.naturalWidth * scale) / 2,
-        y + (h - image.naturalHeight * scale) / 2, image.naturalWidth * scale, image.naturalHeight * scale);
+      const scale = Math.max(w / imageWidth, h / imageHeight) * 1.2;
+      paint(config.backgroundStyle === 'mirror' ? (w - imageWidth * scale) / 2 : x + (w - imageWidth * scale) / 2,
+        y + (h - imageHeight * scale) / 2, imageWidth * scale, imageHeight * scale);
       ctx.restore();
     } else if (config.photoFit !== 'cover' && config.backgroundStyle === 'gradient') {
       const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
       gradient.addColorStop(0, '#312e81'); gradient.addColorStop(1, '#09090b');
       ctx.fillStyle = gradient; ctx.fillRect(x, y, w, h);
     }
-    const zoom = photo.kenBurns === 'zoom-in' ? 1 + progress * 0.1 : photo.kenBurns === 'zoom-out' ? 1.1 - progress * 0.1 : photo.kenBurns === 'static' ? 1 : 1.06;
-    const scale = (config.photoFit === 'cover' ? Math.max(w / image.naturalWidth, h / image.naturalHeight) : Math.min(w / image.naturalWidth, h / image.naturalHeight)) * zoom;
-    const imageW = image.naturalWidth * scale, imageH = image.naturalHeight * scale;
-    const desiredPan = photo.kenBurns === 'pan-up' ? (0.5 - progress) * h * 0.04 : photo.kenBurns === 'pan-down' ? (progress - 0.5) * h * 0.04 : 0;
-    const maxPan = Math.max(0, (imageH - h) / 2);
-    const pan = config.photoFit === 'cover' ? Math.max(-maxPan, Math.min(maxPan, desiredPan)) : desiredPan;
-    ctx.drawImage(image, x + (w - imageW) / 2, y + (h - imageH) / 2 + pan, imageW, imageH);
+    const geometry = photoGeometry(photo, image.naturalWidth, image.naturalHeight, w, h, config.photoFit, progress);
+    paint(x + geometry.left, y + geometry.top, geometry.width, geometry.height);
     ctx.restore();
   };
   const drawScene = (ctx: CanvasRenderingContext2D, slide: SequenceSlide, progress: number, offsetX = 0, zoom = 1) => {
@@ -76,10 +82,11 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
     ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, width, height);
     const gap = config.splitGapSize * width / config.width;
     const count = slide.photos.length;
-    const slotHeight = (height - gap * (count - 1)) / count;
+    const slots = photoSlots(count, width, height, gap);
     slide.photos.forEach((photo, index) => {
       const image = images.get(photo.id);
-      if (image) drawImage(ctx, image, photo, 0, index * (slotHeight + gap), width, slotHeight, progress);
+      const slot = slots[index];
+      if (image) drawImage(ctx, image, photo, slot.x, slot.y, slot.width, slot.height, progress);
     });
     ctx.restore();
   };
@@ -95,7 +102,7 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
     ctx.save(); ctx.globalAlpha = opacity; ctx.drawImage(buffer, 0, 0); ctx.restore();
   };
   const transitionWindow = Math.min(0.35, current.duration / 2);
-  const transitionProgress = Math.max(0, (scene.progress * current.duration - current.duration + transitionWindow) / transitionWindow);
+  const transitionProgress = editing ? 0 : Math.max(0, (scene.progress * current.duration - current.duration + transitionWindow) / transitionWindow);
   const next = slides[scene.index + 1];
   drawScene(ctx, current, scene.progress, next && current.transition === 'pan' ? -width * transitionProgress : 0);
   if (next && transitionProgress > 0) {

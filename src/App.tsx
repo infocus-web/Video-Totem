@@ -2,15 +2,15 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { lazy, Suspense, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Navbar } from './components/Navbar';
 import { ClientInputPanel } from './components/ClientInputPanel';
 import { VideoPreviewPlayer, type PreviewHandle } from './components/VideoPreviewPlayer';
 import { PreparationProgress } from './components/PreparationProgress';
-import type { SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress } from './types';
+import type { PhotoFraming, SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress } from './types';
 import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } from './utils/photoParser';
 import { DEFAULT_CONFIG, clampDuration } from './utils/config';
-import { updateProjectConfig } from './utils/projectConfig';
+import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from './utils/projectConfig';
 import { importPhotos } from './utils/importPhotos';
 import { reconnectPhotos } from './utils/reconnectPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
@@ -59,6 +59,10 @@ export default function App() {
   useEffect(() => () => { importAbort.current?.abort(); urls.current.forEach(url => URL.revokeObjectURL(url)); audioEngine.stop(); }, []);
   const notify = (value: string) => setMessage(value);
   const changeConfig = (newConfig: SequenceConfig) => setProject(prev => updateProjectConfig(prev, newConfig));
+  const changePhotoFraming = useCallback((slideIndex: number, photoIndex: number, framing: PhotoFraming) => {
+    setProject(prev => updatePhotoFraming(prev, slideIndex, photoIndex, framing));
+  }, []);
+  const rotatePhotos = useCallback((ids: string[], direction: -90 | 90) => setProject(previous => rotateProjectPhotos(previous, ids, direction)), []);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
     setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
@@ -67,11 +71,13 @@ export default function App() {
       const result = reconnectPhotos(library, imported, config.localBasePath);
       const merged = new Map(result.library.map(photo => [photo.id, photo]));
       const previousPhotos = new Map(library.map(photo => [photo.id, photo]));
-      if (merged.size > 400) { imported.forEach(photo => URL.revokeObjectURL(photo.previewUrl)); throw new Error('La biblioteca admite hasta 400 fotos. Abrí otro proyecto para una sesión distinta.'); }
+      if (merged.size > 400) { imported.forEach(photo => { URL.revokeObjectURL(photo.previewUrl); if (photo.sourceUrl) URL.revokeObjectURL(photo.sourceUrl); }); throw new Error('La biblioteca admite hasta 400 fotos. Abrí otro proyecto para una sesión distinta.'); }
       result.connected.forEach(photo => {
         const old = previousPhotos.get(photo.id);
         if (old?.previewUrl) { URL.revokeObjectURL(old.previewUrl); urls.current.delete(old.previewUrl); }
+        if (old?.sourceUrl) { URL.revokeObjectURL(old.sourceUrl); urls.current.delete(old.sourceUrl); }
         urls.current.add(photo.previewUrl);
+        if (photo.sourceUrl) urls.current.add(photo.sourceUrl);
       });
       const createMontage = !slides.length && !rawText.trim();
       setProject(prev => ({ ...prev, library: [...merged.values()], slides: createMontage
@@ -185,12 +191,12 @@ export default function App() {
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} musicRevision={musicRevision} libraryCount={connectedCount} /></div>
+        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} musicRevision={musicRevision} libraryCount={connectedCount} /></div>
       </div>
     </main>
     <footer className="mx-auto max-w-7xl px-4 py-6 text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>
     <DeferredDialog open={premiereOpen}><PremiereInspectorModal isOpen={premiereOpen} onClose={() => setPremiereOpen(false)} onApplyPremiereSettings={applyPremiere} /></DeferredDialog>
-    <DeferredDialog open={exportOpen}><ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} canRecord={previewReady && !busy && !importing} onTriggerDirectVideoRender={() => preview.current?.record()} /></DeferredDialog>
+    <DeferredDialog open={exportOpen}><ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} canRecord={previewReady && !busy && !importing} onTriggerDirectVideoRender={chooseLocation => preview.current?.record(chooseLocation)} /></DeferredDialog>
     <DeferredDialog open={guideOpen}><FaqGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} /></DeferredDialog>
   </div>;
 }

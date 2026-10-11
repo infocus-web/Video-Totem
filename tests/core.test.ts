@@ -5,14 +5,117 @@ import { DEFAULT_CONFIG, localPath } from '../src/utils/config.ts';
 import { decodeProject, serializeProject, type SavedProject } from '../src/utils/projectStorage.ts';
 import { generatePremiereXml, fileUrl } from '../src/utils/premiereXmlGenerator.ts';
 import type { PhotoItem } from '../src/types/index.ts';
-import { updateProjectConfig } from '../src/utils/projectConfig.ts';
+import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from '../src/utils/projectConfig.ts';
 import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
+import { normalizeFraming, photoGeometry, photoSlots } from '../src/utils/photoFraming.ts';
 
 const options = { localBasePath: 'D:\\Fotos', prefix: 'IMG_', padding: 3, extension: '.jpg', defaultDuration: 1.5 };
 const photo = (name: string, orientation: PhotoItem['orientation'] = 'horizontal'): PhotoItem => ({
   id: name.toLowerCase(), filename: name, relativePath: name, number: name.match(/\d+/)?.[0] || name,
   fullLocalPath: localPath(options.localBasePath,name), previewUrl:'blob:test', orientation, width: 2400,height:1600,
   duration:1.5,transition:'dissolve',kenBurns:'zoom-in'
+});
+test('normaliza posición y zoom sin admitir números inválidos', () => {
+  assert.deepEqual(normalizeFraming(undefined), { x: 0.5, y: 0.5, zoom: 1 });
+  assert.deepEqual(normalizeFraming({ x: -20, y: 80, zoom: 50 }), { x: 0, y: 1, zoom: 3 });
+  assert.deepEqual(normalizeFraming({ x: NaN, y: Infinity, zoom: '2' }), { x: 0.5, y: 0.5, zoom: 1 });
+});
+test('girar una selección mantiene encuadres, escenas y fotos ajenas', () => {
+  const original = editedProject();
+  const project = updatePhotoFraming(original, 0, 0, { x: 0.2, y: 0.7, zoom: 1.8 });
+  const selected = [project.library[0].id];
+  const rotated = rotateProjectPhotos(project, selected, 90);
+  assert.deepEqual(rotated.library[0].framing, { x: 0.2, y: 0.7, zoom: 1.8, rotation: 90 });
+  assert.equal(rotated.slides[0].photos[0].framing?.rotation, 90);
+  assert.equal(rotated.slides[1], project.slides[1]);
+  assert.equal(rotated.slides[0].duration, project.slides[0].duration);
+  assert.equal(rotated.slides[0].transition, project.slides[0].transition);
+  assert.equal(rotateProjectPhotos(project, [], 90), project);
+  assert.equal(rotateProjectPhotos(rotated, selected, -90).library[0].framing?.rotation, undefined);
+  let all = project;
+  for (let i = 0; i < 4; i++) all = rotateProjectPhotos(all, project.library.map(item => item.id), 90);
+  assert.deepEqual(all.library[0].framing, project.library[0].framing);
+  assert.equal(all.library[1].framing?.rotation, undefined);
+});
+test('los giros intercambian lados y rellenan el cuadro sin franjas', () => {
+  for (const rotation of [0, 90, 180, 270] as const) for (const height of [1920, 956, 634]) {
+    const geometry = photoGeometry({ kenBurns: 'static', framing: { x: 0.2, y: 0.8, zoom: 1, rotation } }, 1200, 800, 1080, height, 'cover', 0);
+    assert.ok(geometry.width >= 1080 && geometry.height >= height);
+    assert.ok(geometry.left <= 0 && geometry.top <= 0);
+    assert.ok(geometry.left + geometry.width >= 1080 && geometry.top + geometry.height >= height);
+  }
+  assert.deepEqual(photoGeometry({ kenBurns: 'static', framing: { x: 0.5, y: 0.5, zoom: 1, rotation: 90 } }, 1200, 800, 1080, 1920, 'contain', 0), { width: 1080, height: 1620, left: 0, top: 150 });
+  assert.equal(normalizeFraming({ rotation: 45 }).rotation, undefined);
+});
+test('el giro se guarda y reconecta sin guardar referencias al original', () => {
+  const project = editedProject(); project.library[0].sourceUrl = 'blob:original-secret';
+  const rotated = rotateProjectPhotos(project, [project.library[0].id], -90);
+  const raw = serializeProject(rotated);
+  assert.ok(!raw.includes('blob:original-secret'));
+  const restored = decodeProject(raw);
+  assert.equal(restored.slides[0].photos[0].framing?.rotation, 270);
+  const incoming = { ...photo('sub/1.jpg'), sourceUrl: 'blob:reconnected-original' };
+  const result = reconnectPhotos(restored.library, [incoming], 'D:\\Fotos');
+  assert.equal(result.connected[0].framing?.rotation, 270);
+  assert.equal(result.connected[0].sourceUrl, incoming.sourceUrl);
+});
+test('el encuadre por defecto conserva la geometría centrada anterior', () => {
+  const item = { ...photo('1.jpg'), kenBurns: 'static' as const };
+  assert.deepEqual(photoGeometry(item, 1200, 800, 1080, 1920, 'cover', 0), { width: 2880, height: 1920, left: -900, top: 0 });
+  assert.deepEqual(photoGeometry(item, 1200, 800, 1080, 1920, 'contain', 0), { width: 1080, height: 720, left: 0, top: 600 });
+});
+test('mover el recorte a los extremos no deja franjas durante los movimientos', () => {
+  for (const kenBurns of ['static', 'zoom-in', 'zoom-out', 'pan-up', 'pan-down'] as const) {
+    for (const x of [0, 0.5, 1]) for (const y of [0, 0.5, 1]) for (const zoom of [1, 3]) for (const progress of [0, 0.5, 1]) {
+      for (const height of [1920, 956, 634]) {
+        const geometry = photoGeometry({ kenBurns, framing: { x, y, zoom } }, 1200, 800, 1080, height, 'cover', progress);
+        assert.ok(geometry.left <= 0 && geometry.top <= 0);
+        assert.ok(geometry.left + geometry.width >= 1080 - 1e-8);
+        assert.ok(geometry.top + geometry.height >= height - 1e-8);
+      }
+    }
+  }
+});
+test('el encuadre actualiza solo la foto elegida y mantiene escenas y ajustes', () => {
+  const library = [photo('1.jpg'), photo('2.jpg')];
+  const project: SavedProject = { version: 1, config: DEFAULT_CONFIG, rawText: '1,2', library, slides: buildSlidesFromPhotos(library, 'single', 1.5) };
+  const result = updatePhotoFraming(project, 0, 0, { x: 0.2, y: 0.8, zoom: 1.5 });
+  assert.deepEqual(result.slides[0].photos[0].framing, { x: 0.2, y: 0.8, zoom: 1.5 });
+  assert.equal(result.library[0].framing, result.slides[0].photos[0].framing);
+  assert.equal(result.slides[1], project.slides[1]);
+  assert.equal(result.library[1], project.library[1]);
+  assert.equal(result.config, project.config);
+  assert.equal(result.slides[0].duration, project.slides[0].duration);
+  assert.equal(project.library[0].framing, undefined);
+  assert.equal(updatePhotoFraming(result, 0, 0, { x: 0.2, y: 0.8, zoom: 1.5 }), result);
+  assert.equal(updatePhotoFraming(project, 99, 0, { x: 0, y: 0, zoom: 1 }), project);
+});
+test('guarda y reconecta el encuadre y lo conserva al reagrupar', () => {
+  const library = [photo('1.jpg'), photo('2.jpg')];
+  const project: SavedProject = { version: 1, config: DEFAULT_CONFIG, rawText: '', library, slides: buildSlidesFromPhotos(library, 'single', 1.5) };
+  const framed = updatePhotoFraming(project, 0, 0, { x: 0.1, y: 0.9, zoom: 2 });
+  const restored = decodeProject(serializeProject(framed));
+  assert.deepEqual(restored.slides[0].photos[0].framing, framed.library[0].framing);
+  const connected = reconnectPhotos(restored.library, library, 'D:\\Fotos');
+  assert.deepEqual(connected.library[0].framing, framed.library[0].framing);
+  const grouped = updateProjectConfig(framed, { ...DEFAULT_CONFIG, horizontalGrouping: 'auto-split-3' });
+  assert.deepEqual(grouped.slides[0].photos[0].framing, framed.library[0].framing);
+});
+test('abre proyectos anteriores centrados y limita encuadres malformados', () => {
+  const library = [photo('1.jpg')];
+  const project: SavedProject = { version: 1, config: DEFAULT_CONFIG, rawText: '', library, slides: buildSlidesFromPhotos(library, 'single', 1.5) };
+  const restored = decodeProject(serializeProject(project));
+  assert.equal(restored.library[0].framing, undefined);
+  assert.deepEqual(normalizeFraming(restored.slides[0].photos[0].framing), { x: 0.5, y: 0.5, zoom: 1 });
+  const modified = JSON.parse(serializeProject(project));
+  modified.slides[0].photos[0].framing = { x: -99, y: 99, zoom: null };
+  assert.deepEqual(decodeProject(JSON.stringify(modified)).slides[0].photos[0].framing, { x: 0, y: 1, zoom: 1 });
+});
+test('las fotos apiladas mantienen sus propios límites y separación', () => {
+  const slots = photoSlots(3, 1080, 1920, 12);
+  assert.deepEqual(slots.map(slot => slot.y), [0, 644, 1288]);
+  assert.ok(slots.every(slot => slot.height === 632));
+  assert.equal(slots[2].y + slots[2].height, 1920);
 });
 test('reconecta una carpeta desde archivos individuales sin duplicar ni perder edición', () => {
   const saved = { ...photo('IMG_001.jpg'), id: 'sub/img_001.jpg', relativePath: 'sub/IMG_001.jpg', previewUrl: '', duration: 2.7, kenBurns: 'pan-up' as const };

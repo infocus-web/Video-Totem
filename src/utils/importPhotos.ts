@@ -16,8 +16,10 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
         const position = index++, file = candidates[position];
         if (signal.aborted) throw new DOMException('Cancelado','AbortError');
         const original = URL.createObjectURL(file);
+        created.push(original);
+        const image = new Image();
         try {
-          const image = new Image(); image.src = original; await image.decode();
+          image.src = original; await image.decode();
           if (signal.aborted) throw new DOMException('Cancelado','AbortError');
           const width = image.naturalWidth, height = image.naturalHeight;
           if (!width || !height || width * height > 100000000) throw new Error('Imagen demasiado grande o inválida: ' + file.name);
@@ -31,14 +33,14 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
           const previewUrl = URL.createObjectURL(blob); created.push(previewUrl);
           const relativePath = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1).join('/') : file.name;
           result[position] = { id: relativePath.toLowerCase(), filename: file.name, relativePath, fullLocalPath: localPath(config.localBasePath,relativePath),
-            previewUrl, width, height, number: file.name.replace(/\.[^.]+$/,'').match(/\d+$/)?.[0] ?? file.name,
+            previewUrl, sourceUrl: original, width, height, number: file.name.replace(/\.[^.]+$/,'').match(/\d+$/)?.[0] ?? file.name,
             orientation: width > height ? 'horizontal' : width < height ? 'vertical' : 'square',
             duration: config.defaultDuration, transition: config.defaultTransition, kenBurns: 'zoom-in' };
           onProgress?.({ completed: ++completed, total: candidates.length });
           // Give the browser a chance to paint progress before preparing another photo.
           await new Promise<void>(resolve => window.setTimeout(resolve, 0));
         } catch (error) { throw new Error('No se pudo cargar ' + file.name + ': ' + (error instanceof Error ? error.message : 'archivo inválido')); }
-        finally { URL.revokeObjectURL(original); }
+        finally { image.removeAttribute('src'); }
       }
     }));
     const failure = workers.find(worker => worker.status === 'rejected');
