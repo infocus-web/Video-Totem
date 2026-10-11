@@ -9,6 +9,57 @@ import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from '..
 import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
 import { normalizeFraming, photoGeometry, photoSlots } from '../src/utils/photoFraming.ts';
 import { videoOutput } from '../src/utils/videoOutput.ts';
+import { normalizeTextStyle, textStyle, textFont, textPlacement } from '../src/utils/textOverlay.ts';
+
+test('textos conservan fuentes, tamaño y ubicación independientes sin modificar las fotos', () => {
+  const original = editedProject();
+  const textStyles = {
+    eventTitle: { fontFamily: 'Georgia', size: 96, x: 95, y: 93, align: 'right' as const },
+    eventSubtitle: { fontFamily: 'Courier New', size: 38, x: 5, y: 50, align: 'left' as const },
+    watermark: { fontFamily: 'Plus Jakarta Sans', size: 22, x: 50, y: 8, align: 'center' as const },
+  };
+  const changed = updateProjectConfig(original, { ...original.config, textStyles });
+  assert.equal(changed.slides, original.slides); assert.equal(changed.library, original.library);
+  const restored = decodeProject(serializeProject(changed));
+  assert.deepEqual(restored.config.textStyles, textStyles);
+  assert.deepEqual(restored.slides[0].photos[0].framing, original.slides[0].photos[0].framing);
+});
+
+test('textos de proyectos anteriores mantienen valores predeterminados y fuente heredada', () => {
+  const saved = JSON.parse(serializeProject(editedProject()));
+  delete saved.config.textStyles; saved.config.fontFamily = 'Georgia';
+  const restored = decodeProject(JSON.stringify(saved));
+  assert.deepEqual(textStyle(restored.config, 'eventTitle'), { fontFamily: 'Georgia', size: 43, x: 50, y: 8, align: 'center' });
+  assert.equal(textStyle(restored.config, 'watermark').y, 93);
+  assert.equal(textStyle(restored.config, 'eventSubtitle').size, 29);
+});
+
+test('diseño del texto rechaza fuentes y números inválidos en JSON', () => {
+  const saved = JSON.parse(serializeProject(editedProject()));
+  saved.config.fontFamily = 'unknown';
+  saved.config.textStyles = { eventTitle: { fontFamily: 'Arial";bad', size: 999, x: -30, y: 200, align: 'invalid' }, watermark: { size: '72', x: null } };
+  const restored = decodeProject(JSON.stringify(saved));
+  assert.equal(restored.config.fontFamily, 'Arial');
+  assert.deepEqual(textStyle(restored.config, 'eventTitle'), { fontFamily: 'Arial', size: 180, x: 0, y: 100, align: 'center' });
+  assert.equal(textStyle(restored.config, 'watermark').size, 29);
+  assert.equal(normalizeTextStyle({ size: NaN, y: Infinity }, 'eventSubtitle').y, 11);
+});
+
+test('texto respeta márgenes, alineación y escala para vertical, horizontal y tótem', () => {
+  for (const [width, height] of [[1080, 1920], [1920, 1080], [1080, 1080]]) {
+    for (const align of ['left', 'center', 'right'] as const) {
+      for (const x of [0, 50, 100]) {
+        const style = normalizeTextStyle({ size: 180, align, x, y: 100 }, 'eventTitle');
+        const position = textPlacement(style, width, height, width * 3);
+        const left = align === 'left' ? 0 : align === 'center' ? position.maxWidth / 2 : position.maxWidth;
+        assert.ok(position.x - left >= width * 0.025 - 0.001);
+        assert.ok(position.x + position.maxWidth - left <= width * 0.975 + 0.001);
+        assert.ok(position.y < height);
+        assert.ok(textFont(style, 'eventTitle', width).includes(Math.round(180 * width / 1080) + 'px'));
+      }
+    }
+  }
+});
 
 test('tótem exporta horizontal y mantiene el tamaño vertical de edición', () => {
   for (const rotation of [90, 270] as const) {

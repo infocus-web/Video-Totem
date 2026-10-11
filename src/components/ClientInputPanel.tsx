@@ -2,6 +2,7 @@ import { useRef, type ReactNode, type ChangeEvent, type KeyboardEvent } from 're
 import { Camera, Check, Copy, Crop, ExternalLink, FileCode2, FolderOpen, Heart, House, Images, Layers, LayoutTemplate, Maximize, Music2, PartyPopper, PlusCircle, RefreshCw, Sparkles, Timer, Trash2, Type } from 'lucide-react';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorTool, EditorToolButton } from './EditorTool';
+import { TextOverlayControls } from './TextOverlayControls';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
@@ -178,6 +179,7 @@ export function ClientInputPanel(props: Props) {
       <EditorPropertyRow label="Subtítulo"><input aria-label="Subtítulo" maxLength={120} value={config.eventSubtitle} onChange={e => change('eventSubtitle', e.target.value)} className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Marca de agua"><input aria-label="Marca de agua" maxLength={120} value={config.watermark} onChange={e => change('watermark', e.target.value)} placeholder="Ej: @tu_fotografia" className="studio-input" /></EditorPropertyRow>
       <EditorPropertyRow label="Visibilidad"><EditorTool label={config.showOverlayText ? 'Ocultar textos' : 'Mostrar textos'}><label className="editor-switch"><input aria-label="Mostrar textos" type="checkbox" checked={config.showOverlayText} onChange={e => change('showOverlayText', e.target.checked)} /><span aria-hidden="true" className="editor-switch-track"><span /></span></label></EditorTool></EditorPropertyRow>
+      <TextOverlayControls config={config} onChange={onConfigChange} />
     </EditorSection>
     <EditorSection activeSection={activeSection} number={7} title="Música y volumen" detail="Elegir música, cargar un archivo y ajustar su volumen.">
       <EditorPropertyRow label="Música"><select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input">

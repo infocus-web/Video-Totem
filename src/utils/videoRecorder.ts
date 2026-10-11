@@ -1,6 +1,7 @@
 import type { SequenceConfig, SequenceSlide } from '../types';
 import { drawVideoFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
 import { videoOutput } from './videoOutput';
+import { prepareTextFonts } from './textOverlay';
 import { audioEngine } from './audioSynthesizer';
 import { RecordingImages } from './recordingImages';
 import { createRecordingSource, supportsBackgroundRecording } from './recordingSource';
@@ -92,7 +93,7 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
   const composition = output.rotation ? document.createElement('canvas') : canvas;
   composition.width = config.width; composition.height = config.height;
   try {
-    await document.fonts.ready; await audioEngine.resume();
+    await prepareTextFonts(config); await audioEngine.resume();
     if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
   } catch (error) { originals.clear(); throw error; }
   let source: ReturnType<typeof createRecordingSource>;

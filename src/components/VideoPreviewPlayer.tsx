@@ -13,6 +13,7 @@ import { downloadBlob } from '../utils/download';
 import { saveVideoAs } from '../utils/saveVideo';
 import { supportsBackgroundExport } from '../utils/videoRecorder';
 import { videoOutput } from '../utils/videoOutput';
+import { prepareTextFonts } from '../utils/textOverlay';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
@@ -80,6 +81,13 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     time.current = Math.min(time.current, total);
     if (canvas.current && !isPlaying) drawFrame(canvas.current, slides, config, images, time.current, framingMode);
   }, [slides, config, images, ready, isPlaying, displayTime, total, framingMode]);
+  useEffect(() => {
+    let cancelled = false;
+    void prepareTextFonts(config).then(() => {
+      if (!cancelled && canvas.current && !playing.current) drawFrame(canvas.current, slides, config, images, time.current, framingMode);
+    }).catch(() => { /* Canvas keeps the system fallback if a font cannot load. */ });
+    return () => { cancelled = true; };
+  }, [config, slides, images, framingMode]);
   useEffect(() => {
     if (disabled) { playing.current = false; setPlaying(false); audioEngine.stop(); }
   }, [disabled]);

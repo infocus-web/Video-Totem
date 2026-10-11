@@ -116,6 +116,14 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
   .property-inline-fields .studio-input { width: 85px; }
   .property-control > .property-small-input { flex: 0 1 90px; min-width: 70px; }
   .framing-properties { position: relative; margin-top: 4px; border-top: 1px solid #373047; padding-top: 4px; }
+  .text-overlay-controls { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #373047; min-width: 0; }
+  .text-overlay-placement { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+  .text-position-grid { display: grid; grid-template-columns: repeat(3, 60px); gap: 4px; }
+  .text-position-grid .editor-icon-button { width: 60px; min-height: 46px; }
+  .text-position-grid svg { width: 26px; height: 20px; }
+  .text-font-sample { font-size: 24px; color: #e0e7ff; }
+  .property-control > .text-size-input { flex: 0 0 58px; min-width: 58px; width: 58px; }
+  @container (min-width: 600px) { .text-overlay-controls { grid-template-columns: minmax(0, 1fr) 192px; gap: 24px; } }
   .preview-tools .property-row { grid-template-columns: 95px minmax(0, 1fr); }
   .preview-device { @apply relative mx-auto max-w-full overflow-hidden rounded-[38px] border-4 border-neutral-800 bg-neutral-950 p-2.5 shadow-2xl shadow-indigo-950/30 ring-1 ring-neutral-700/50; width: 350px; }
   .preview-panel {

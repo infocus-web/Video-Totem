@@ -44,6 +44,15 @@ export type HorizontalGroupMode =
   | 'auto-adaptive' // Smart mix: 2 or 3 depending on sequence
   | 'single'; // Keep single with blurred background
 
+export type OverlayTextKey = 'eventTitle' | 'eventSubtitle' | 'watermark';
+export interface OverlayTextStyle {
+  fontFamily: string;
+  size: number; // Pixels at a composition width of 1080; scales with the output.
+  x: number; // Anchor position as a percentage of the composition.
+  y: number;
+  align: 'left' | 'center' | 'right';
+}
+
 export interface SequenceConfig {
   name: string;
   aspectRatio: '9:16' | '1:1' | '16:9' | '4:5';
@@ -64,6 +73,7 @@ export interface SequenceConfig {
   eventSubtitle: string;
   watermark: string;
   fontFamily: string;
+  textStyles?: Partial<Record<OverlayTextKey, OverlayTextStyle>>;
   localBasePath: string;
   driveLink: string;
   filenamePrefix: string;

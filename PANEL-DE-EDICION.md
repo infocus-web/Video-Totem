@@ -4,6 +4,18 @@ Las herramientas se reúnen en ocho pestañas: Fotos, Formato, Encuadre, Escenas
 
 Anterior y Siguiente recorren las fotos del montaje, incluidas las que comparten una escena. Se desactivan al llegar al principio o al final. Cambian la foto visible sin modificar su encuadre ni volver a decodificar las imágenes. Al terminar de encuadrar, se retoma la reproducción si estaba activa.
 
+## Diseño de textos
+
+En **Textos**, escribí el título, subtítulo y marca de agua. Elegí **Título**, **Subtítulo** o **Firma** para cambiar su diseño de manera independiente: ocho tipografías, tamaño entre 12 y 180px, nueve ubicaciones y posición horizontal/vertical. El tamaño corresponde a un cuadro de 1080px de ancho y se escala según la resolución. Restablecer devuelve solamente el diseño del texto elegido a sus valores iniciales, conservando su contenido y los demás textos.
+
+Los cambios se ven mientras reproduce la vista previa, quedan guardados en el navegador y en el JSON, y se aplican al MP4 y a la grabación alternativa. En modo Tótem, los textos se giran junto con todo el cuadro al exportar. Las líneas largas se ajustan al ancho disponible y conservan un margen de seguridad; pueden superponerse si elegís la misma ubicación para varios textos. El XML de Premiere sigue sin incluir estas capas de texto.
+
+Plus Jakarta Sans se incluye en la app. Las otras opciones usan fuentes del sistema y una alternativa si no están instaladas; no hay nuevas dependencias ni servicios externos. Los proyectos anteriores mantienen sus valores iniciales y su fuente compatible.
+
+Archivos: `src/components/TextOverlayControls.tsx` agrega los controles; `ClientInputPanel.tsx` los integra en Textos; `src/index.css` organiza las propiedades y miniaturas. `src/types/index.ts`, `src/utils/textOverlay.ts` y `projectStorage.ts` definen, validan y guardan el diseño. `canvasRenderer.ts` usa el mismo dibujo para vista previa y video; `VideoPreviewPlayer.tsx`, `videoEncoder.ts` y `videoRecorder.ts` esperan la carga de fuentes. `tests/core.test.ts` verifica persistencia, compatibilidad y márgenes; `scripts/text-overlay-smoke.cjs` prueba los controles en Chrome y compara los textos de la vista previa con los píxeles del MP4 decodificado.
+
+Para probar localmente: ejecutá `npm test`, `npm run build` y `npm run preview`. Cargá fotos y ajustá los tres textos, guardá/abrí el proyecto y exportá un video corto. En producción, repetí después de Commit → Push y del despliegue de Vercel; reconectá las fotos cuando abras un JSON.
+
 ## Espacio de trabajo
 
 Nuevo, Guardar y Abrir están en la cabecera junto al estado del guardado. Los avisos usan una línea compacta. En escritorio, el editor ocupa dos tercios del ancho y la vista previa el tercio restante; ambos aprovechan la altura disponible. La imagen crece con el espacio del panel, sin el límite anterior de tamaño. Cada panel se desplaza por separado, manteniendo visibles la cabecera, los accesos y la foto. En celulares se conserva la distribución vertical y la cabecera usa dos filas.

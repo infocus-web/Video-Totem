@@ -57,6 +57,8 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 ## Panel de edición
 
+En **Textos** podés elegir entre ocho tipografías y ajustar por separado el tamaño y la ubicación del título, subtítulo y marca de agua. Los botones ofrecen nueve posiciones y los deslizadores permiten afinar el encuadre. Se guardan en el proyecto y se aplican a la vista previa y al video exportado. [Uso, archivos y pruebas](PANEL-DE-EDICION.md#diseño-de-textos).
+
 La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En escritorio, el espacio de trabajo ocupa la altura disponible: dos tercios del ancho para edición y un tercio para la vista previa ampliada. Cada panel se desplaza de forma independiente. Los avisos ocupan una línea compacta. En celulares, la cabecera usa dos filas y los paneles se distribuyen verticalmente. [Archivos y pruebas del panel](PANEL-DE-EDICION.md).
 
 **Nuevo** abre una ventana para escribir el nombre. Crear proyecto inicia un montaje vacío y limpia las fotos, música y avisos anteriores; si había fotos, descarga antes su respaldo JSON. Cancelar o Escape conserva el proyecto actual. El nuevo nombre se guarda inmediatamente en el navegador.

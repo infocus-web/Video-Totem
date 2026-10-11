@@ -1,6 +1,7 @@
 import type { PhotoItem, SequenceConfig, SequenceSlide } from '../types';
 import { DEFAULT_CONFIG, clampDuration } from './config.ts';
 import { normalizeFraming } from './photoFraming.ts';
+import { normalizeTextStyle, overlayFont, TEXT_LAYERS } from './textOverlay.ts';
 
 export interface SavedProject { version: 1; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
 export const STORAGE_KEY = 'autoreel-project-v1';
@@ -33,6 +34,11 @@ export function decodeProject(raw: string): SavedProject {
   config.musicVolume = Math.max(0, Math.min(1, Number(data.config.musicVolume) || 0));
   config.splitGapSize = Math.max(0, Math.min(80, Number(data.config.splitGapSize) || 0));
   config.showOverlayText = data.config.showOverlayText === true;
+  config.fontFamily = overlayFont(data.config.fontFamily);
+  if (object(data.config.textStyles)) {
+    const savedStyles = data.config.textStyles;
+    config.textStyles = Object.fromEntries(TEXT_LAYERS.map(({ key }) => [key, normalizeTextStyle(savedStyles[key], key, config.fontFamily)]));
+  }
   if (['blur','black','mirror','gradient'].includes(String(data.config.backgroundStyle))) config.backgroundStyle = data.config.backgroundStyle as SequenceConfig['backgroundStyle'];
   if (data.config.photoFit === 'cover') config.photoFit = 'cover';
   if (['chill','upbeat','cinematic','none'].includes(String(data.config.musicTrack))) config.musicTrack = String(data.config.musicTrack);

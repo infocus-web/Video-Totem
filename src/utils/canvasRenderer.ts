@@ -1,6 +1,7 @@
 import type { SequenceConfig, SequenceSlide, PhotoItem, FilePreparationProgress } from '../types';
 import { normalizeFraming, photoGeometry, photoSlots } from './photoFraming.ts';
 import { videoOutput } from './videoOutput.ts';
+import { drawTextOverlay } from './textOverlay.ts';
 export type ImageMap = Map<string, HTMLImageElement>;
 
 export function drawVideoFrame(canvas: HTMLCanvasElement, composition: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number) {
@@ -132,16 +133,6 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
       ctx.fillStyle = 'rgba(255,255,255,' + Math.sin(transitionProgress * Math.PI) + ')'; ctx.fillRect(0, 0, width, height);
     }
   }
-  if (config.showOverlayText) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, height * 0.24);
-    gradient.addColorStop(0, 'rgba(0,0,0,0.7)'); gradient.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height * 0.24);
-    ctx.textAlign = 'center'; ctx.fillStyle = 'white';
-    ctx.font = '700 ' + Math.round(width * 0.04) + 'px "' + config.fontFamily + '", sans-serif';
-    ctx.fillText(config.eventTitle, width / 2, height * 0.08, width * 0.9);
-    ctx.font = Math.round(width * 0.027) + 'px "' + config.fontFamily + '", sans-serif';
-    ctx.fillText(config.eventSubtitle, width / 2, height * 0.11, width * 0.9);
-    ctx.fillText(config.watermark, width / 2, height * 0.93, width * 0.9);
-  }
+  drawTextOverlay(ctx, config, width, height);
 }
 

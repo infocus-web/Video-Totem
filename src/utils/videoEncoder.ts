@@ -4,6 +4,7 @@ import { audioEngine } from './audioSynthesizer';
 import { drawVideoFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
 import { RecordingImages } from './recordingImages';
 import { videoOutput } from './videoOutput';
+import { prepareTextFonts } from './textOverlay';
 
 export async function encodeVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, bitrate: number, progress: (value: number) => void, phase: (message: string) => void) {
   const checkAbort = () => { if (signal.aborted) throw new DOMException('Exportación cancelada', 'AbortError'); };
@@ -36,7 +37,7 @@ export async function encodeVideo(slides: SequenceSlide[], config: SequenceConfi
   const channel = new MessageChannel();
   const yieldTask = () => new Promise<void>(resolve => { channel.port1.onmessage = () => resolve(); channel.port2.postMessage(null); });
   try {
-    await document.fonts.ready; checkAbort(); await output.start();
+    await prepareTextFonts(config); checkAbort(); await output.start();
     let audioUntil = 0;
     for (let index = 0; index < frameCount; index++) {
       checkAbort();
