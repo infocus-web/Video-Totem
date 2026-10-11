@@ -94,3 +94,15 @@ test('rechaza proyectos con escenas o rutas incoherentes', () => {
   assert.throws(() => decodeProject(JSON.stringify({ ...project,slides:[{ ...slides[0],layout:'split-3' }] })));
 });
 
+test('reabre proyectos con Fade y Wipe y conserva transiciones al reagrupar', () => {
+  const library = [photo('1.jpg'), photo('2.jpg'), photo('3.jpg')];
+  const slides = buildSlidesFromPhotos(library, 'single', 1.5);
+  slides[0].transition = 'wipe'; slides[1].transition = 'fade';
+  const restored = decodeProject(serializeProject({ version: 1, config: { ...DEFAULT_CONFIG, defaultTransition: 'wipe' }, rawText: '', library, slides }));
+  assert.equal(restored.config.defaultTransition, 'wipe');
+  assert.deepEqual(restored.slides.map(slide => slide.transition), ['wipe', 'fade', 'dissolve']);
+  const regrouped = buildSlidesFromPhotos(restored.slides.flatMap(slide => slide.photos.map(item => ({ ...item, transition: slide.transition }))), 'auto-split-2', 1.5);
+  assert.equal(regrouped[0].transition, 'wipe');
+  assert.deepEqual(regrouped.flatMap(slide => slide.photos.map(item => item.filename)), library.map(item => item.filename));
+});
+

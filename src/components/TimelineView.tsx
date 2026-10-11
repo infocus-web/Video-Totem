@@ -12,7 +12,7 @@ import {
   SplitSquareVertical,
   Maximize2
 } from 'lucide-react';
-import type { SequenceSlide, SequenceConfig, PhotoItem } from '../types';
+import type { SequenceSlide, SequenceConfig, PhotoItem, TransitionType } from '../types';
 
 interface TimelineViewProps {
   slides: SequenceSlide[];
@@ -22,6 +22,7 @@ interface TimelineViewProps {
   onTogglePhotoOrientation: (slideIndex: number, photoIndex: number) => void;
   onUpdatePhoto: (slideIndex: number, photoIndex: number, motion: PhotoItem['kenBurns']) => void;
   config: SequenceConfig;
+  onApplyGlobalTransition: (transition: TransitionType) => void;
 }
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
@@ -32,6 +33,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onTogglePhotoOrientation,
   onUpdatePhoto,
   config,
+  onApplyGlobalTransition,
 }) => {
   const totalDuration = slides.reduce((acc, s) => acc + s.duration, 0);
   const totalPhotosCount = slides.reduce((acc, s) => acc + s.photos.length, 0);
@@ -80,8 +82,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         </div>
       </div>
 
+      <div className="studio-card space-y-3">
+        <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-indigo-400" aria-hidden="true" />Transiciones para todas las escenas</p>
+        <div className="flex flex-wrap gap-2">{(['fade', 'zoom', 'wipe', 'none'] as const).map(transition => <button key={transition} className="quick-button" aria-pressed={slides.every(slide => slide.transition === transition)} onClick={() => onApplyGlobalTransition(transition)}>{transition === 'fade' ? 'Todas: Fade' : transition === 'zoom' ? 'Todas: Zoom' : transition === 'wipe' ? 'Todas: Wipe' : 'Todas: corte directo'}</button>)}</div>
+        <p className="text-[11px] text-neutral-400">Se aplican en la vista previa y el video exportado. También podés cambiar cada escena.</p>
+      </div>
       {/* Grid of Slide Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         {slides.map((slide, slideIndex) => {
           const isStacked2 = slide.layout === 'split-2';
           const isStacked3 = slide.layout === 'split-3';
@@ -214,6 +221,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 </label>)}
                 <div>
                   <label className="text-[10px] text-neutral-400 block mb-0.5">Transición:</label>
+                  <div className="mb-1 flex flex-wrap gap-1">{(['fade', 'zoom', 'wipe'] as const).map(transition => <button key={transition} className="rounded border border-neutral-700 px-2 py-1 text-[10px] aria-pressed:border-indigo-400 aria-pressed:bg-indigo-600/20" aria-label={transition + ' escena ' + (slideIndex + 1)} aria-pressed={slide.transition === transition} onClick={() => onUpdateSlide(slideIndex, { transition })}>{transition === 'fade' ? 'Fade' : transition === 'zoom' ? 'Zoom' : 'Wipe'}</button>)}</div>
                   <select
                     aria-label={'Transición escena ' + (slideIndex + 1)}
                     value={slide.transition}
@@ -225,6 +233,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     className="w-full bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-[11px] text-neutral-200"
                   >
                     <option value="dissolve">Disolvencia Cruzada</option>
+                    <option value="fade">Fade · Fundido</option>
+                    <option value="wipe">Wipe · Barrido lateral</option>
                     <option value="zoom">Zoom Punch</option>
                     <option value="flash">Flash Blanco</option>
                     <option value="pan">Whip Pan</option>

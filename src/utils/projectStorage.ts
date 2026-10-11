@@ -3,7 +3,7 @@ import { DEFAULT_CONFIG, clampDuration } from './config.ts';
 
 export interface SavedProject { version: 1; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
 export const STORAGE_KEY = 'autoreel-project-v1';
-const transitions = ['none', 'dissolve', 'zoom', 'flash', 'pan'];
+const transitions = ['none', 'dissolve', 'fade', 'zoom', 'wipe', 'flash', 'pan'];
 const motions = ['static', 'zoom-in', 'zoom-out', 'pan-up', 'pan-down'];
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const string = (value: unknown) => typeof value === 'string' ? value.slice(0, 20000) : '';

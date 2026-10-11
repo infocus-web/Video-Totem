@@ -1,4 +1,5 @@
 export type PhotoOrientation = 'horizontal' | 'vertical' | 'square';
+export type TransitionType = 'dissolve' | 'fade' | 'zoom' | 'wipe' | 'pan' | 'flash' | 'none';
 
 export interface PhotoItem {
   id: string;
@@ -12,7 +13,7 @@ export interface PhotoItem {
   selectionByNumber?: boolean;
   orientation: PhotoOrientation;
   duration: number; // in seconds
-  transition: 'dissolve' | 'zoom' | 'pan' | 'flash' | 'none';
+  transition: TransitionType;
   kenBurns: 'zoom-in' | 'zoom-out' | 'pan-up' | 'pan-down' | 'static';
   title?: string;
   caption?: string;
@@ -25,7 +26,7 @@ export interface SequenceSlide {
   layout: SlideLayout;
   photos: PhotoItem[];
   duration: number;
-  transition: 'dissolve' | 'zoom' | 'pan' | 'flash' | 'none';
+  transition: TransitionType;
 }
 
 export type HorizontalGroupMode =
@@ -41,7 +42,7 @@ export interface SequenceConfig {
   height: number;
   fps: number;
   defaultDuration: number;
-  defaultTransition: 'dissolve' | 'zoom' | 'pan' | 'flash' | 'none';
+  defaultTransition: TransitionType;
   backgroundStyle: 'blur' | 'black' | 'mirror' | 'gradient';
   horizontalGrouping: HorizontalGroupMode;
   splitGapSize: number; // gap between stacked photos in pixels (e.g. 6px)

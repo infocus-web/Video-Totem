@@ -1,5 +1,6 @@
 import type { SequenceConfig, SequenceSlide, PhotoItem } from '../types';
 export type ImageMap = Map<string, HTMLImageElement>;
+const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
 export async function loadImages(slides: SequenceSlide[], signal: AbortSignal): Promise<ImageMap> {
   const photos = [...new Map(slides.flatMap(slide => slide.photos).map(photo => [photo.id, photo])).values()];
@@ -39,7 +40,7 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, width, height);
   const scene = sceneAtTime(slides, time), current = slides[scene.index];
   if (!current) return;
-  const drawImage = (image: HTMLImageElement, photo: PhotoItem, x: number, y: number, w: number, h: number, progress: number) => {
+  const drawImage = (ctx: CanvasRenderingContext2D, image: HTMLImageElement, photo: PhotoItem, x: number, y: number, w: number, h: number, progress: number) => {
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
     if (config.backgroundStyle === 'blur' || config.backgroundStyle === 'mirror') {
       ctx.save();
@@ -61,29 +62,45 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
     ctx.drawImage(image, x + (w - imageW) / 2, y + (h - imageH) / 2 + pan, imageW, imageH);
     ctx.restore();
   };
-  const drawScene = (slide: SequenceSlide, progress: number, opacity = 1, offsetX = 0, zoom = 1) => {
-    ctx.save(); ctx.globalAlpha = opacity; ctx.translate(offsetX + width / 2, height / 2); ctx.scale(zoom, zoom); ctx.translate(-width / 2, -height / 2);
+  const drawScene = (ctx: CanvasRenderingContext2D, slide: SequenceSlide, progress: number, offsetX = 0, zoom = 1) => {
+    ctx.save(); ctx.translate(offsetX + width / 2, height / 2); ctx.scale(zoom, zoom); ctx.translate(-width / 2, -height / 2);
+    ctx.fillStyle = '#09090b'; ctx.fillRect(0, 0, width, height);
     const gap = config.splitGapSize * width / config.width;
     const count = slide.photos.length;
     const slotHeight = (height - gap * (count - 1)) / count;
     slide.photos.forEach((photo, index) => {
       const image = images.get(photo.id);
-      if (image) drawImage(image, photo, 0, index * (slotHeight + gap), width, slotHeight, progress);
+      if (image) drawImage(ctx, image, photo, 0, index * (slotHeight + gap), width, slotHeight, progress);
     });
     ctx.restore();
+  };
+  const drawOverlay = (slide: SequenceSlide, opacity: number, zoom = 1) => {
+    // Blend a complete scene once: layered backgrounds otherwise darken the previous photo twice.
+    let buffer = transitionBuffers.get(canvas);
+    if (!buffer) { buffer = document.createElement('canvas'); transitionBuffers.set(canvas, buffer); }
+    if (buffer.width !== width || buffer.height !== height) { buffer.width = width; buffer.height = height; }
+    const bufferContext = buffer.getContext('2d');
+    if (!bufferContext) throw new Error('No se pudo dibujar la transición.');
+    bufferContext.clearRect(0, 0, width, height);
+    drawScene(bufferContext, slide, 0, 0, zoom);
+    ctx.save(); ctx.globalAlpha = opacity; ctx.drawImage(buffer, 0, 0); ctx.restore();
   };
   const transitionWindow = Math.min(0.35, current.duration / 2);
   const transitionProgress = Math.max(0, (scene.progress * current.duration - current.duration + transitionWindow) / transitionWindow);
   const next = slides[scene.index + 1];
-  drawScene(current, scene.progress);
+  drawScene(ctx, current, scene.progress, next && current.transition === 'pan' ? -width * transitionProgress : 0);
   if (next && transitionProgress > 0) {
-    if (current.transition === 'dissolve') drawScene(next, 0, transitionProgress);
-    else if (current.transition === 'zoom') drawScene(next, 0, transitionProgress, 0, 1.12 - transitionProgress * 0.12);
+    if (current.transition === 'dissolve' || current.transition === 'fade') drawOverlay(next, transitionProgress);
+    else if (current.transition === 'wipe') {
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, width * transitionProgress, height); ctx.clip();
+      drawScene(ctx, next, 0); ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(width * transitionProgress - width * 0.003, 0, width * 0.006, height);
+    }
+    else if (current.transition === 'zoom') drawOverlay(next, transitionProgress, 1.12 - transitionProgress * 0.12);
     else if (current.transition === 'pan') {
-      drawScene(current, scene.progress, 1, -width * transitionProgress);
-      drawScene(next, 0, 1, width * (1 - transitionProgress));
+      drawScene(ctx, next, 0, width * (1 - transitionProgress));
     } else if (current.transition === 'flash') {
-      if (transitionProgress > 0.5) drawScene(next, 0);
+      if (transitionProgress > 0.5) drawScene(ctx, next, 0);
       ctx.fillStyle = 'rgba(255,255,255,' + Math.sin(transitionProgress * Math.PI) + ')'; ctx.fillRect(0, 0, width, height);
     }
   }

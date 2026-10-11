@@ -2,6 +2,8 @@
 
 Editor de fotos a video para fotógrafos. React 19, TypeScript, Vite y Tailwind CSS. Funciona como aplicación estática en Vercel; las fotos y la música se procesan en el navegador.
 
+Esta entrega recupera el diseño de Google AI Studio: tarjetas de selección, apilado, rutas y estilos; vista previa con marco de teléfono; y controles Fade, Zoom y Wipe. Veo se omitió por pedido del usuario: no incluye botones de generación con IA, rutas API, servidor Express ni configuración de Gemini.
+
 ## Ejecutar localmente
 
 Requisitos: Node.js 22.12 o superior (recomendado Node 22 LTS o 24 LTS) y npm.
@@ -28,11 +30,13 @@ La vista previa de producción se abre en http://localhost:4173. No abras index.
 ## Subir a GitHub
 
 1. Descomprimí el ZIP.
-2. Creá un repositorio en GitHub.
+2. Abrí tu repositorio existente Video-Totem en GitHub Desktop, o creá uno si todavía no lo tenés.
 3. Subí el contenido de la carpeta autoreel-studio a la raíz del repositorio. Incluí src, public, tests, scripts, package.json, package-lock.json, tsconfig.json, vite.config.ts, vercel.json y README.md.
 4. No subas node_modules, dist, artifacts ni archivos .env. El .gitignore ya los excluye.
 
 También podés abrir esta carpeta con GitHub Desktop y publicar el repositorio. El ZIP contiene código fuente; no se debe subir el ZIP como único archivo del repositorio.
+
+Para actualizar Video-Totem, copiá los archivos de esta entrega sobre el código de la carpeta local del repositorio. Conservá su carpeta .git. Revisá los cambios en GitHub Desktop, hacé un commit y pulsá Push origin. Si tu versión anterior incluía server.ts, VeoAnimationModal.tsx o rutas API de Veo, retiralas del repositorio porque esta entrega ya no las utiliza. No copies .env, node_modules ni dist de otra versión.
 
 ## Desplegar en Vercel
 
@@ -52,17 +56,19 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 ## Flujo de uso
 
-1. Elegí fotos individuales o una carpeta completa.
+1. Elegí fotos individuales o una carpeta completa. Si la selección está vacía y todavía no hay escenas, el montaje se arma automáticamente con todas las fotos. Pulsá Reproducir para verlo.
 2. Para Premiere, pegá la ruta absoluta de esa carpeta, por ejemplo D:\Fotos\Sesion o /Users/usuario/Fotos/Sesion. El navegador no puede obtener esta ruta.
 3. Pegá la selección del cliente: números, nombres, códigos de cámara o rangos. Ejemplo: 004, 012, 025-028, DSC_1020.jpg.
 4. Pulsá Aplicar selección. Si hay fotos faltantes o nombres ambiguos, se muestra el problema y se conserva el montaje anterior. También podés usar todas las fotos.
 5. Elegí formato, estilo, duración, música y textos. Los presets Boda, Fiesta, Portfolio e Inmobiliaria ajustan estilo y ritmo.
-6. Reagrupar montaje aplica el apilado de fotos horizontales en pares o tríos. Reemplaza la distribución de escenas: aplicalo antes de hacer ajustes individuales.
-7. En Línea de tiempo, cambiá el orden, duración, transición y movimiento. Elegir un diseño con más fotos consume fotos de escenas siguientes; elegir una foto por escena divide el grupo sin perder fotos.
+6. Las tarjetas 2 en 1, 3 en 1, Inteligente e Individual aplican el modo al elegirlo. Reagrupar montaje vuelve a aplicar ese modo. Conservan el orden y los movimientos; cada grupo toma la duración y transición de su primera foto. La distribución de escenas cambia.
+7. En Línea de tiempo, cambiá el orden, duración, transición y movimiento. Fade, Zoom y Wipe pueden aplicarse a todas las escenas o individualmente. Elegir un diseño con más fotos consume fotos de escenas siguientes; elegir una foto por escena divide el grupo sin perder fotos.
 8. Grabá el video final o descargá el XML para Premiere.
 9. Usá Guardar proyecto JSON para llevarte el montaje. Nuevo proyecto descarga un respaldo del anterior antes de abrir una sesión vacía.
 
-Aplicar selección reconstruye las escenas a partir del texto y de la duración configurada. Editar el texto o el modo de agrupación solo no altera el montaje hasta que se aplican. Cambiar la duración general actualiza todas las escenas.
+Aplicar selección reconstruye las escenas a partir del texto, la duración y la transición general configuradas. Editar el texto solo no modifica las escenas hasta pulsar Aplicar selección. Las tarjetas de agrupación redistribuyen las escenas inmediatamente. Cambiar la duración general actualiza todas las escenas.
+
+Pegar mensaje de WhatsApp lee el portapapeles real con permiso del navegador. Si el navegador no lo permite, pegá con Ctrl + V. Los campos de nombres están en Configurar formato de nombres y la separación del apilado tiene botones de 4, 8, 12 y 16 píxeles.
 
 La búsqueda intenta primero el nombre exacto, sin distinguir mayúsculas. Si la entrada era un número, también busca el número al final de los nombres reales. Un nombre de archivo explícito nunca se sustituye por otro prefijo. Evitá pegar fechas, teléfonos u otros números ajenos a la selección.
 
@@ -85,6 +91,8 @@ La aplicación elige MP4 con H.264/AAC cuando MediaRecorder lo admite. Si no est
 Se graba en tiempo real, hasta 5 minutos, con la resolución y FPS configurados. Mantené la pestaña visible; ocultarla cancela la grabación para evitar un archivo incompleto. La cadencia real depende de la capacidad de codificación de tu equipo. Podés cancelar la grabación.
 
 El video incluye fotos apiladas, fondos, movimientos, transiciones, títulos, marca de agua y audio. No cambia la extensión de un WebM para hacerlo pasar por MP4.
+
+Fade mezcla escenas completas para evitar fondos oscuros durante el fundido. Wipe reemplaza la escena de izquierda a derecha, incluyendo los márgenes. Las transiciones se muestran al final de cada escena que tiene una siguiente; la última termina sin un salto al inicio.
 
 ## Premiere: alcance del XML
 
@@ -112,7 +120,7 @@ El campo de Drive guarda un enlace de referencia y permite abrirlo. Para usar la
 
 ## Pruebas y verificación
 
-npm test ejecuta 16 pruebas de regresión: extracción y deduplicación de selecciones, códigos de cámara, coincidencias ambiguas, rangos, agrupación, rutas, XML y validación del guardado. npm run build también verifica TypeScript en modo estricto.
+npm test ejecuta 17 pruebas de regresión: extracción y deduplicación de selecciones, códigos de cámara, coincidencias ambiguas, rangos, agrupación, rutas, XML, validación del guardado y compatibilidad de Fade/Wipe en proyectos JSON. npm run build también verifica TypeScript en modo estricto.
 
 La prueba opcional de navegador está en scripts/browser-smoke.cjs. No agrega dependencias al producto. En un entorno de desarrollo, podés instalar Playwright temporalmente:
 
@@ -133,11 +141,13 @@ Los resultados quedan en artifacts, excluido de Git. El script también acepta l
 
 1. Abrí la URL HTTPS de Vercel en Chrome o Edge.
 2. Conectá tres fotos propias, pegá sus números y aplicá la selección.
+   Con selección vacía y sin escenas, las fotos deben aparecer en un montaje automáticamente al cargarlas.
 3. Reproducí el montaje y escuchá la música.
 4. Grabá un video corto; verificá resolución, duración, textos y audio.
 5. Exportá el XML e importalo en Premiere en la misma computadora donde están los originales.
 6. Recargá la página: el montaje debe conservarse y pedir reconectar las fotos.
 7. Revisá la consola del navegador y que Vercel haya completado el build.
+8. En Línea de tiempo, elegí Todas: Wipe y cambiá una escena a Fade. Comprobá la vista previa, la grabación y el guardado JSON.
 
 La entrega fue verificada localmente; el despliegue en tu cuenta y la importación real en Adobe Premiere requieren estas comprobaciones.
 
@@ -145,6 +155,8 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 
 - src/App.tsx: estado persistente del proyecto, conexión de archivos y edición de escenas.
 - src/components: formularios conectados, vista previa, línea de tiempo y ventanas accesibles.
+- src/components/ClientInputPanel.tsx, Navbar.tsx y VideoPreviewPlayer.tsx: diseño de Studio, tarjetas conectadas, portapapeles real y vista previa con marco de teléfono.
+- src/components/TimelineView.tsx y src/types/index.ts: Fade/Wipe/Zoom por escena y para todo el montaje, con tipos completos.
 - src/utils/photoParser.ts: selección sin fotos de stock ni archivos inventados.
 - src/utils/importPhotos.ts: lectura local, orientación real, preparación de imágenes y limpieza de recursos.
 - src/utils/canvasRenderer.ts: motor visual compartido por vista previa y grabación.
@@ -154,10 +166,12 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 - package.json y package-lock.json: dependencias reducidas e instalación reproducible.
 - vite.config.ts, tsconfig.json y vercel.json: configuración de desarrollo, TypeScript y Vercel.
 - tests/core.test.ts: pruebas de los casos que fallaban en la versión anterior.
+- src/index.css y public/fonts: tipografía Plus Jakarta Sans servida localmente con su licencia y estilos del editor.
+- scripts/restoration-smoke.cjs y transitions-smoke.cjs: importación automática, controles, persistencia, píxeles de las transiciones y adaptación a móviles.
 
 Se mantiene React + Vite y la composición con una, dos o tres fotos. Se retiran las dependencias de IA, servidor y efectos que no se usaban, junto con los archivos de plantilla de AI Studio y el lockfile de Bun desactualizado.
 
-Commit sugerido: "fix: connect real photos, persist edits and correct video export"
+Commit sugerido: "fix: restore studio UI and add working fade and wipe transitions"
 
 
-Para probar también la compilación de producción: primero ejecutá browser-smoke.cjs para generar las fotos de prueba; luego mantené npm run preview activo en otra terminal y ejecutá node scripts/production-smoke.cjs. Se comprueba música WAV cargada, descarga de video desde el modal e inspección del XML generado. Verificá VERIFICACION.md para conocer el alcance de la entrega.
+Para probar también la compilación de producción: primero ejecutá browser-smoke.cjs para generar las fotos de prueba; luego mantené npm run preview activo en otra terminal y ejecutá node scripts/production-smoke.cjs y node scripts/restoration-smoke.cjs. Se comprueban música WAV cargada, transición Wipe, descarga de video desde el modal, inspector XML, montaje automático con 31 fotos y diseño a 390/320 píxeles. Con npm run dev activo, node scripts/transitions-smoke.cjs verifica los colores de Fade/Wipe/Pan, márgenes y controles guardados. Verificá VERIFICACION.md para conocer el alcance de la entrega.

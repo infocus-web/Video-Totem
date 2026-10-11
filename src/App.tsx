@@ -17,6 +17,7 @@ import { importPhotos } from './utils/importPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
 import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from './utils/projectStorage';
 import { downloadBlob } from './utils/download';
+import { FileCode2 } from 'lucide-react';
 
 function initialProject(): SavedProject {
   try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) return decodeProject(stored); } catch { /* An invalid or unavailable saved draft never prevents opening the app. */ }
@@ -46,9 +47,13 @@ export default function App() {
     newConfig = { ...newConfig, defaultDuration: clampDuration(newConfig.defaultDuration) };
     setProject(prev => {
       const updatePath = (photo: typeof library[number]) => ({ ...photo, fullLocalPath: localPath(newConfig.localBasePath,photo.relativePath || photo.filename) });
-      return { ...prev, config: newConfig, library: prev.library.map(updatePath), slides: prev.slides.map(slide => ({
+      const updatedSlides = prev.slides.map(slide => ({
         ...slide, duration: newConfig.defaultDuration !== prev.config.defaultDuration ? newConfig.defaultDuration : slide.duration,
-        photos: slide.photos.map(updatePath) })) };
+        photos: slide.photos.map(updatePath) }));
+      const regrouped = newConfig.horizontalGrouping !== prev.config.horizontalGrouping
+        ? buildSlidesFromPhotos(updatedSlides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))), newConfig.horizontalGrouping, newConfig.defaultDuration)
+        : updatedSlides;
+      return { ...prev, config: newConfig, library: prev.library.map(updatePath), slides: regrouped };
     });
   };
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -64,9 +69,12 @@ export default function App() {
         if (old?.previewUrl) { URL.revokeObjectURL(old.previewUrl); urls.current.delete(old.previewUrl); }
         urls.current.add(photo.previewUrl);
       });
-      setProject(prev => ({ ...prev, library: [...merged.values()], slides: prev.slides.map(slide => ({ ...slide, photos: slide.photos.map(photo => ({
-        ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
-      setMessage(imported.length + ' fotos conectadas. Aplicá la selección o usá todas.');
+      const createMontage = !slides.length && !rawText.trim();
+      setProject(prev => ({ ...prev, library: [...merged.values()], slides: createMontage
+        ? buildSlidesFromPhotos([...merged.values()].filter(photo => photo.previewUrl), config.horizontalGrouping, config.defaultDuration)
+        : prev.slides.map(slide => ({ ...slide, photos: slide.photos.map(photo => ({
+          ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
+      setMessage(imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.'));
     } catch (error) { notify(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.'); }
     finally { setImporting(false); importAbort.current = null; }
   };
@@ -79,13 +87,13 @@ export default function App() {
         selection.missing.length ? 'Fotos faltantes o sin conectar: ' + selection.missing.join(', ') : '',
         selection.ambiguous.length ? 'Nombres ambiguos (hay más de un archivo): ' + selection.ambiguous.join(', ') : ''
       ].filter(Boolean).join('. ') + '. El montaje anterior se conserva.');
-      setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(selection.resolved.map(photo => ({ ...photo, duration: config.defaultDuration })),config.horizontalGrouping,config.defaultDuration) }));
+      setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(selection.resolved.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
       notify(selection.resolved.length + ' fotos seleccionadas.');
     } catch (error) { notify(error instanceof Error ? error.message : 'Selección inválida.'); }
   };
   const useAll = () => {
     if (!library.length || reconnect) { notify('Conectá las fotos de la biblioteca antes de usarlas.'); return; }
-    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(library.map(photo => ({ ...photo, duration: config.defaultDuration })),config.horizontalGrouping,config.defaultDuration) }));
+    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(library.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
     notify('Se agregaron todas las fotos al montaje.');
   };
   const regroup = () => setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(prev.slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))),config.horizontalGrouping,config.defaultDuration) }));
@@ -148,7 +156,13 @@ export default function App() {
   };
   return <div className="min-h-screen bg-neutral-950 text-neutral-100">
     <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={slides.reduce((sum,slide) => sum + slide.photos.length,0)} totalDuration={slides.reduce((sum,slide) => sum + slide.duration,0)} />
-    <main className="mx-auto max-w-7xl px-4 py-6 space-y-5">
+    <div className="border-b border-neutral-800 bg-neutral-900/50">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-xs sm:px-6 lg:px-8">
+        <p className="flex items-start gap-2 text-neutral-300"><span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" /><span><strong>Apilado 2 en 1 y 3 en 1:</strong> fotos horizontales una encima de otra para completar tu video vertical.</span></p>
+        <div className="flex flex-wrap items-center gap-3"><button onClick={() => setGuideOpen(true)} className="font-semibold text-indigo-400 underline hover:text-indigo-300">Guía & FAQ</button><span aria-hidden="true" className="text-neutral-700">|</span><button onClick={() => !busy && setPremiereOpen(true)} className="flex items-center gap-1 font-semibold text-violet-400 hover:text-violet-300"><FileCode2 aria-hidden="true" className="h-3.5 w-3.5" />Ver Proyecto Premiere</button></div>
+      </div>
+    </div>
+    <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-neutral-500">{saveStatus}</span>
           <button className="control" disabled={busy || importing} onClick={newProject}>Nuevo proyecto</button>
@@ -159,15 +173,16 @@ export default function App() {
       {message && <div role="status" className="flex justify-between gap-3 rounded-xl border border-indigo-800 bg-indigo-950/40 p-3 text-sm text-indigo-100"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
       {importing && <p role="status" className="text-sm text-indigo-300">Preparando archivos locales…</p>}
       {reconnect > 0 && <p role="status" className="text-sm text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir su carpeta para recuperar la vista previa.</p>}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-7">
+      <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-7">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
-            libraryCount={library.filter(photo => photo.previewUrl).length} onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
+            libraryCount={library.filter(photo => photo.previewUrl).length} selectedCount={slides.reduce((sum, slide) => sum + slide.photos.length, 0)} sceneCount={slides.length} onError={notify}
+            onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onMusicUpload={event => void uploadMusic(event)} musicName={musicName} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
             : <fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
-              onTogglePhotoOrientation={toggleOrientation} config={config} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset>}
+              onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset>}
         </div>
-        <div className="lg:col-span-5 lg:sticky lg:top-24"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy || importing} onBusy={setBusy} onError={notify} musicRevision={musicRevision} /></div>
+        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy || importing} onBusy={setBusy} onError={notify} musicRevision={musicRevision} libraryCount={library.filter(photo => photo.previewUrl).length} onUseAll={useAll} /></div>
       </div>
     </main>
     <footer className="mx-auto max-w-7xl px-4 py-6 text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>

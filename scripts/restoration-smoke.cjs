@@ -1,0 +1,65 @@
+const { chromium } = require(process.argv[2] || 'playwright');
+const fs = require('node:fs');
+const assert = require('node:assert/strict');
+let browser;
+(async () => {
+  fs.mkdirSync('artifacts', { recursive: true });
+  browser = await chromium.launch({ headless: true, ...(process.argv[3] ? { executablePath: process.argv[3] } : {}) });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('response', response => { if (response.status() >= 400) errors.push(response.status() + ' ' + response.url()); });
+  await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+  await page.screenshot({ path: 'artifacts/restored-empty.png', fullPage: true });
+  const fixture = fs.readFileSync('artifacts/fixture-1.jpg');
+  await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(Array.from({ length: 31 }, (_, index) => ({
+    name: 'IMG_' + String(index + 1).padStart(3, '0') + '.jpg', mimeType: 'image/jpeg', buffer: fixture,
+  })));
+  await page.getByText('31 fotos conectadas', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Exportar (24.0s)', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+  await page.getByRole('button', { name: /3 en 1 \(Completa el Cuadro\)/ }).click();
+  await page.getByRole('button', { name: 'Exportar (16.5s)', exact: true }).waitFor();
+  await page.getByRole('button', { name: /Individual \(1 foto por escena\)/ }).click();
+  await page.getByRole('button', { name: 'Exportar (46.5s)', exact: true }).waitFor();
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.evaluate(() => navigator.clipboard.writeText('004, 001, 002, 003, 005, 006, 007'));
+  await page.getByRole('button', { name: 'Pegar mensaje de WhatsApp', exact: true }).click();
+  assert.equal(await page.getByLabel('Selección del cliente').inputValue(), '004, 001, 002, 003, 005, 006, 007');
+  await page.getByRole('button', { name: 'Aplicar selección', exact: true }).click();
+  await page.getByRole('button', { name: /2 en 1 \(Arriba y Abajo\)/ }).click();
+  await page.getByText('7 fotos', { exact: true }).waitFor();
+  await page.getByText('4 escenas 9:16', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '12px', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: '12px', exact: true }).getAttribute('aria-pressed'), 'true');
+  await page.getByRole('button', { name: 'Configurar formato de nombres (IMG_, ceros, extensión)', exact: true }).click();
+  await page.getByLabel('Prefijo', { exact: true }).fill('DSC_');
+  await page.getByRole('button', { name: 'Ocultar formato de nombres (IMG_, ceros, extensión)', exact: true }).click();
+  const download = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Guardar proyecto JSON', exact: true }).click()]).then(([value]) => value);
+  await download.saveAs('artifacts/restored-project.json');
+  const project = JSON.parse(fs.readFileSync('artifacts/restored-project.json', 'utf8'));
+  assert.deepEqual(project.slides.flatMap(slide => slide.photos.map(photo => photo.filename)), ['IMG_004.jpg','IMG_001.jpg','IMG_002.jpg','IMG_003.jpg','IMG_005.jpg','IMG_006.jpg','IMG_007.jpg']);
+  assert.equal(project.config.splitGapSize, 12);
+  assert.equal(project.config.filenamePrefix, 'DSC_');
+  await page.getByLabel('Título', { exact: true }).fill('Boda Valentina & Mateo');
+  await page.getByLabel('Marca de agua', { exact: true }).fill('@tu_fotografia');
+  await page.getByRole('button', { name: 'Cerrar aviso', exact: true }).click();
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'artifacts/restored-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).click();
+  await page.waitForFunction(() => Number(document.querySelector('input[aria-label="Posición del video"]').value) > 0.2);
+  await page.getByRole('button', { name: 'Pausar', exact: true }).click();
+  assert.ok(Number(await page.getByLabel('Posición del video').inputValue()) > 0.2);
+  await page.getByRole('button', { name: 'Reiniciar reproducción', exact: true }).click();
+  assert.equal(Number(await page.getByLabel('Posición del video').inputValue()), 0);
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Sin desborde horizontal a ' + width + 'px');
+    await page.screenshot({ path: 'artifacts/restored-mobile-' + width + '.png', fullPage: true });
+  }
+  assert.deepEqual(errors, []);
+  console.log('PASS: 31 fotos crean montaje automáticamente; tarjetas 2/3/individual, portapapeles real, nombres, separación, orden, reproducción y móvil 390/320px');
+  await browser.close();
+})().catch(error => { console.error(error); if (browser) browser.close().finally(() => process.exit(1)); else process.exit(1); });
