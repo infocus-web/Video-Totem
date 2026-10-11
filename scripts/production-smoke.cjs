@@ -41,6 +41,21 @@ let browser;
   const download=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Grabar y descargar video'}).click()]).then(([value])=>value);
   await download.saveAs('artifacts/production-video.'+download.suggestedFilename().split('.').pop());
   assert.ok(fs.statSync('artifacts/production-video.'+download.suggestedFilename().split('.').pop()).size>1000);
+  const videoMetadata = await page.evaluate(async ({base64,mime}) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(base64),character=>character.charCodeAt(0))],{type:mime}));
+    video.src=url; video.muted=true; await new Promise((resolve,reject)=>{video.onloadeddata=resolve;video.onerror=reject;});
+    let duration=video.duration;
+    if(!Number.isFinite(duration)) {
+      const ended=new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('El video no terminó')),8000);video.onended=()=>{clearTimeout(timeout);resolve();};});
+      await video.play();await ended;duration=video.currentTime;
+    }
+    const result={width:video.videoWidth,height:video.videoHeight,duration};
+    URL.revokeObjectURL(url);return result;
+  },{base64:fs.readFileSync('artifacts/production-video.'+download.suggestedFilename().split('.').pop()).toString('base64'),mime:download.suggestedFilename().endsWith('.mp4')?'video/mp4':'video/webm'});
+  assert.equal(videoMetadata.width,1080);assert.equal(videoMetadata.height,1920);
+  if(Number.isFinite(videoMetadata.duration))assert.ok(Math.abs(videoMetadata.duration-1)<0.2);
+  await page.locator('summary').filter({hasText:'Rutas de Archivos & Google Drive'}).click();
   await page.getByLabel('Ruta de esa carpeta').fill('D:\\Fotos\\Sesion');
   await page.getByRole('button',{name:/Exportar \(/}).click();
   const xml=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Descargar XML de Premiere'}).click()]).then(([value])=>value);
@@ -51,8 +66,11 @@ let browser;
   await page.getByRole('button',{name:'Aplicar resolución y FPS al editor'}).waitFor();
   await page.getByRole('button',{name:'Aplicar resolución y FPS al editor'}).click();
   await page.getByText('Se aplicó el formato del XML.').waitFor();
+  await page.getByRole('button',{name:'Inspector XML'}).click();
+  await page.getByRole('button',{name:'Aplicar resolución y FPS al editor'}).waitFor();
+  await page.keyboard.press('Escape');
   assert.deepEqual(errors,[]);
-  fs.writeFileSync('artifacts/production-report.json',JSON.stringify({status:'passed',customAudio:'tone.wav',transition:'wipe',video:download.suggestedFilename(),xmlImport:'passed',consoleErrors:errors},null,2));
+  fs.writeFileSync('artifacts/production-report.json',JSON.stringify({status:'passed',customAudio:'tone.wav',transition:'wipe',video:download.suggestedFilename(),videoMetadata,xmlImport:'passed',consoleErrors:errors},null,2));
   console.log('PASS: compiled app, local images, custom WAV audio, modal video download and XML inspector');
   await browser.close();
 })().catch(error=>{console.error(error);if(browser)browser.close().finally(()=>process.exit(1));else process.exit(1);});

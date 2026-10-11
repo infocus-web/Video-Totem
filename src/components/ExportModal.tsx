@@ -4,7 +4,7 @@ import { generatePremiereXml } from '../utils/premiereXmlGenerator';
 import { downloadBlob } from '../utils/download';
 import { recordingFormat } from '../utils/videoRecorder';
 import { Modal } from './Modal';
-export function ExportModal({ isOpen, onClose, slides, config, onTriggerDirectVideoRender }: { isOpen: boolean; onClose: () => void; slides: SequenceSlide[]; config: SequenceConfig; onTriggerDirectVideoRender: () => void }) {
+export function ExportModal({ isOpen, onClose, slides, config, canRecord, onTriggerDirectVideoRender }: { isOpen: boolean; onClose: () => void; slides: SequenceSlide[]; config: SequenceConfig; canRecord: boolean; onTriggerDirectVideoRender: () => void }) {
   const [error, setError] = useState('');
   const format = recordingFormat();
   const unresolved = slides.some(slide => slide.photos.some(photo => !photo.previewUrl));
@@ -16,7 +16,9 @@ export function ExportModal({ isOpen, onClose, slides, config, onTriggerDirectVi
     {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
     <section className="rounded-2xl border border-emerald-800 p-4 space-y-3"><h3 className="font-bold">Video final · {format?.extension.toUpperCase() ?? 'No disponible'}</h3>
       <p className="text-sm text-neutral-400">Incluye la composición, movimientos, transiciones, títulos y música. Se graba en tiempo real: mantené la pestaña visible.</p>
-      <button disabled={!slides.length || unresolved || !format} onClick={() => { onClose(); onTriggerDirectVideoRender(); }} className="control">Grabar y descargar video</button>
+      <p className="text-xs text-neutral-500">Se verifica la pista de imagen antes de descargar. Si Chrome falla al generar MP4, se reintenta en WebM y se muestra un aviso.</p>
+      <button disabled={!slides.length || unresolved || !format || !canRecord} onClick={() => { onClose(); onTriggerDirectVideoRender(); }} className="control">Grabar y descargar video</button>
+      {slides.length > 0 && !unresolved && !canRecord && <p className="text-xs text-indigo-300">Esperá a que termine de prepararse la vista previa.</p>}
       {unresolved && <p className="text-xs text-amber-300">Volvé a conectar las fotos del proyecto antes de grabar.</p>}
     </section>
     <section className="rounded-2xl border border-violet-800 p-4 space-y-3"><h3 className="font-bold">Secuencia editable para Premiere · XML</h3>

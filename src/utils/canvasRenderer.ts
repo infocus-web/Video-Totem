@@ -2,15 +2,20 @@ import type { SequenceConfig, SequenceSlide, PhotoItem, FilePreparationProgress 
 export type ImageMap = Map<string, HTMLImageElement>;
 const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
 
-export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void): Promise<ImageMap> {
+export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void, cached: ImageMap = new Map()): Promise<ImageMap> {
   const photos = [...new Map(slides.flatMap(slide => slide.photos).map(photo => [photo.id, photo])).values()];
   const images = new Map<string, HTMLImageElement>();
-  onProgress?.({ completed: 0, total: photos.length });
+  const pending = photos.filter(photo => {
+    const image = cached.get(photo.id);
+    if (image && photo.previewUrl && image.src === photo.previewUrl) { images.set(photo.id, image); return false; }
+    return true;
+  });
+  onProgress?.({ completed: images.size, total: photos.length });
   // Limit concurrent decoding to avoid a memory spike on large folders.
   let index = 0;
-  await Promise.all(Array.from({ length: Math.min(4, photos.length) }, async () => {
-    while (index < photos.length) {
-      const photo = photos[index++];
+  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
+    while (index < pending.length) {
+      const photo = pending[index++];
       if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
       if (!photo.previewUrl) throw new Error('Volvé a conectar la foto ' + photo.filename);
       const image = new Image();

@@ -84,7 +84,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       <div className="studio-card space-y-3">
         <p className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-indigo-400" aria-hidden="true" />Transiciones para todas las escenas</p>
-        <div className="flex flex-wrap gap-2">{(['fade', 'zoom', 'wipe', 'none'] as const).map(transition => <button key={transition} className="quick-button" aria-pressed={slides.every(slide => slide.transition === transition)} onClick={() => onApplyGlobalTransition(transition)}>{transition === 'fade' ? 'Todas: Fade' : transition === 'zoom' ? 'Todas: Zoom' : transition === 'wipe' ? 'Todas: Wipe' : 'Todas: corte directo'}</button>)}</div>
+        <div className="flex flex-wrap gap-2">{(['dissolve', 'zoom', 'wipe', 'none'] as const).map(transition => <button key={transition} className="quick-button" aria-pressed={slides.every(slide => (slide.transition === 'fade' ? 'dissolve' : slide.transition) === transition)} onClick={() => onApplyGlobalTransition(transition)}>{transition === 'dissolve' ? 'Todas: Fundido' : transition === 'zoom' ? 'Todas: Zoom' : transition === 'wipe' ? 'Todas: Wipe' : 'Todas: corte directo'}</button>)}</div>
         <p className="text-[11px] text-neutral-400">Se aplican en la vista previa y el video exportado. También podés cambiar cada escena.</p>
       </div>
       {/* Grid of Slide Cards */}
@@ -162,6 +162,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     {photo.previewUrl ? <img
                       src={photo.previewUrl}
                       alt={photo.filename}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     /> : <div className="p-3 text-xs text-amber-300">Reconectá {photo.filename}</div>}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 flex flex-col justify-between p-1.5">
@@ -201,6 +203,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       min="0.4"
                       max="60"
                       value={slide.duration}
+                      aria-label={'Duración escena ' + (slideIndex + 1)}
                       onChange={(e) =>
                         onUpdateSlide(slideIndex, {
                           duration: parseFloat(e.target.value) || 1.5,
@@ -221,10 +224,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 </label>)}
                 <div>
                   <label className="text-[10px] text-neutral-400 block mb-0.5">Transición:</label>
-                  <div className="mb-1 flex flex-wrap gap-1">{(['fade', 'zoom', 'wipe'] as const).map(transition => <button key={transition} className="rounded border border-neutral-700 px-2 py-1 text-[10px] aria-pressed:border-indigo-400 aria-pressed:bg-indigo-600/20" aria-label={transition + ' escena ' + (slideIndex + 1)} aria-pressed={slide.transition === transition} onClick={() => onUpdateSlide(slideIndex, { transition })}>{transition === 'fade' ? 'Fade' : transition === 'zoom' ? 'Zoom' : 'Wipe'}</button>)}</div>
                   <select
                     aria-label={'Transición escena ' + (slideIndex + 1)}
-                    value={slide.transition}
+                    value={slide.transition === 'fade' ? 'dissolve' : slide.transition}
                     onChange={(e) =>
                       onUpdateSlide(slideIndex, {
                         transition: e.target.value as SequenceSlide['transition'],
@@ -232,8 +234,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     }
                     className="w-full bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-[11px] text-neutral-200"
                   >
-                    <option value="dissolve">Disolvencia Cruzada</option>
-                    <option value="fade">Fade · Fundido</option>
+                    <option value="dissolve">Fundido</option>
                     <option value="wipe">Wipe · Barrido lateral</option>
                     <option value="zoom">Zoom Punch</option>
                     <option value="flash">Flash Blanco</option>

@@ -19,10 +19,10 @@ const modes: { value: HorizontalGroupMode; title: string; detail: string; slots:
   { value: 'single', title: 'Individual (1 foto por escena)', detail: 'Una foto a la vez con el fondo que elijas para tu video.', slots: 1 },
 ];
 const presets: { name: string; detail: string; duration: number; music: string; group: HorizontalGroupMode; background: SequenceConfig['backgroundStyle'] }[] = [
-  { name: '💍 Boda Emotiva', detail: '1.8s · 2 en 1 + Disolvencias', duration: 1.8, music: 'cinematic', group: 'auto-split-2', background: 'blur' },
+  { name: '💍 Boda Emotiva', detail: '1.8s · 2 en 1 · Música cinemática', duration: 1.8, music: 'cinematic', group: 'auto-split-2', background: 'blur' },
   { name: '🎉 Fiesta / 15 Años', detail: '0.9s · 3 en 1 + Beats rápidos', duration: 0.9, music: 'upbeat', group: 'auto-split-3', background: 'blur' },
-  { name: '📸 Portfolio / Sesión', detail: '1.4s · Ken Burns Zoom', duration: 1.4, music: 'chill', group: 'auto-adaptive', background: 'blur' },
-  { name: '🏡 Inmobiliaria / Tour', detail: '2.2s · Panorámica vertical', duration: 2.2, music: 'chill', group: 'auto-split-2', background: 'black' },
+  { name: '📸 Portfolio / Sesión', detail: '1.4s · Agrupación inteligente', duration: 1.4, music: 'chill', group: 'auto-adaptive', background: 'blur' },
+  { name: '🏡 Inmobiliaria / Tour', detail: '2.2s · 2 en 1 · Fondo negro', duration: 2.2, music: 'chill', group: 'auto-split-2', background: 'black' },
 ];
 
 export function ClientInputPanel(props: Props) {
@@ -52,7 +52,6 @@ export function ClientInputPanel(props: Props) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-xs text-neutral-500">Rápido:</span>
         <button type="button" onClick={() => void paste()} className="quick-button"><Copy aria-hidden="true" />Pegar mensaje de WhatsApp</button>
-        <button type="button" onClick={() => props.onRawTextChange(props.rawText.trim() ? props.rawText + ', 10-15' : '10-15')} className="quick-button">+ Rango 10–15</button>
         <button type="button" onClick={() => props.onRawTextChange('')} className="quick-button">Limpiar lista</button>
         <label className="quick-button !border-indigo-500/30 !text-indigo-300"><PlusCircle aria-hidden="true" />Subir fotos locales
           <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label>
@@ -88,11 +87,12 @@ export function ClientInputPanel(props: Props) {
           onClick={() => change('splitGapSize', gap)} className={'rounded px-2 py-1 font-mono text-xs ' + (config.splitGapSize === gap ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-neutral-400 hover:text-white')}>{gap}px</button>)}</div>
       </div>
       <p className="text-xs text-neutral-500">Cambiar el modo redistribuye las escenas. Conserva el orden, los movimientos y usa la duración de la primera foto de cada grupo.</p>
-      <button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button">Reagrupar montaje con este modo</button>
+      <details className="text-xs text-neutral-400"><summary className="cursor-pointer">Opciones de agrupación</summary><p className="my-2">Si cambiaste cuadros en la línea de tiempo, podés volver a aplicar este modo a todo el montaje.</p><button type="button" onClick={props.onRegroup} disabled={!props.sceneCount} className="quick-button">Reagrupar montaje con este modo</button></details>
     </section>
 
-    <section className="studio-card space-y-4">
-      <div className="section-heading"><span className="step-badge step-green">3</span><div><h2>Rutas de Archivos & Google Drive</h2><p>Para vincular los originales con Premiere Pro y tu disco.</p></div></div>
+    <details className="studio-card space-y-4">
+      <summary className="cursor-pointer text-sm font-bold text-neutral-200">Rutas de Archivos & Google Drive <span className="ml-2 text-xs font-normal text-neutral-400">Opcional · Premiere</span></summary>
+      <p className="text-xs text-neutral-400">Para vincular los originales con Premiere Pro y tu disco.</p>
       <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-neutral-300"><HardDrive aria-hidden="true" className="h-3.5 w-3.5" />Ruta local en tu PC / Mac:</span>
         <input aria-label="Ruta de esa carpeta" value={config.localBasePath} onChange={e => change('localBasePath', e.target.value)} placeholder="D:\Fotos\Bodas_2024\FamiliaPerez\" className="studio-input font-mono text-xs" /></label>
       <p className="text-xs text-neutral-400">Solo para el XML de Premiere. Copiá la ruta del Explorador de archivos; no hace falta para grabar el video.</p>
@@ -109,10 +109,10 @@ export function ClientInputPanel(props: Props) {
         <label className="text-xs text-neutral-400">Dígitos<select value={config.filenamePadding} onChange={e => change('filenamePadding', Number(e.target.value))} className="studio-input mt-1">{[0,3,4,5,6].map(n => <option key={n} value={n}>{n || 'Exactos'}</option>)}</select></label>
         <label className="text-xs text-neutral-400">Extensión<select value={config.filenameExtension} onChange={e => change('filenameExtension', e.target.value)} className="studio-input mt-1">{['.jpg','.jpeg','.png','.webp','.avif'].map(ext => <option key={ext}>{ext}</option>)}</select></label>
       </div>}
-    </section>
+    </details>
 
     <section className="studio-card space-y-4">
-      <div className="section-heading"><span className="step-badge step-amber">4</span><div><h2>Ritmo, Estilo & Música del Video</h2><p>Adaptá la velocidad y los efectos al tipo de evento.</p></div></div>
+      <div className="section-heading"><span className="step-badge step-amber">3</span><div><h2>Ritmo, Estilo & Música del Video</h2><p>Adaptá la velocidad y los efectos al tipo de evento.</p></div></div>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{presets.map(preset => <button type="button" key={preset.name} className="preset-card"
         onClick={() => onConfigChange({ ...config, defaultDuration: preset.duration, musicTrack: preset.music, horizontalGrouping: preset.group, backgroundStyle: preset.background })}>
         <span className="block text-xs font-semibold text-neutral-200">{preset.name}</span><span className="mt-1 block text-xs text-neutral-400">{preset.detail}</span>
@@ -154,7 +154,7 @@ export function ClientInputPanel(props: Props) {
           {[[1080,1920,'Vertical 9:16'],[1080,1080,'Cuadrado 1:1'],[1920,1080,'Horizontal 16:9'],[1080,1350,'Retrato 4:5']].map(([w,h,label]) => <option key={String(w) + 'x' + h} value={String(w) + 'x' + h}>{label}</option>)}
           {!['1080x1920','1080x1080','1920x1080','1080x1350'].includes(config.width + 'x' + config.height) && <option value={config.width + 'x' + config.height}>{config.width} × {config.height}</option>}
         </select></label>
-        <label className="text-xs text-neutral-400">FPS<select value={config.fps} onChange={e => change('fps', Number(e.target.value))} className="studio-input mt-1">{[24,25,30,50,60].map(fps => <option key={fps}>{fps}</option>)}</select></label>
+        <label className="text-xs text-neutral-400">FPS<select aria-label="FPS" value={config.fps} onChange={e => change('fps', Number(e.target.value))} className="studio-input mt-1">{[24,25,30,50,60].map(fps => <option key={fps}>{fps}</option>)}</select></label>
       </div>
     </section>
   </fieldset>;

@@ -2,16 +2,46 @@ import type { SequenceConfig, SequenceSlide } from '../types';
 import { drawFrame, type ImageMap } from './canvasRenderer';
 import { audioEngine } from './audioSynthesizer';
 
-export function recordingFormat() {
+export function recordingFormat(preference?: 'webm') {
   if (typeof MediaRecorder === 'undefined') return null;
   const candidates = ['video/mp4;codecs=avc1.424028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-  const mime = candidates.find(candidate => MediaRecorder.isTypeSupported(candidate));
+  const mime = candidates.find(candidate => (!preference || candidate.startsWith('video/' + preference)) && MediaRecorder.isTypeSupported(candidate));
   return mime ? { mime, extension: mime.startsWith('video/mp4') ? 'mp4' : 'webm' } : null;
 }
 
-export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void) {
+export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
   const format = recordingFormat();
   if (!format || !HTMLCanvasElement.prototype.captureStream) throw new Error('Este navegador no permite grabar video. Probá con Chrome o Edge actualizado.');
+  onPhase('Grabando video');
+  let result = await recordWithFormat(slides, config, images, signal, progress, format);
+  onPhase('Verificando archivo');
+  if (!await hasVideoTrack(result.blob, config, signal)) {
+    const fallback = format.extension === 'mp4' ? recordingFormat('webm') : null;
+    if (!fallback) throw new Error('El navegador generó un archivo sin imagen. Probá de nuevo en Chrome o Edge.');
+    onPhase('Reintentando video en WebM'); progress(0);
+    result = await recordWithFormat(slides, config, images, signal, progress, fallback);
+    onPhase('Verificando archivo');
+    if (!await hasVideoTrack(result.blob, config, signal)) throw new Error('El navegador no pudo generar la pista de video. Probá en otro navegador.');
+  }
+  progress(100); return result;
+}
+
+function hasVideoTrack(blob: Blob, config: SequenceConfig, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return Promise.reject(new DOMException('Cancelado', 'AbortError'));
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video'), url = URL.createObjectURL(blob);
+    const cleanup = () => { window.clearTimeout(timeout); signal.removeEventListener('abort', abort); video.onloadedmetadata = null; video.onerror = null; video.removeAttribute('src'); video.load(); URL.revokeObjectURL(url); };
+    const finish = (valid: boolean) => { cleanup(); resolve(valid); };
+    const abort = () => { cleanup(); reject(new DOMException('Cancelado', 'AbortError')); };
+    const timeout = window.setTimeout(() => finish(false), 5000);
+    video.onloadedmetadata = () => finish(video.videoWidth === config.width && video.videoHeight === config.height);
+    video.onerror = () => finish(false);
+    signal.addEventListener('abort', abort, { once: true });
+    video.preload = 'metadata'; video.src = url;
+  });
+}
+
+async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, format: { mime: string; extension: string }) {
   const duration = slides.reduce((sum, slide) => sum + slide.duration, 0);
   if (!duration || duration > 300) throw new Error('La grabación admite montajes de hasta 5 minutos.');
   if (signal.aborted || document.hidden) throw new Error('Dejá esta pestaña visible para grabar.');
@@ -60,7 +90,7 @@ export async function recordVideo(slides: SequenceSlide[], config: SequenceConfi
         if (failure) { reject(failure); return; }
         const blob = new Blob(chunks, { type: recorder.mimeType || format.mime });
         if (!blob.size) { reject(new Error('El navegador generó un archivo vacío.')); return; }
-        progress(100); resolve({ blob, extension: format.extension });
+        resolve({ blob, extension: format.extension });
       };
       const tick = () => {
         if (recorder.state === 'inactive') return;

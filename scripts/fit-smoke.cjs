@@ -72,7 +72,8 @@ let activePage;
   await page.getByRole('button', { name: 'Editor', exact: true }).click();
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
   await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: 'artifacts/fit-desktop.png', fullPage: true });
-  const videoDownload = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /^Grabar (MP4|WEBM)$/ }).click()]).then(([value]) => value);
+  await page.getByRole('button', { name: /Exportar \(/ }).click();
+  const videoDownload = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Grabar y descargar video' }).click()]).then(([value]) => value);
   const videoPath = 'artifacts/fit-video.' + videoDownload.suggestedFilename().split('.').pop(); await videoDownload.saveAs(videoPath);
   const metadata = await page.evaluate(async ({ base64, mime }) => {
     const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(base64), character => character.charCodeAt(0))], { type: mime }));

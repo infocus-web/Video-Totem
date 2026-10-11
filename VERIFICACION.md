@@ -7,7 +7,7 @@ Fecha: 11 de octubre de 2026.
 - Instalación limpia con npm ci: correcta.
 - npm audit: 0 vulnerabilidades reportadas en las dependencias instaladas.
 - TypeScript estricto y compilación Vite de producción: correctos.
-- Pruebas automatizadas: 18 aprobadas, 0 fallidas.
+- Pruebas automatizadas: 22 aprobadas, 0 fallidas.
 - Flujo de navegador verificado en Google Chrome de escritorio.
 
 ## Evidencia de navegador
@@ -51,11 +51,24 @@ Los cambios abarcan los tipos y valores iniciales del encuadre, su persistencia,
 
 ## Alcance pendiente fuera del entorno local
 
-Esta entrega no modificó el repositorio Video-Totem ni su despliegue existente. La configuración y el código están preparados para actualizarlo siguiendo README.md. Las pruebas nuevas corresponden al código local de este ZIP.
+Los archivos optimizados se aplican directamente al repositorio local **D:\PROYECTOS\VIDEO TOTEM\Video Totem**. No se publica un commit ni se modifica el despliegue desde esta entrega. Para actualizar Vercel, revisá los cambios en GitHub Desktop, hacé commit y Push origin.
 
 La importación del XML dentro de Adobe Premiere no se ejecutó. El inspector del navegador verificó la estructura y tiempos del XML generado; escala y posición requieren una comprobación en la versión de Premiere del usuario. Los efectos completos del editor se conservan en el video, no en el XML.
 
 La exportación MP4 depende de los codecs que admita el navegador. Existe alternativa WebM y se muestra el formato antes de grabar.
+
+## Optimización y continuidad de reproducción
+
+- Cambiar textos, volumen, FPS, recorte, separación, transición, movimiento, duración, orden y agrupación mantiene la reproducción.
+- Con tres fotos, importar y preparar la vista previa requiere seis decodificaciones. Los ajustes no agregan decodificaciones. Agregar una foto nueva requiere dos más, sin volver a decodificar las anteriores.
+- Vista previa pausada: cero callbacks de animación durante el intervalo medido de 350 ms.
+- Línea de tiempo, exportación, inspector y ayuda se descargan al abrirlos. Un inspector ya abierto conserva sus datos al cerrarlo.
+- Un solo acceso a inspector y ayuda; grabación centralizada en Exportar; un selector de transición por escena; Fade y disolvencia unificados visualmente como Fundido, con compatibilidad del JSON anterior.
+- Rutas de Premiere y Reagrupar disponibles en secciones desplegables. Los presets describen los ajustes que aplican.
+- Carga de 31 fotos, progreso real, reconexión y recuperación ante archivo inválido comprobados.
+- El archivo exportado se verifica antes de descargar. Un MP4 sin pista de video se descarta y se reintenta como WebM. La prueba corta con música WAV comprobó resolución y duración del video resultante.
+- Se conserva el recorte individual/apilado y se comprueban los píxeles superior e inferior del video exportado.
+- Documentación de archivos y mediciones: OPTIMIZACIONES.md.
 
 ## Cambios funcionales relevantes
 

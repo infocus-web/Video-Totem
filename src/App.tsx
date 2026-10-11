@@ -2,23 +2,31 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Navbar } from './components/Navbar';
 import { ClientInputPanel } from './components/ClientInputPanel';
 import { VideoPreviewPlayer, type PreviewHandle } from './components/VideoPreviewPlayer';
-import { TimelineView } from './components/TimelineView';
-import { PremiereInspectorModal } from './components/PremiereInspectorModal';
-import { ExportModal } from './components/ExportModal';
-import { FaqGuideModal } from './components/FaqGuideModal';
 import { PreparationProgress } from './components/PreparationProgress';
 import type { SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress } from './types';
 import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } from './utils/photoParser';
-import { DEFAULT_CONFIG, clampDuration, localPath } from './utils/config';
+import { DEFAULT_CONFIG, clampDuration } from './utils/config';
+import { updateProjectConfig } from './utils/projectConfig';
 import { importPhotos } from './utils/importPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
 import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from './utils/projectStorage';
 import { downloadBlob } from './utils/download';
-import { FileCode2 } from 'lucide-react';
+
+const TimelineView = lazy(() => import('./components/TimelineView').then(module => ({ default: module.TimelineView })));
+const PremiereInspectorModal = lazy(() => import('./components/PremiereInspectorModal').then(module => ({ default: module.PremiereInspectorModal })));
+const ExportModal = lazy(() => import('./components/ExportModal').then(module => ({ default: module.ExportModal })));
+const FaqGuideModal = lazy(() => import('./components/FaqGuideModal').then(module => ({ default: module.FaqGuideModal })));
+
+function DeferredDialog({ open, children }: { open: boolean; children: ReactNode }) {
+  const [wasOpened, setWasOpened] = useState(false);
+  useEffect(() => { if (open) setWasOpened(true); }, [open]);
+  // Keep opened tools mounted so inspecting an XML survives closing the dialog.
+  return open || wasOpened ? <Suspense fallback={<p role="status" className="fixed bottom-4 right-4 z-50 rounded-xl bg-neutral-800 p-3 text-sm">Abriendo herramienta…</p>}>{children}</Suspense> : null;
+}
 
 function initialProject(): SavedProject {
   try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) return decodeProject(stored); } catch { /* An invalid or unavailable saved draft never prevents opening the app. */ }
@@ -29,6 +37,7 @@ export default function App() {
   const [tab, setTab] = useState<ViewTab>('editor');
   const [premiereOpen, setPremiereOpen] = useState(false), [exportOpen, setExportOpen] = useState(false), [guideOpen, setGuideOpen] = useState(false);
   const [busy, setBusy] = useState(false), [importing, setImporting] = useState(false);
+  const [previewReady, setPreviewReady] = useState(false);
   const [importProgress, setImportProgress] = useState<FilePreparationProgress | null>(null);
   const [message, setMessage] = useState(''), [saveStatus, setSaveStatus] = useState('Guardando…');
   const [musicName, setMusicName] = useState(''), [musicRevision, setMusicRevision] = useState(0);
@@ -36,6 +45,9 @@ export default function App() {
   const urls = useRef(new Set<string>());
   const { config, rawText, slides, library } = project;
   const reconnect = library.filter(photo => !photo.previewUrl).length;
+  const connectedCount = library.length - reconnect;
+  const selectedCount = slides.reduce((sum, slide) => sum + slide.photos.length, 0);
+  const totalDuration = slides.reduce((sum, slide) => sum + slide.duration, 0);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try { localStorage.setItem(STORAGE_KEY,serializeProject(project)); setSaveStatus('Guardado en este navegador'); }
@@ -45,29 +57,18 @@ export default function App() {
   }, [project]);
   useEffect(() => () => { importAbort.current?.abort(); urls.current.forEach(url => URL.revokeObjectURL(url)); audioEngine.stop(); }, []);
   const notify = (value: string) => setMessage(value);
-  const changeConfig = (newConfig: SequenceConfig) => {
-    newConfig = { ...newConfig, defaultDuration: clampDuration(newConfig.defaultDuration) };
-    setProject(prev => {
-      const updatePath = (photo: typeof library[number]) => ({ ...photo, fullLocalPath: localPath(newConfig.localBasePath,photo.relativePath || photo.filename) });
-      const updatedSlides = prev.slides.map(slide => ({
-        ...slide, duration: newConfig.defaultDuration !== prev.config.defaultDuration ? newConfig.defaultDuration : slide.duration,
-        photos: slide.photos.map(updatePath) }));
-      const regrouped = newConfig.horizontalGrouping !== prev.config.horizontalGrouping
-        ? buildSlidesFromPhotos(updatedSlides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))), newConfig.horizontalGrouping, newConfig.defaultDuration)
-        : updatedSlides;
-      return { ...prev, config: newConfig, library: prev.library.map(updatePath), slides: regrouped };
-    });
-  };
+  const changeConfig = (newConfig: SequenceConfig) => setProject(prev => updateProjectConfig(prev, newConfig));
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
     setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
     try {
       const imported = await importPhotos(files,config,importAbort.current.signal,setImportProgress);
       const merged = new Map(library.map(photo => [photo.id,photo]));
+      const previousPhotos = new Map(merged);
       imported.forEach(photo => merged.set(photo.id,photo));
       if (merged.size > 400) { imported.forEach(photo => URL.revokeObjectURL(photo.previewUrl)); throw new Error('La biblioteca admite hasta 400 fotos. Abrí otro proyecto para una sesión distinta.'); }
       imported.forEach(photo => {
-        const old = library.find(item => item.id === photo.id);
+        const old = previousPhotos.get(photo.id);
         if (old?.previewUrl) { URL.revokeObjectURL(old.previewUrl); urls.current.delete(old.previewUrl); }
         urls.current.add(photo.previewUrl);
       });
@@ -157,13 +158,7 @@ export default function App() {
     notify('Proyecto nuevo. Si había un montaje, se descargó su respaldo JSON.');
   };
   return <div className="min-h-screen bg-neutral-950 text-neutral-100">
-    <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={slides.reduce((sum,slide) => sum + slide.photos.length,0)} totalDuration={slides.reduce((sum,slide) => sum + slide.duration,0)} />
-    <div className="border-b border-neutral-800 bg-neutral-900/50">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-xs sm:px-6 lg:px-8">
-        <p className="flex items-start gap-2 text-neutral-300"><span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400" /><span><strong>Apilado 2 en 1 y 3 en 1:</strong> fotos horizontales una encima de otra para completar tu video vertical.</span></p>
-        <div className="flex flex-wrap items-center gap-3"><button onClick={() => setGuideOpen(true)} className="font-semibold text-indigo-400 underline hover:text-indigo-300">Guía & FAQ</button><span aria-hidden="true" className="text-neutral-700">|</span><button onClick={() => !busy && setPremiereOpen(true)} className="flex items-center gap-1 font-semibold text-violet-400 hover:text-violet-300"><FileCode2 aria-hidden="true" className="h-3.5 w-3.5" />Ver Proyecto Premiere</button></div>
-      </div>
-    </div>
+    <Navbar currentTab={tab} onTabChange={setTab} onOpenPremiereModal={() => !busy && !importing && setPremiereOpen(true)} onOpenExportModal={() => !busy && !importing && setExportOpen(true)} onOpenFaqModal={() => setGuideOpen(true)} totalPhotos={selectedCount} totalDuration={totalDuration} formatLabel={config.width + ' × ' + config.height} busy={busy || importing} />
     <main className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2 items-center"><span className="text-xs text-neutral-500">{saveStatus}</span>
@@ -178,19 +173,19 @@ export default function App() {
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-7">
           {tab === 'editor' ? <ClientInputPanel rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
-            libraryCount={library.filter(photo => photo.previewUrl).length} selectedCount={slides.reduce((sum, slide) => sum + slide.photos.length, 0)} sceneCount={slides.length} onError={notify}
+            libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onMusicUpload={event => void uploadMusic(event)} musicName={musicName} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
-            : <fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
-              onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset>}
+            : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
+              onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy || importing} onBusy={setBusy} onError={notify} musicRevision={musicRevision} libraryCount={library.filter(photo => photo.previewUrl).length} onUseAll={useAll} /></div>
+        <div className="min-w-0 lg:sticky lg:top-24 lg:col-span-5"><VideoPreviewPlayer ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} musicRevision={musicRevision} libraryCount={connectedCount} /></div>
       </div>
     </main>
     <footer className="mx-auto max-w-7xl px-4 py-6 text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>
-    <PremiereInspectorModal isOpen={premiereOpen} onClose={() => setPremiereOpen(false)} onApplyPremiereSettings={applyPremiere} />
-    <ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} onTriggerDirectVideoRender={() => preview.current?.record()} />
-    <FaqGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
+    <DeferredDialog open={premiereOpen}><PremiereInspectorModal isOpen={premiereOpen} onClose={() => setPremiereOpen(false)} onApplyPremiereSettings={applyPremiere} /></DeferredDialog>
+    <DeferredDialog open={exportOpen}><ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} slides={slides} config={config} canRecord={previewReady && !busy && !importing} onTriggerDirectVideoRender={() => preview.current?.record()} /></DeferredDialog>
+    <DeferredDialog open={guideOpen}><FaqGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} /></DeferredDialog>
   </div>;
 }
 

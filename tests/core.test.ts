@@ -5,6 +5,7 @@ import { DEFAULT_CONFIG, localPath } from '../src/utils/config.ts';
 import { decodeProject, serializeProject, type SavedProject } from '../src/utils/projectStorage.ts';
 import { generatePremiereXml, fileUrl } from '../src/utils/premiereXmlGenerator.ts';
 import type { PhotoItem } from '../src/types/index.ts';
+import { updateProjectConfig } from '../src/utils/projectConfig.ts';
 
 const options = { localBasePath: 'D:\\Fotos', prefix: 'IMG_', padding: 3, extension: '.jpg', defaultDuration: 1.5 };
 const photo = (name: string, orientation: PhotoItem['orientation'] = 'horizontal'): PhotoItem => ({
@@ -114,5 +115,52 @@ test('conserva el recorte y abre proyectos anteriores con la foto completa', () 
   assert.equal(decodeProject(JSON.stringify(older)).config.photoFit, 'contain');
   older.config.photoFit = 'stretch';
   assert.equal(decodeProject(JSON.stringify(older)).config.photoFit, 'contain');
+});
+
+function editedProject(): SavedProject {
+  const library = [photo('sub/1.jpg'), photo('sub/2.jpg')];
+  const config = { ...DEFAULT_CONFIG, horizontalGrouping: 'single' as const };
+  const slides = buildSlidesFromPhotos(library, 'single', 1.5);
+  slides[0].duration = 2.3; slides[0].transition = 'fade';
+  return { version: 1, config, rawText: '', library, slides };
+}
+
+test('cambiar textos o encuadre conserva las fotos y las ediciones del montaje', () => {
+  const project = editedProject();
+  const changed = updateProjectConfig(project, { ...project.config, eventTitle: 'Nueva boda', photoFit: 'cover' });
+  assert.equal(changed.library, project.library);
+  assert.equal(changed.slides, project.slides);
+  assert.equal(changed.slides[0].duration, 2.3);
+  assert.equal(changed.slides[0].transition, 'fade');
+  assert.equal(changed.config.photoFit, 'cover');
+  assert.equal(updateProjectConfig(project, { ...project.config }), project);
+});
+
+test('cambiar duración actualiza escenas sin reconstruir ni perder las fotos', () => {
+  const project = editedProject();
+  const changed = updateProjectConfig(project, { ...project.config, defaultDuration: 3 });
+  assert.deepEqual(changed.slides.map(slide => slide.duration), [3, 3]);
+  assert.equal(changed.library, project.library);
+  assert.equal(changed.slides[0].photos, project.slides[0].photos);
+  assert.equal(changed.slides[0].transition, 'fade');
+});
+
+test('cambiar la ruta actualiza originales y escenas conservando subcarpetas', () => {
+  const project = editedProject();
+  const changed = updateProjectConfig(project, { ...project.config, localBasePath: 'E:\\Sesiones' });
+  assert.equal(changed.library[0].fullLocalPath, 'E:\\Sesiones\\sub\\1.jpg');
+  assert.equal(changed.slides[0].photos[0].fullLocalPath, changed.library[0].fullLocalPath);
+  assert.equal(changed.slides[0].duration, 2.3);
+  assert.equal(changed.slides[0].photos[0].previewUrl, project.slides[0].photos[0].previewUrl);
+});
+
+test('cambiar agrupación mantiene el orden y las ediciones de la primera foto', () => {
+  const project = editedProject();
+  const changed = updateProjectConfig(project, { ...project.config, horizontalGrouping: 'auto-split-2' });
+  assert.equal(changed.slides.length, 1);
+  assert.deepEqual(changed.slides[0].photos.map(item => item.id), project.library.map(item => item.id));
+  assert.equal(changed.slides[0].duration, 2.3);
+  assert.equal(changed.slides[0].transition, 'fade');
+  assert.equal(changed.slides[0].photos[0].kenBurns, 'zoom-in');
 });
 

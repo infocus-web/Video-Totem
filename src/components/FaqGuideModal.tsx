@@ -6,10 +6,11 @@ export function FaqGuideModal({ isOpen, onClose }: { isOpen: boolean; onClose: (
       <li>Para Premiere, pegá la ruta absoluta de esa carpeta. Al seleccionar subcarpetas, se conservan sus rutas relativas.</li>
       <li>Pegá la selección del cliente y pulsá Aplicar selección, o usá todas las fotos. Revisá el aviso de faltantes y nombres ambiguos.</li>
       <li>Configurá el formato, la duración, los textos y la música. Las tarjetas de apilado cambian la distribución del montaje al seleccionarlas. Al reagrupar se conservan el orden y los movimientos; cada grupo usa la duración de su primera foto.</li>
-      <li>En Línea de tiempo podés reordenar, eliminar, dividir escenas y ajustar duración, transición y movimiento. Fade, Zoom y Wipe se aplican por escena o a todo el montaje y se conservan en el video exportado.</li>
-      <li>Grabá el video final o descargá el XML editable. El XML exporta una secuencia base; el video conserva todos los efectos.</li>
+      <li>En Línea de tiempo podés reordenar, eliminar, dividir escenas y ajustar duración, transición y movimiento. Fundido, Zoom y Wipe se aplican por escena o a todo el montaje y se conservan en el video exportado. Los proyectos anteriores con Fade se muestran como Fundido.</li>
+      <li>Abrí Exportar para grabar el video final o descargar el XML editable. El XML exporta una secuencia base; el video conserva todos los efectos.</li>
     </ol>
     <p className="text-sm text-neutral-400">Tu proyecto se guarda automáticamente en este navegador. También podés descargarlo como JSON. Al reabrir, reconectá las fotos y la música: los archivos multimedia no se incluyen en el JSON.</p>
+    <p className="text-sm text-neutral-400">La reproducción conserva su posición al cambiar ajustes. Cargar fotos o música y grabar el video pausa la vista previa. Las rutas y el formato de nombres están en Rutas de Archivos & Google Drive, y Reagrupar está en Opciones de agrupación.</p>
     <p className="text-sm text-neutral-400">En Ritmo, Estilo & Música, Rellenar cuadro (recortar) amplía y centra cada foto para cubrir su espacio sin franjas ni deformarla. Recorta lo que sobresale. Funciona en fotos individuales y apiladas, y se conserva en el video. Mostrar foto completa recupera el encuadre anterior. La separación de 0px quita la línea entre fotos apiladas.</p>
     <p className="text-sm text-neutral-400">Para Drive, descargá o sincronizá la carpeta y elegila desde tu computadora. La aplicación no pide credenciales ni tiene acceso directo a tu cuenta de Google.</p>
   </Modal>;

@@ -33,6 +33,7 @@ let browser;
   await page.getByText('4 escenas 9:16', { exact: true }).waitFor();
   await page.getByRole('button', { name: '12px', exact: true }).click();
   assert.equal(await page.getByRole('button', { name: '12px', exact: true }).getAttribute('aria-pressed'), 'true');
+  await page.locator('summary').filter({hasText:'Rutas de Archivos & Google Drive'}).click();
   await page.getByRole('button', { name: 'Configurar formato de nombres (IMG_, ceros, extensión)', exact: true }).click();
   await page.getByLabel('Prefijo', { exact: true }).fill('DSC_');
   await page.getByRole('button', { name: 'Ocultar formato de nombres (IMG_, ceros, extensión)', exact: true }).click();
