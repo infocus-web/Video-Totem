@@ -103,15 +103,38 @@ let browser, page;
   const stacked = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
   assert.deepEqual(stacked.slides[0].photos[0].framing, { x: 0, y: 0.8, zoom: 1.5 }, 'Apilar y tocar otra foto no cambia la primera');
   assert.ok(stacked.slides[0].photos[1].framing.x < 0.5 && stacked.slides[0].photos[1].framing.y > 0.5, 'El dedo mueve solo la segunda foto');
+  await page.getByRole('button', { name: '↷ Girar 90° a la derecha', exact: true }).click();
   await page.getByRole('button', { name: 'Restablecer encuadre', exact: true }).click();
   assert.equal(await page.getByLabel('Zoom de la foto').inputValue(), '1');
+  assert.equal(await page.getByLabel('Encuadre horizontal', { exact: true }).inputValue(), '50');
+  assert.equal(await page.getByLabel('Encuadre vertical', { exact: true }).inputValue(), '50');
+  await page.waitForTimeout(750);
+  const reset = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
+  assert.deepEqual(reset.slides[0].photos[1].framing, { x: 0.5, y: 0.5, zoom: 1 }, 'Restablecer elimina también el giro individual');
+  assert.deepEqual(reset.slides[0].photos[0].framing, stacked.slides[0].photos[0].framing, 'Restablecer no modifica otra foto');
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Sin desbordes a ' + width);
   }
   await page.screenshot({ path: 'artifacts/framing-mobile.png', fullPage: true });
+  const layout = [];
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 1200, height: 650 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByLabel('Formato', { exact: true }).scrollIntoViewIfNeeded();
+    await page.locator('.preview-panel').evaluate(panel => window.scrollBy(0, panel.getBoundingClientRect().top - document.querySelector('header').getBoundingClientRect().height - 16));
+    await page.getByRole('button', { name: 'Restablecer encuadre', exact: true }).scrollIntoViewIfNeeded();
+    const bounds = await canvas.boundingBox(), headerHeight = await page.locator('header').first().evaluate(header => header.getBoundingClientRect().height);
+    assert.ok(bounds.y >= headerHeight - 1 && bounds.y + bounds.height <= viewport.height, 'La foto sigue visible al llegar a los controles finales: ' + JSON.stringify(viewport));
+    const region = page.getByRole('region', { name: 'Controles de vista previa', exact: true });
+    await region.evaluate(region => { region.scrollTop = region.scrollHeight; });
+    const after = await canvas.boundingBox();
+    assert.ok(Math.abs(after.y - bounds.y) < 1, 'Desplazar los controles no mueve la foto');
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    layout.push({ ...viewport, photoHeight: bounds.height });
+    if (viewport.width === 1440) await page.screenshot({ path: 'artifacts/preview-controls-desktop.png' });
+  }
   assert.deepEqual(errors, []);
-  fs.writeFileSync('artifacts/framing-report.json', JSON.stringify({ status: 'passed', mouse: true, touch: true, keyboard: true, persistent: true, preservedPlayback: true, metadata, errors }, null, 2));
+  fs.writeFileSync('artifacts/framing-report.json', JSON.stringify({ status: 'passed', mouse: true, touch: true, keyboard: true, persistent: true, preservedPlayback: true, resetAll: true, layout, metadata, errors }, null, 2));
   console.log('PASS: arrastre, teclado, zoom, reconexión, reproducción, píxeles del video exportado, fotos apiladas y táctil');
   await browser.close();
 })().catch(async error => {

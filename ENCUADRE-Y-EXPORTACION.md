@@ -4,8 +4,8 @@
 
 - **Encuadrar foto**, debajo de la vista previa: arrastrar con mouse/dedo, flechas de teclado, posición y zoom por foto. Al terminar retoma la reproducción si estaba andando.
 - **Aplicar giro a**: esta foto, fotos marcadas o todas las del montaje. Giros reales de 90° a izquierda/derecha. La posición, zoom y giro se guardan en el borrador/JSON, sobreviven a reconectar y se respetan en el video.
-- Exportación desde los **originales**, cargando únicamente la escena actual y la siguiente. Compresión de unos 15,6 Mbps a 1080 × 1920/30 FPS; las copias de 1920 px quedan para la vista previa.
-- En MP4 con Chrome/Edge compatibles, captura directa de fotogramas y reloj de audio permiten grabar con otra pestaña activa. Al terminar, volver a la app completa la verificación del archivo. En WebM o sin esa API, se pausa y continúa al volver, sin cancelar.
+- Exportación desde los **originales**, cargando únicamente la escena actual y la siguiente. Codificación por cuadros con prioridad de detalle y bitrate alternativo de unos 24,9 Mbps a Full HD/30 FPS; las copias de 1920 px quedan para la vista previa.
+- En Chrome/Edge compatibles, el MP4 se genera cuadro por cuadro con WebCodecs, sin saltos por demoras de carga o codificación. Puede exportar con otra pestaña activa. El modo compatible conserva grabación en tiempo real; WebM se pausa al ocultar la pestaña.
 - **Elegir dónde guardar al terminar** en Exportar prepara el video y presenta **Elegir ubicación y guardar video**. El selector necesita ese nuevo clic. Cancelarlo o fallar al escribir permite reintentar sin grabar otra vez; también queda disponible la descarga habitual.
 
 ## Archivos
@@ -20,7 +20,7 @@
 - `src/components/FaqGuideModal.tsx`, `README.md`, este archivo: ayuda, alcance y pasos de verificación.
 - `tests/core.test.ts`, `scripts/framing-smoke.cjs`, `export-smoke.cjs`, `export-fallback-smoke.cjs`: regresiones y pruebas reales de navegador.
 
-No cambian dependencias, variables de entorno ni configuración de Vercel.
+La nueva exportación agrega Mediabunny como dependencia para armar el MP4; se carga solo al exportar. No cambian variables de entorno ni configuración de Vercel. Ver EXPORTACION-ESTABLE.md para la corrección de cadencia, restablecimiento y controles.
 
 ## Probar localmente
 
@@ -34,7 +34,7 @@ npm run preview
 
 Con la vista previa en el puerto 4173 y Playwright disponible como herramienta de desarrollo, ejecutar `node scripts/framing-smoke.cjs`, `node scripts/export-smoke.cjs` y `node scripts/export-fallback-smoke.cjs`. Los scripts aceptan como argumentos adicionales la ruta del módulo Playwright, el ejecutable de Chrome y la URL. La prueba de pestañas usa un perfil temporal de Chrome aislado, sin emulación de foco; no accede a tus perfiles/cuentas.
 
-Comprobaciones: 38 pruebas unitarias, arrastre real con mouse/touch, teclado, zoom, reconexión, giros individuales/marcados/todos, y píxeles de los archivos MP4/WebM. La prueba de Guardar como controla el selector y escribe en el almacenamiento privado del navegador: verifica cancelación, error, reintento y activación de usuario. El diálogo del sistema se comprueba manualmente.
+Comprobaciones: 41 pruebas unitarias, arrastre real con mouse/touch, teclado, zoom, reconexión, giros individuales/marcados/todos, y píxeles de los archivos MP4/WebM. La prueba de Guardar como controla el selector y escribe en el almacenamiento privado del navegador: verifica cancelación, error, reintento y activación de usuario. El diálogo del sistema se comprueba manualmente.
 
 ## Verificar en Vercel
 

@@ -4,12 +4,22 @@ import { videoOutput } from './videoOutput';
 import { audioEngine } from './audioSynthesizer';
 import { RecordingImages } from './recordingImages';
 import { createRecordingSource, supportsBackgroundRecording } from './recordingSource';
+import { supportsFrameEncoding } from './frameEncodingSupport';
+
+export function supportsBackgroundExport(extension?: string) {
+  return supportsFrameEncoding() || supportsBackgroundRecording(extension);
+}
 
 export function recordingBitrate(config: Pick<SequenceConfig, 'width' | 'height' | 'fps'>) {
   return Math.max(4000000, Math.min(40000000, Math.round(config.width * config.height * config.fps * 0.25)));
 }
 
 export function recordingFormat(preference?: 'webm') {
+  if (!preference && supportsFrameEncoding()) return { mime: 'video/mp4', extension: 'mp4' };
+  return nativeRecordingFormat(preference);
+}
+
+function nativeRecordingFormat(preference?: 'webm') {
   if (typeof MediaRecorder === 'undefined') return null;
   const candidates = ['video/mp4;codecs=avc1.424028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
   const mime = candidates.find(candidate => (!preference || candidate.startsWith('video/' + preference)) && MediaRecorder.isTypeSupported(candidate));
@@ -17,7 +27,12 @@ export function recordingFormat(preference?: 'webm') {
 }
 
 export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
-  const format = recordingFormat();
+  if (supportsFrameEncoding()) {
+    const { encodeVideo } = await import('./videoEncoder');
+    const result = await encodeVideo(slides, config, images, signal, recordingBitrate(config), progress, onPhase);
+    if (result) { progress(100); return result; }
+  }
+  const format = nativeRecordingFormat();
   if (!format || (!supportsBackgroundRecording() && !HTMLCanvasElement.prototype.captureStream)) throw new Error('Este navegador no permite grabar video. Probá con Chrome o Edge actualizado.');
   onPhase('Grabando video');
   let result = await recordWithFormat(slides, config, images, signal, progress, format, onPhase);
@@ -25,7 +40,7 @@ export async function recordVideo(slides: SequenceSlide[], config: SequenceConfi
   await waitForVisible(signal);
   onPhase('Verificando archivo');
   if (!await hasVideoTrack(result.blob, config, signal)) {
-    const fallback = format.extension === 'mp4' ? recordingFormat('webm') : null;
+    const fallback = format.extension === 'mp4' ? nativeRecordingFormat('webm') : null;
     if (!fallback) throw new Error('El navegador generó un archivo sin imagen. Probá de nuevo en Chrome o Edge.');
     onPhase('Reintentando video en WebM'); progress(0);
     result = await recordWithFormat(slides, config, images, signal, progress, fallback, onPhase);

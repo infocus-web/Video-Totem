@@ -42,6 +42,6 @@ export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneCh
       <input aria-label={axis === 'x' ? 'Encuadre horizontal' : 'Encuadre vertical'} type="range" min="0" max="100" step="1" value={Math.round(framing[axis] * 100)} onChange={event => onChange({ ...framing, [axis]: Number(event.target.value) / 100 })} className="mt-2 w-full accent-indigo-500" />
     </label>)}
     <label className="block text-xs text-neutral-300">Zoom · {Math.round(framing.zoom * 100)}%<input aria-label="Zoom de la foto" type="range" min="1" max="3" step="0.05" value={framing.zoom} onChange={event => onChange({ ...framing, zoom: Number(event.target.value) })} className="mt-2 w-full accent-indigo-500" /></label>
-    <button type="button" className="quick-button" onClick={() => onChange({ ...framing, x: 0.5, y: 0.5, zoom: 1 })}>Restablecer encuadre</button>
+    <button type="button" className="quick-button" title="Centrar la foto, volver al 100% y quitar su giro individual" onClick={() => onChange({ x: 0.5, y: 0.5, zoom: 1, rotation: 0 })}>Restablecer encuadre</button>
   </div>;
 }

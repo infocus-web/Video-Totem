@@ -18,7 +18,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   await page.setViewportSize({ width: 1440, height: 1100 });
   const errors = [], downloads = []; page.on('pageerror', error => errors.push(error.message)); page.on('download', download => downloads.push(download));
   await page.addInitScript(forceWebM => {
-    window.exportProbe = { decodes: [], frames: [], recorders: [], picker: [], saved: null, abortAttempts: 0 };
+    window.exportProbe = { decodes: [], frames: [], recorders: [], encoders: [], picker: [], saved: null, abortAttempts: 0 };
     const AudioCtx = window.AudioContext;
     window.recordingContexts = [];
     window.AudioContext = new Proxy(AudioCtx, { construct(target, args) { const context = Reflect.construct(target, args); window.recordingContexts.push(context); return context; } });
@@ -26,6 +26,9 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     HTMLImageElement.prototype.decode = async function () {
       const result = await decode.call(this); window.exportProbe.decodes.push({ width: this.naturalWidth, height: this.naturalHeight }); return result;
     };
+    const Encoder = window.VideoEncoder;
+    if (Encoder) { const configure = Encoder.prototype.configure; Encoder.prototype.configure = function (config) { window.exportProbe.encoders.push(config); return configure.call(this, config); }; }
+    if (forceWebM) { window.VideoEncoder = undefined; window.AudioEncoder = undefined; }
     const Recorder = window.MediaRecorder;
     window.MediaRecorder = new Proxy(Recorder, {
       construct(target, args) { window.exportProbe.recorders.push(args[1]); return Reflect.construct(target, args); },
@@ -112,6 +115,16 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
     assert.equal(await page.getByLabel('Formato', { exact: true }).inputValue(), 'totem-' + outputRotation);
   }
+  if (process.argv[7] === 'custom-audio') {
+    const sampleRate = 44100, samples = sampleRate, wav = Buffer.alloc(44 + samples * 2);
+    wav.write('RIFF', 0); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
+    wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
+    wav.writeUInt32LE(sampleRate, 24); wav.writeUInt32LE(sampleRate * 2, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34);
+    wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40);
+    for (let index = 0; index < samples; index++) wav.writeInt16LE(Math.round(12000 * Math.sin(2 * Math.PI * 440 * index / sampleRate)), 44 + index * 2);
+    await page.getByLabel('Cargar música', { exact: true }).setInputFiles([{ name: 'test-loop.wav', mimeType: 'audio/wav', buffer: wav }]);
+    await page.getByText('test-loop.wav', { exact: true }).waitFor();
+  }
   await page.getByRole('button', { name: /Exportar \(/ }).click();
   await page.getByRole('checkbox', { name: 'Elegir dónde guardar al terminar' }).check();
   assert.equal(await page.evaluate(() => document.hidden), false);
@@ -121,7 +134,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.equal(await page.evaluate(() => document.hidden), true, 'La pestaña de la app realmente queda oculta');
   const pausedProgress = await page.evaluate(() => document.querySelector('progress[aria-label="Avance de exportación"]')?.value);
   await pause(3500);
-  const whileHidden = await page.evaluate(() => ({ hidden: document.hidden, progress: document.querySelector('progress[aria-label="Avance de exportación"]')?.value, frames: window.exportProbe.frames.filter(frame => frame.hidden).length }));
+  const whileHidden = await page.evaluate(() => ({ hidden: document.hidden, progress: document.querySelector('progress[aria-label="Avance de exportación"]')?.value ?? (document.body.innerText.includes('Elegir ubicación y guardar video') ? 100 : 0), frames: window.exportProbe.frames.filter(frame => frame.hidden).length }));
   assert.equal(whileHidden.hidden, true);
   if (process.argv[5] === 'webm') {
     assert.equal(whileHidden.progress, pausedProgress, 'WebM conserva el avance al pausar la pestaña');
@@ -131,7 +144,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.ok(whileHidden.progress > 15); assert.ok(whileHidden.frames > 45, 'La grabación conserva fotogramas en segundo plano');
   }
   for (let i = 0; process.argv[5] !== 'webm' && i < 300; i++) {
-    if (await page.evaluate(() => document.body.innerText.includes('Grabación completa: volvé a esta pestaña para verificar y guardar'))) break;
+    if (await page.evaluate(() => document.body.innerText.includes('Grabación completa: volvé a esta pestaña para verificar y guardar') || document.body.innerText.includes('Elegir ubicación y guardar video'))) break;
     if (i === 299) throw new Error('La grabación no terminó: ' + await page.evaluate(() => document.body.innerText.slice(0, 1600) + '\n' + document.body.innerText.slice(-1600)));
     await pause(100);
   }
@@ -152,12 +165,17 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const exported = 'artifacts/background-video.' + extension; fs.writeFileSync(exported, Buffer.from(probe.saved.data, 'base64'));
   const video = await page.evaluate(async ({ data, extension, outputRotation }) => {
     const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(data), char => char.charCodeAt(0))], { type: 'video/' + extension }));
-    const video = document.createElement('video'); video.src = url;
+    const video = document.createElement('video'); video.src = url; video.muted = true;
+    video.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0.01'; document.body.append(video);
     await new Promise((resolve, reject) => { video.onloadeddata = resolve; video.onerror = reject; });
     const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d'), samples = [];
     for (const time of [0.6, 3.3, 5.8, 8.3]) {
-      video.currentTime = time; await new Promise(resolve => { video.onseeked = resolve; }); ctx.drawImage(video, 0, 0);
+      await new Promise((resolve, reject) => {
+        video.onseeked = () => { video.requestVideoFrameCallback(() => { video.pause(); resolve(); }); video.play().catch(reject); };
+        video.currentTime = time;
+      });
+      ctx.drawImage(video, 0, 0);
       const center = Array.from(ctx.getImageData(outputRotation ? 960 : 540, outputRotation ? 540 : 960, 1, 1).data).slice(0, 3);
       const line = outputRotation ? ctx.getImageData(outputRotation === 90 ? 720 : 600, 540, 600, 1).data : ctx.getImageData(540, 600, 1, 600).data;
       const values = Array.from({ length: 600 }, (_, index) => line[index * 4]);
@@ -176,6 +194,12 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       let sum = 0; for (let index = start; index < end; index++) sum += channel[index] * channel[index];
       return Math.sqrt(sum / Math.max(1, end - start));
     });
+    const toneFrequency = [0.5, 4.9, 5.1, 8].map(time => {
+      const start = Math.floor(time * audio.sampleRate), count = Math.floor(audio.sampleRate / 5);
+      let crossings = 0;
+      for (let index = start + 1; index < start + count; index++) if (channel[index - 1] <= 0 && channel[index] > 0) crossings++;
+      return crossings * audio.sampleRate / count;
+    });
     let duration = video.duration;
     if (!Number.isFinite(duration)) {
       // MediaRecorder WebM may omit duration; use its playback timeline, not decoded audio length.
@@ -187,7 +211,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
       });
       duration = video.currentTime;
     }
-    await audioContext.close(); URL.revokeObjectURL(url); return { width: video.videoWidth, height: video.videoHeight, duration, samples, audioRms, audioDuration: audio.duration };
+    await audioContext.close(); video.remove(); URL.revokeObjectURL(url); return { width: video.videoWidth, height: video.videoHeight, duration, samples, audioRms, toneFrequency, audioDuration: audio.duration };
   }, { data: probe.saved.data, extension, outputRotation });
   fs.writeFileSync('artifacts/export-video-metadata.json', JSON.stringify(video, null, 2));
   assert.equal(video.width, totem ? 1920 : 1080); assert.equal(video.height, totem ? 1080 : 1920);
@@ -195,6 +219,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.ok(video.duration > 9.6 && video.duration < 10.5, 'Cambiar de pestaña conserva la duración');
   assert.ok(video.audioDuration >= 9.5 && video.audioDuration < 10.5, 'La pista de audio conserva su duración, con margen para el arranque del dispositivo');
   assert.ok(video.audioRms.every(value => value > 0.0001), 'La música conserva señal durante las escenas grabadas con la pestaña oculta');
+  if (process.argv[7] === 'custom-audio') assert.ok(video.toneFrequency.every(value => Math.abs(value - 440) <= 5), 'La música cargada conserva el tono, se repite y cruza el límite de bloques sin silencio');
   assert.ok(video.samples[0].contrast > 200, 'Las líneas finas del original permanecen definidas y giradas en el video');
   assert.ok(video.samples[1].center[0] > 200 && video.samples[1].center[1] < 30, 'La segunda escena se grabó mientras la pestaña estaba oculta');
   assert.ok(video.samples[2].center[1] > 200 && video.samples[2].center[0] < 30);
@@ -212,7 +237,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     const normal = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
     assert.equal(normal.config.outputRotation, 0); assert.equal(normal.slides[0].photos[0].framing.rotation, 90);
   }
-  fs.writeFileSync('artifacts/export-report.json', JSON.stringify({ status: 'passed', rotationCurrentSelectedAll: true, reconnect: true, whileHidden, quality: { bitrate: probe.recorders[0].videoBitsPerSecond, originalDecodes: probe.decodes.filter(image => image.width === 4000).length }, picker: probe.picker, video, errors }, null, 2));
+  fs.writeFileSync('artifacts/export-report.json', JSON.stringify({ status: 'passed', rotationCurrentSelectedAll: true, reconnect: true, whileHidden, quality: { bitrate: probe.encoders[0]?.bitrate ?? probe.recorders[0]?.videoBitsPerSecond, originalDecodes: probe.decodes.filter(image => image.width === 4000).length }, picker: probe.picker, video, errors }, null, 2));
   if (totem) fs.copyFileSync('artifacts/export-report.json', 'artifacts/totem-' + outputRotation + '-' + extension + '-report.json');
   console.log('PASS: giro individual/selección/todas, persistencia, originales, video real en pestaña oculta, Guardar como con cancelar/error/reintentar y cancelación de grabación');
 })().catch(async error => {

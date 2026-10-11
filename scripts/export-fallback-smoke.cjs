@@ -15,7 +15,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   fs.mkdirSync(downloadPath, { recursive: true });
   await downloadSession.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath, eventsEnabled: true });
   const context = browser.contexts()[0]; page = context.pages()[0]; const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(() => { window.MediaStreamTrackGenerator = undefined; window.showSaveFilePicker = undefined; });
+  await page.addInitScript(() => { window.VideoEncoder = undefined; window.AudioEncoder = undefined; window.MediaStreamTrackGenerator = undefined; window.showSaveFilePicker = undefined; });
   await page.goto(process.argv[4] || 'http://127.0.0.1:4173', { waitUntil: 'networkidle' });
   const photo = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 300; canvas.height = 200; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ff0000'; ctx.fillRect(0, 0, 300, 200); return canvas.toDataURL().split(',')[1]; });
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles([{ name: 'IMG_001.png', mimeType: 'image/png', buffer: Buffer.from(photo, 'base64') }]);

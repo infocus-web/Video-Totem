@@ -1,4 +1,5 @@
 import { Film, FileCode2, HelpCircle, Download } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import type { ViewTab } from '../types';
 interface Props {
   currentTab: ViewTab; onTabChange: (tab: ViewTab) => void;
@@ -6,7 +7,16 @@ interface Props {
   totalPhotos: number; totalDuration: number; formatLabel: string; busy: boolean;
 }
 export function Navbar(props: Props) {
-  return <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/95 backdrop-blur">
+  const header = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    const updateHeight = () => document.documentElement.style.setProperty('--app-header-height', element.getBoundingClientRect().height + 'px');
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight); observer.observe(element);
+    return () => { observer.disconnect(); document.documentElement.style.removeProperty('--app-header-height'); };
+  }, []);
+  return <header ref={header} className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-900/95 backdrop-blur">
     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-amber-400 shadow-lg shadow-indigo-500/20"><Film aria-hidden="true" className="h-5 w-5" /></div>

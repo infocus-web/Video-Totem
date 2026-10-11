@@ -1,3 +1,4 @@
+import { musicStepDuration, scheduleMusicStep } from './syntheticMusic';
 import recordingClockUrl from './recordingClock.worklet.ts?worker&url';
 
 class BackgroundAudioEngine {
@@ -31,6 +32,31 @@ class BackgroundAudioEngine {
     this.stop(); this.buffer = decoded;
   }
   public clearTrack() { this.stop(); this.buffer = null; }
+  public createAudioRenderer(style: string, volume: number) {
+    const track = this.buffer, sampleRate = 48000;
+    return async (start: number, duration: number) => {
+      // A short lead-in preserves note tails at chunk boundaries without keeping a five-minute buffer.
+      const lead = Math.min(start, 1), base = start - lead;
+      const length = Math.round(duration * sampleRate), skip = Math.round(lead * sampleRate);
+      const ctx = new OfflineAudioContext(2, length + skip, sampleRate), gain = ctx.createGain();
+      gain.gain.value = Math.max(0, Math.min(1, volume)); gain.connect(ctx.destination);
+      if (style !== 'none' && track) {
+        const source = ctx.createBufferSource(); source.buffer = track; source.loop = true;
+        source.connect(gain); source.start(0, base % track.duration);
+      } else if (style !== 'none') {
+        const stepDuration = musicStepDuration(style);
+        for (let step = Math.max(0, Math.ceil(base / stepDuration) - 1); (step + 1) * stepDuration < start + duration; step++) {
+          const time = (step + 1) * stepDuration - base;
+          if (time >= 0) scheduleMusicStep(ctx, gain, style, step % 16, time);
+        }
+      }
+      const rendered = await ctx.startRendering();
+      if (!skip) return rendered;
+      const result = new AudioBuffer({ numberOfChannels: 2, length, sampleRate });
+      for (let channel = 0; channel < 2; channel++) result.copyToChannel(rendered.getChannelData(channel).subarray(skip, skip + length), channel);
+      return result;
+    };
+  }
   public setStyle(style: string) { this.style = style; }
   public setVolume(volume: number) {
     this.init(); this.gain!.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx!.currentTime);
@@ -62,13 +88,12 @@ class BackgroundAudioEngine {
       this.source = ctx.createBufferSource(); this.source.buffer = this.buffer; this.source.loop = true;
       this.source.connect(this.gain!); this.source.start(0, offset % this.buffer.duration); return;
     }
-    const bpm = this.style === 'upbeat' ? 124 : this.style === 'cinematic' ? 95 : 112;
-    const stepDuration = 60 / bpm / 2;
+    const stepDuration = musicStepDuration(this.style);
     this.step = Math.floor(offset / stepDuration);
     this.nextTime = ctx.currentTime + (stepDuration - offset % stepDuration);
     const schedule = () => {
       while (this.nextTime < ctx.currentTime + 0.12) {
-        this.trigger(this.step % 16, this.nextTime);
+        scheduleMusicStep(ctx, this.gain!, this.style, this.step % 16, this.nextTime, this.nodes);
         this.nextTime += stepDuration; this.step++;
       }
     };
@@ -84,24 +109,5 @@ class BackgroundAudioEngine {
     this.nodes.forEach(node => { try { node.stop(); node.disconnect(); } catch { /* Already ended. */ } });
     this.nodes.clear();
   }
-  private tone(time: number, frequency: number, duration: number, volume: number, type: OscillatorType = 'sine', endFrequency?: number) {
-    const osc = this.ctx!.createOscillator(), gain = this.ctx!.createGain();
-    osc.type = type; osc.frequency.setValueAtTime(frequency, time);
-    if (endFrequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, time + duration);
-    gain.gain.setValueAtTime(volume, time); gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-    osc.connect(gain); gain.connect(this.gain!); this.nodes.add(osc);
-    osc.onended = () => { osc.disconnect(); gain.disconnect(); this.nodes.delete(osc); };
-    osc.start(time); osc.stop(time + duration);
-  }
-  private trigger(step: number, time: number) {
-    if (step === 0 || step === 8 || (this.style === 'upbeat' && step % 4 === 0)) this.tone(time, 140, 0.18, 0.3, 'sine', 38);
-    if (step === 4 || step === 12) this.tone(time, 200, 0.1, 0.12, 'triangle', 80);
-    if (step % 2 === 0) this.tone(time, 8000, 0.025, 0.015, 'square');
-    if (step % 4 === 0) {
-      const chords = [[220,261.63,329.63],[174.61,220,261.63],[261.63,329.63,392],[196,246.94,293.66]];
-      chords[Math.floor(step / 4)].forEach((frequency, index) => this.tone(time + index * 0.02, frequency, 0.6, 0.05));
-    }
-  }
 }
 export const audioEngine = new BackgroundAudioEngine();
-

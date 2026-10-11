@@ -8,7 +8,7 @@ import { recordVideo, recordingFormat } from '../utils/videoRecorder';
 import { audioEngine } from '../utils/audioSynthesizer';
 import { downloadBlob } from '../utils/download';
 import { saveVideoAs } from '../utils/saveVideo';
-import { supportsBackgroundRecording } from '../utils/recordingSource';
+import { supportsBackgroundExport } from '../utils/videoRecorder';
 import { videoOutput } from '../utils/videoOutput';
 import { Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
@@ -178,10 +178,10 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     finally { setSavingVideo(false); onBusy(false); }
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
-  return <section className="panel space-y-4">
+  return <section className="panel preview-panel">
     <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-sm font-bold"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-indigo-500" />Previsualización {config.aspectRatio} en Vivo</h2><span className="font-mono text-[11px] text-neutral-400">{config.width} × {config.height} · {config.fps} FPS</span></div>
     {output.rotation !== 0 && <p className="text-xs text-indigo-300">Tótem TV · Vista derecha como en tu TV vertical. Archivo final: {output.width} × {output.height}, girado 90° a la {output.rotation === 90 ? 'derecha' : 'izquierda'}.</p>}
-    <div className="preview-device" style={config.width >= config.height ? { width: '100%' } : undefined}>
+    <div className="preview-device" style={{ width: `min(${config.width >= config.height ? '100%' : '350px'}, calc(var(--preview-screen-height) * ${config.width / config.height} + 28px))` }}>
       <div aria-hidden="true" className="preview-notch"><span className="h-2.5 w-2.5 rounded-full border border-neutral-700 bg-neutral-950" /><span className="h-1 w-10 rounded-full bg-neutral-800" /></div>
       <div className="preview-screen" style={{ aspectRatio: config.width / config.height }}>
         <canvas ref={canvas} width={Math.min(720,config.width)} height={Math.round(config.height * Math.min(720,config.width) / config.width)} aria-label="Vista previa del montaje" role="img" tabIndex={framingMode ? 0 : undefined} aria-describedby={framingMode ? 'photo-framing-help' : undefined}
@@ -200,6 +200,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
         {busy && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/75 p-6 text-center"><span className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" /><p className="text-sm font-bold">{savingVideo ? 'Guardando video' : recordPhase}…</p>{!savingVideo && <p className="font-mono text-xs text-indigo-300">{progress}%</p>}</div>}
       </div>
     </div>
+    <div className="preview-tools space-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de vista previa" tabIndex={0}>
     <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
       <button type="button" aria-pressed={framingMode} onClick={toggleFraming} className="control w-full">{framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'}</button>
       {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
@@ -219,13 +220,14 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
         <span className="text-[11px] text-neutral-400">Descargá desde Exportar</span>
       </div>
     </div>
-    {busy && !savingVideo && <div role="status" className="space-y-2"><p className="text-sm">{recordPhase} · {progress}% · {supportsBackgroundRecording(recordingFormat()?.extension) ? 'Podés cambiar de pestaña; dejá la app abierta.' : 'Dejá esta pestaña visible. Al volver, la grabación continúa.'}</p><progress aria-label="Avance de exportación" value={progress} max={100} className="w-full" /><button className="control" onClick={() => abort.current?.abort()}>Cancelar grabación</button></div>}
+    {busy && !savingVideo && <div role="status" className="space-y-2"><p className="text-sm">{recordPhase} · {progress}% · {supportsBackgroundExport(recordingFormat()?.extension) ? 'Podés cambiar de pestaña; dejá la app abierta.' : 'Dejá esta pestaña visible. Al volver, la grabación continúa.'}</p><progress aria-label="Avance de exportación" value={progress} max={100} className="w-full" /><button className="control" onClick={() => abort.current?.abort()}>Cancelar grabación</button></div>}
     {pendingVideo && <div className="space-y-3 rounded-xl border border-emerald-700 bg-emerald-950/20 p-3"><p role="status" className="text-sm text-emerald-200">Video listo: {pendingVideo.filename}</p><p className="text-xs text-neutral-400">Elegí la carpeta y el nombre. Guardalo antes de recargar o cerrar la página.</p><div className="flex flex-wrap gap-2">
       <button type="button" disabled={disabled} onClick={() => void savePendingVideo()} className="control">Elegir ubicación y guardar video</button>
       <button type="button" disabled={disabled} onClick={() => { downloadBlob(pendingVideo.blob, pendingVideo.filename); setPendingVideo(null); setSaveMessage('Se inició la descarga con la configuración de tu navegador.'); }} className="quick-button">Descargar sin elegir ubicación</button>
     </div></div>}
     {saveMessage && <p role="status" className="text-xs text-emerald-200">{saveMessage}</p>}
-    <p className="text-xs text-neutral-500">Se graba en tiempo real, hasta 5 minutos. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
+    <p className="text-xs text-neutral-500">Exportación local, hasta 5 minutos. En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
+    </div>
   </section>;
 });
 

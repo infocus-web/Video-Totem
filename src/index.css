@@ -39,6 +39,16 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
   .stack-icon { @apply flex h-12 w-8 shrink-0 flex-col gap-0.5 rounded border border-neutral-700 bg-neutral-800 p-0.5; }
   .preset-card { @apply rounded-xl border border-neutral-800 bg-neutral-950 p-3 text-left transition hover:border-neutral-600 hover:bg-neutral-800/40; }
   .preview-device { @apply relative mx-auto max-w-full overflow-hidden rounded-[38px] border-4 border-neutral-800 bg-neutral-950 p-2.5 shadow-2xl shadow-indigo-950/30 ring-1 ring-neutral-700/50; width: 350px; }
+  .preview-panel {
+    --preview-screen-height: clamp(120px, calc((100dvh - var(--app-header-height, 96px) - 120px) * 0.58), 600px);
+    display: flex; flex-direction: column; gap: 1rem;
+    max-height: calc(100dvh - var(--app-header-height, 96px) - 32px);
+  }
+  .preview-panel > :not(.preview-tools) { flex-shrink: 0; }
+  .preview-tools { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 2px 4px 4px; }
+  @media (min-width: 1024px) {
+    .preview-column { position: sticky; top: calc(var(--app-header-height, 96px) + 16px); }
+  }
   .preview-screen { @apply relative overflow-hidden rounded-[26px] bg-black; }
   .preview-notch { @apply pointer-events-none absolute left-1/2 top-4 z-20 flex h-4 w-24 -translate-x-1/2 items-center justify-center gap-2 rounded-full border border-neutral-800 bg-neutral-900; }
   .preview-control { @apply flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition hover:bg-neutral-800 hover:text-neutral-100 disabled:opacity-40; }

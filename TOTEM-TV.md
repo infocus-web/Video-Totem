@@ -42,5 +42,5 @@ Commit sugerido: `feat: add Totem TV export with full composition rotation`.
 
 - El XML de Premiere sigue vertical; para conservar el resultado del tótem en Premiere, importá el video final.
 - El modo necesita un canvas adicional de resolución completa al grabar; no duplica los originales ni agrega llamadas a servicios externos.
-- Se mantiene la exportación en tiempo real y el formato disponible en el navegador. Probá la compatibilidad del MP4 en tu reproductor de TV.
-- No cambian dependencias, variables de entorno ni configuración de Vercel. Estos cambios locales no se publican automáticamente.
+- El MP4 se genera por cuadros en Chrome/Edge compatibles; otros navegadores conservan el modo de grabación compatible. Probá la compatibilidad del MP4 en tu reproductor de TV.
+- La exportación por cuadros agrega Mediabunny para armar el MP4. No cambian variables de entorno ni configuración de Vercel. Estos cambios locales no se publican automáticamente. Ver EXPORTACION-ESTABLE.md.

@@ -4,7 +4,7 @@ import { generatePremiereXml } from '../utils/premiereXmlGenerator';
 import { downloadBlob } from '../utils/download';
 import { recordingFormat } from '../utils/videoRecorder';
 import { canChooseVideoLocation } from '../utils/saveVideo';
-import { supportsBackgroundRecording } from '../utils/recordingSource';
+import { supportsBackgroundExport } from '../utils/videoRecorder';
 import { videoOutput } from '../utils/videoOutput';
 import { Modal } from './Modal';
 export function ExportModal({ isOpen, onClose, slides, config, canRecord, onTriggerDirectVideoRender }: { isOpen: boolean; onClose: () => void; slides: SequenceSlide[]; config: SequenceConfig; canRecord: boolean; onTriggerDirectVideoRender: (chooseLocation: boolean) => void }) {
@@ -22,8 +22,8 @@ export function ExportModal({ isOpen, onClose, slides, config, canRecord, onTrig
     {error && <p role="alert" className="text-sm text-amber-300">{error}</p>}
     <section className="rounded-2xl border border-emerald-800 p-4 space-y-3"><h3 className="font-bold">Video final · {format?.extension.toUpperCase() ?? 'No disponible'}</h3>
       <p className="text-sm text-indigo-300">{output.width} × {output.height} · {config.fps} FPS{output.rotation !== 0 ? ' · Tótem TV: montaje completo girado 90° a la ' + (output.rotation === 90 ? 'derecha' : 'izquierda') : ''}</p>
-      <p className="text-sm text-neutral-400">Incluye la composición, movimientos, transiciones, títulos y música. Se graba en tiempo real. {supportsBackgroundRecording(format?.extension) ? 'Podés cambiar de pestaña; dejá la app abierta hasta que termine.' : 'Con este formato o navegador, cambiar de pestaña pausa la grabación. Volvé para continuar; no se cancela.'}</p>
-      <p className="text-xs text-neutral-500">Se verifica la pista de imagen antes de descargar. Si Chrome falla al generar MP4, se reintenta en WebM y se muestra un aviso.</p>
+      <p className="text-sm text-neutral-400">Incluye la composición, movimientos, transiciones, títulos y música. En Chrome/Edge compatibles se genera cuadro por cuadro con los originales; la velocidad depende de tu equipo. {supportsBackgroundExport(format?.extension) ? 'Podés cambiar de pestaña; dejá la app abierta hasta que termine.' : 'Con este formato o navegador, cambiar de pestaña pausa la grabación. Volvé para continuar; no se cancela.'}</p>
+      <p className="text-xs text-neutral-500">Se comprueba que el MP4 incluya todos los cuadros. Navegadores sin codificación por cuadros usan la grabación en tiempo real; probá Chrome o Edge actualizado para la mejor calidad.</p>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={chooseLocation && locationAvailable} disabled={!locationAvailable} onChange={event => setChooseLocation(event.target.checked)} className="accent-indigo-500" />Elegir dónde guardar al terminar</label>
       <p className="text-xs text-neutral-400">{locationAvailable ? 'Al terminar, tocá Elegir ubicación y guardar video para elegir la carpeta y el nombre. Si cancelás, el video queda listo para reintentar.' : 'Tu navegador usa su configuración de descargas. Activá que pregunte dónde guardar cada archivo para elegir la carpeta.'}</p>
       <button disabled={!slides.length || unresolved || !format || !canRecord} onClick={() => { onClose(); onTriggerDirectVideoRender(chooseLocation && locationAvailable); }} className="control">{chooseLocation && locationAvailable ? 'Grabar y elegir dónde guardar' : 'Grabar y descargar video'}</button>

@@ -107,11 +107,13 @@ Al elegir una carpeta se conserva la estructura de subcarpetas debajo de su raí
 
 ## Exportación de video
 
-La aplicación elige MP4 con H.264/AAC cuando MediaRecorder lo admite. Si no está disponible, ofrece WebM y muestra el formato antes de grabar. Antes de descargar, verifica que el archivo tenga una pista de video con la resolución configurada. Si Chrome entrega un MP4 sin imagen, descarta ese archivo y reintenta en WebM, mostrando la etapa y un aviso al finalizar. Ese reintento vuelve a grabar el montaje y puede demorar otra duración completa. Recomendamos Chrome o Edge actualizado en una computadora.
+En Chrome/Edge compatibles, el MP4 H.264/AAC se genera **cuadro por cuadro con WebCodecs**, usando los originales. El tiempo de cada cuadro es su índice dividido por los FPS: cargar fotos o codificar más lento no hace avanzar el montaje ni saltea cuadros. Se espera la carga de la escena y su siguiente transición antes de dibujar. Mediabunny arma el contenedor MP4 y controla la cola del codificador; se carga únicamente al exportar.
 
-Se graba en tiempo real, hasta 5 minutos, con la resolución y FPS configurados. En MP4 con Chrome/Edge y captura directa de fotogramas podés cambiar de pestaña sin cancelar ni depender de las animaciones del canvas. Al terminar, volvé a la app para verificar el archivo y guardarlo: la decodificación de comprobación necesita una pestaña visible. En WebM o navegadores sin captura directa se pausa automáticamente al ocultarla y continúa al volver. La app muestra la etapa y el porcentaje; no cierres ni recargues la página durante el proceso. La cadencia real depende del equipo, y suspender la computadora o descartar la pestaña puede interrumpir el trabajo. Podés cancelar explícitamente.
+Se prioriza el detalle de las fotos con cuantizador 18 donde el codificador lo admite y bitrate alternativo de aproximadamente **24,9 Mbps a Full HD/30 FPS** (hasta 60 Mbps según resolución/FPS). El archivo usa H.264 y AAC de 48 kHz, con el giro Tótem TV incorporado a la imagen. La música se genera en bloques locales, sin depender del reloj de reproducción ni de la pestaña activa.
 
-El video usa los originales y un bitrate ajustado a resolución/FPS (aproximadamente **15,6 Mbps en 1080 × 1920 a 30 FPS**, antes 8 Mbps; máximo 40 Mbps). Los archivos pueden pesar más. Una foto pequeña o un zoom excesivo sigue limitado por su detalle original; exportar no puede recuperar detalle que no exista.
+Hasta 5 minutos. Podés cambiar de pestaña durante la codificación, pero mantené la página abierta y la computadora despierta. El porcentaje refleja cuadros completados; si el equipo es lento, tarda más en exportar. Se comprueba que el codificador haya entregado todos los cuadros antes de descargar. Los archivos pueden pesar más; se mantienen en memoria hasta guardarlos. Una foto pequeña o un zoom excesivo sigue limitado por su detalle original.
+
+Los navegadores sin WebCodecs o sin los codificadores necesarios conservan el modo compatible de grabación en tiempo real con MediaRecorder. Ese modo depende del rendimiento del equipo. MP4 sin pista de imagen se reintenta en WebM; WebM o captura sin soporte de segundo plano se pausa al ocultar la pestaña y continúa al volver. La etapa muestra la pausa. Para la exportación por cuadros, usá Chrome o Edge actualizado en una computadora.
 
 Para elegir la carpeta y el nombre, activá **Elegir dónde guardar al terminar** en Exportar. Cuando esté listo, pulsá **Elegir ubicación y guardar video**. Este nuevo clic abre el selector nativo en navegadores compatibles y HTTPS/localhost. Cancelar o recibir un error de escritura conserva el video para reintentar, sin volver a grabar. También podés descargarlo con la configuración habitual del navegador. Si el selector no está disponible, configurá el navegador para preguntar dónde guardar las descargas. El archivo terminado permanece en memoria hasta guardarlo, reemplazarlo por otra grabación o cerrar la página.
 
@@ -190,7 +192,7 @@ La entrega fue verificada localmente; el despliegue en tu cuenta y la importaci�
 - src/utils/canvasRenderer.ts: motor visual compartido por vista previa y grabación.
 - src/types/index.ts, src/utils/config.ts y projectStorage.ts: opción de encuadre, guardado y compatibilidad con proyectos anteriores.
 - src/components/ClientInputPanel.tsx y FaqGuideModal.tsx: controles de encuadre, separación 0px y ayuda.
-- src/utils/videoRecorder.ts y audioSynthesizer.ts: video en tiempo real y mezcla de audio; captura explícita de fotos estáticas y pista silenciosa al grabar sin música.
+- src/utils/videoEncoder.ts, videoRecorder.ts, audioSynthesizer.ts y syntheticMusic.ts: exportación por cuadros, música local y modo compatible de grabación.
 - src/utils/projectStorage.ts: JSON versionado, validación y recuperación del proyecto.
 - src/utils/premiereParser.ts y premiereXmlGenerator.ts: intercambio XML sin datos simulados.
 - package.json y package-lock.json: dependencias reducidas e instalación reproducible.
