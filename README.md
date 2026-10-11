@@ -61,7 +61,7 @@ La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En e
 
 Las propiedades se editan en filas: etiqueta a la izquierda y control a la derecha. La selección de archivos usa una caja de una línea que podés ampliar desde la esquina inferior; conserva mensajes largos y rangos. Los botones de ajuste, agrupación y estilo ocupan una fila compacta. Posición, zoom, duración y volumen muestran sus valores junto al deslizador. Las explicaciones ampliadas están en la guía y en las ayudas al pasar el puntero.
 
-La barra y las acciones usan iconos con ayudas al pasar el cursor o enfocar con Tab. Los ajustes activos se resaltan. El apilado se representa con miniaturas, las fotos apiladas se seleccionan por su imagen y la visibilidad de textos usa un interruptor. Las ayudas se cierran con Escape, clic o al desplazar el panel.
+La barra y las acciones usan miniaturas con icono y texto corto dentro del botón. Los ajustes activos se resaltan. El apilado muestra sus divisiones y nombre; las fotos apiladas se seleccionan por su imagen y número. La visibilidad de textos usa un interruptor. Las ayudas completas aparecen con el cursor o Tab y se cierran con Escape, clic o desplazamiento. Los grupos aprovechan dos columnas cuando el panel tiene al menos 880px de ancho; en áreas más chicas usan una columna.
 
 Un solo panel, en este orden: **Fotos del proyecto → Formato de salida → Encuadre y giro → Composición de escenas → Ritmo y estilo → Textos y marca → Música y volumen → Premiere y Google Drive**. Todas las secciones están visibles. La barra fija de accesos desplaza el panel hasta el grupo elegido, sin ocultar controles. La vista previa queda visible mientras desplazás los controles; en pantallas chicas aparece arriba.
 

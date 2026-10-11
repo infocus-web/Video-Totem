@@ -196,7 +196,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
   const framingControls = <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
-    <EditorPropertyRow label="Editar"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
+    <EditorPropertyRow label="Editar"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} caption={framingMode ? 'Listo' : 'Encuadrar'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
     {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
       onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
       onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}

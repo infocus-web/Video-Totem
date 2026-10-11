@@ -78,7 +78,7 @@ let browser, page;
       const labelBox = await selection.locator('xpath=ancestor::*[contains(@class,"property-row")]').locator('.property-label').boundingBox();
       assert.ok(selectionBox.height <= 32, 'La selección empieza en una sola línea');
       assert.ok(labelBox.x + labelBox.width <= selectionBox.x && Math.abs(labelBox.y - selectionBox.y) < 20, 'Etiqueta a la izquierda y selección a la derecha');
-      assert.ok(await page.locator('#editor-section-1').evaluate(section => section.getBoundingClientRect().height <= 190), 'La selección deja espacio para otras herramientas');
+      assert.ok(await page.locator('#editor-section-1').evaluate(section => section.getBoundingClientRect().height <= 280), 'La selección y sus miniaturas dejan espacio para otras herramientas');
       assert.ok(await page.locator('.editor-tools').evaluate(panel => panel.scrollWidth <= panel.clientWidth && panel.scrollLeft === 0), 'Sin etiquetas ni controles recortados');
       await page.getByRole('button', { name: 'Música', exact: true }).click();
       assert.equal(await toolbar.getByRole('button', { name: 'Música', exact: true }).getAttribute('aria-current'), 'location', 'El acceso elegido queda activo');
@@ -93,6 +93,14 @@ let browser, page;
         assert.ok(button && button.x >= 0 && button.x + button.width <= viewport.width && button.y >= 0 && button.y + button.height <= measure.header.height, 'Acción accesible en la cabecera: ' + name);
       }
       if (viewport.width === 1440) assert.ok(measure.photo.height > 550, 'La vista previa creció respecto de los 412px anteriores');
+      if (viewport.width >= 1440) {
+        const first = await page.locator('#editor-section-1').boundingBox();
+        const second = await page.locator('#editor-section-2').boundingBox();
+        assert.ok(second.x > first.x + first.width - 1 && Math.abs(second.y - first.y) < 1, 'Las herramientas aprovechan dos columnas');
+      }
+      const tile = await contain.locator('.editor-tile-caption').boundingBox();
+      const tileButton = await contain.boundingBox();
+      assert.ok(tile && tile.x >= tileButton.x && tile.y + tile.height <= tileButton.y + tileButton.height, 'Texto visible dentro de la miniatura');
       if (viewport.width === 1920) await page.screenshot({ path: 'artifacts/compact-workspace-desktop.png' });
     } else {
       assert.ok(measure.header.height <= 90, 'Cabecera compacta en móvil');

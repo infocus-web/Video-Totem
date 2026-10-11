@@ -22,11 +22,17 @@ Esta compactación modifica `ClientInputPanel.tsx`, `PhotoFramingControls.tsx`, 
 
 ## Controles visuales
 
-Los accesos y acciones usan iconos con nombres accesibles. El ajuste activo y el estilo elegido se resaltan; los modos de apilado muestran miniaturas de una, dos o tres divisiones. Las fotos apiladas se eligen desde sus miniaturas. La visibilidad de textos se controla con un interruptor. Anterior, Siguiente, giros y restablecer usan flechas, con las mismas acciones y alcances anteriores.
+Los accesos y acciones usan miniaturas con icono y texto corto dentro del botón. El nombre completo se conserva para lectores de pantalla y ayudas. El ajuste activo y el estilo elegido se resaltan; los modos de apilado muestran una, dos o tres divisiones y su nombre. Las fotos apiladas se eligen desde sus miniaturas con número. La visibilidad de textos se controla con un interruptor. Anterior, Siguiente, giros y restablecer conservan sus acciones y alcances.
 
 `EditorTool.tsx` reúne los botones y sus ayudas al pasar el cursor o enfocar con Tab. Escape, clic y desplazamiento cierran la ayuda. Se muestra fuera del panel para que no se recorte; no ocupa espacio del editor. `ClientInputPanel.tsx`, `PhotoFramingControls.tsx`, `VideoPreviewPlayer.tsx` e `index.css` aplican estos controles. No se agregan dependencias ni cambia la codificación del video.
 
 Para probar: recorré la barra con Tab, verificá las ayudas y usá Escape; cambiá ajuste, apilado y estilo y comprobá el estado activo y la vista previa. Probá el interruptor de textos con clic y Espacio, y la selección de miniaturas. Los scripts de navegador verifican navegación, ayudas, selección, guardado, encuadre y exportación. En producción, repetí después de Commit → Push y de recargar el despliegue.
+
+## Distribución en dos columnas
+
+Cuando el área de herramientas tiene al menos 880px de ancho, los grupos se distribuyen en dos columnas. Al encuadrar, los controles de la foto ocupan la izquierda y Composición, Ritmo y Textos aprovechan la derecha. Los campos se limitan a 440px. En áreas más angostas se usa una columna y, en celulares, la barra de accesos se desliza horizontalmente para conservar espacio de edición. Todas las secciones siguen abiertas.
+
+Archivos de esta mejora: `EditorTool.tsx` comparte el texto dentro de las miniaturas; `ClientInputPanel.tsx` aplica nombres cortos y navegación compatible con dos columnas; `PhotoFramingControls.tsx` y `VideoPreviewPlayer.tsx` identifican las acciones de encuadre; `index.css` define miniaturas y distribución; `scripts/workspace-layout-smoke.cjs` comprueba texto dentro del botón y dos columnas. Este documento y `README.md` describen el uso. Los botones ocupan más altura que los iconos anteriores; la distribución aprovecha el ancho disponible. No cambia el guardado ni la exportación.
 
 ## Archivos
 

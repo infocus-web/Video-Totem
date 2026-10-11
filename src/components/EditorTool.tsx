@@ -25,8 +25,8 @@ export function EditorTool({ label, children }: { label: string; children: React
 }
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
-  label: string; hint?: string; children: ReactNode; variant?: 'primary';
+  label: string; caption?: string; hint?: string; children: ReactNode; variant?: 'primary';
 }
-export function EditorToolButton({ label, hint, children, variant, className = '', ...props }: ButtonProps) {
-  return <EditorTool label={hint || label}><button {...props} type="button" data-variant={variant} className={'editor-icon-button ' + className}>{children}<span className="sr-only">{label}</span></button></EditorTool>;
+export function EditorToolButton({ label, caption = label, hint, children, variant, className = '', ...props }: ButtonProps) {
+  return <EditorTool label={hint || label}><button {...props} type="button" data-variant={variant} className={'editor-icon-button ' + className}>{children}<span aria-hidden="true" className="editor-tile-caption">{caption}</span><span className="sr-only">{label}</span></button></EditorTool>;
 }
