@@ -1,0 +1,11 @@
+@import "tailwindcss";
+@layer components {
+  .panel { @apply rounded-3xl border border-neutral-800 bg-neutral-900 p-5 shadow-xl; }
+  .control { @apply rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed; }
+}
+button, summary, label:has(input[type="file"]) { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 3px; }
+input[type="file"]:focus-visible { outline-offset: 6px; }
+dialog::backdrop { background: rgb(0 0 0 / 0.8); }
+

@@ -1,0 +1,112 @@
+const { chromium } = require(process.argv[2] || 'playwright');
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+fs.mkdirSync('artifacts', { recursive: true });
+let activeBrowser;
+(async () => {
+  const browser = await chromium.launch({ headless: true, ...(process.argv[3] ? { executablePath: process.argv[3] } : {}), args:['--autoplay-policy=no-user-gesture-required'] });
+  activeBrowser = browser; const context = await browser.newContext({ viewport:{ width:1440,height:1000 }, acceptDownloads:true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error' && !message.text().includes('ERR_CERT_AUTHORITY_INVALID')) errors.push(message.text()); });
+  await page.goto('http://127.0.0.1:3000', {waitUntil:'domcontentloaded',timeout:15000});
+  await page.getByText('Conectá tus fotos y aplicá una selección para empezar.').waitFor();
+  const fixture = await page.evaluate(() => [1,2,3,4,5].map((number) => {
+    const canvas=document.createElement('canvas'); canvas.width=number===3?600:1200; canvas.height=number===3?1000:800;
+    const ctx=canvas.getContext('2d'); ctx.fillStyle=['#db2777','#4f46e5','#059669','#ea580c','#ca8a04'][number-1]; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.font='bold 100px sans-serif'; ctx.fillStyle='white'; ctx.fillText('FOTO '+number,50,200);
+    return {name:'IMG_'+String(number).padStart(3,'0')+'.jpg', data:canvas.toDataURL('image/jpeg').split(',')[1]};
+  }));
+  fixture.slice(0,2).forEach((item,index)=>fs.writeFileSync('artifacts/fixture-'+(index+1)+'.jpg',Buffer.from(item.data,'base64')));
+  await page.getByLabel('Elegir fotos', { exact:true }).setInputFiles(fixture.map(item=>({name:item.name,mimeType:'image/jpeg',buffer:Buffer.from(item.data,'base64')})));
+  await page.getByText('5 fotos conectadas', { exact:true }).waitFor();
+  await page.getByLabel('Ruta de esa carpeta').fill('D:\\Fotos\\Sesion');
+  await page.getByLabel('Selección del cliente').fill('Hola! Queremos estas fotos:\n004, 001, 002, 003, 005\nGracias!');
+  await page.getByRole('button',{name:'Aplicar selección',exact:true}).click();
+  await page.getByText('5 fotos seleccionadas.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Reproducir',exact:true}).waitFor({state:'visible'});
+  await page.waitForFunction(() => !Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Reproducir')?.disabled);
+  await page.getByRole('button',{name:'Reproducir',exact:true}).click();
+  await page.waitForTimeout(350);
+  await page.getByRole('button',{name:'Pausar',exact:true}).click();
+  const time=await page.getByLabel('Posición del video').inputValue();
+  assert.ok(Number(time)>0.2,'El reloj avanza en tiempo real');
+  await page.getByRole('button',{name:'Línea de tiempo',exact:true}).first().click();
+  await page.locator('input[type=number]').first().fill('0.7');
+  await page.getByLabel('Transición escena 1').selectOption('pan');
+  // Old cards use visual labels; update the first transition with a locator if no linked label.
+  await page.getByTitle('Mover a la derecha').first().click();
+  await page.waitForTimeout(700);
+  const projectDownload = await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Guardar proyecto JSON'}).click()]).then(([download])=>download);
+  await projectDownload.saveAs(path.resolve('artifacts/project.autoreel.json'));
+  const saved=JSON.parse(fs.readFileSync('artifacts/project.autoreel.json','utf8'));
+  assert.equal(saved.slides[1].duration,0.7);
+  assert.equal(saved.slides[1].transition,'pan');
+  assert.deepEqual(saved.slides.flatMap(slide=>slide.photos.map(photo=>photo.filename)),['IMG_002.jpg','IMG_004.jpg','IMG_001.jpg','IMG_003.jpg','IMG_005.jpg']);
+  await page.getByRole('button',{name:/Exportar \(/}).click();
+  const xmlDownload = await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Descargar XML de Premiere'}).click()]).then(([download])=>download);
+  await xmlDownload.saveAs(path.resolve('artifacts/sequence.xml'));
+  const xml=fs.readFileSync('artifacts/sequence.xml','utf8');
+  assert.ok(xml.includes('file://localhost/D:/Fotos/Sesion/IMG_004.jpg'));
+  const inspection=await page.evaluate(async xml=>{
+    const {parsePremiereXml}=await import('/src/utils/premiereParser.ts');
+    const result=parsePremiereXml(xml);
+    let invalid=false;try{parsePremiereXml('<garbage/>');}catch{invalid=true;}
+    return {duration:result.totalDurationSeconds,clips:result.clipsCount,tracks:result.videoTracksCount,invalid};
+  },xml);
+  assert.equal(inspection.clips,5); assert.equal(inspection.tracks,2); assert.equal(inspection.invalid,true);
+  await page.getByRole('button',{name:'Cerrar ventana'}).click();
+  await page.getByRole('button',{name:'Editor',exact:true}).click();
+  await page.getByLabel('Selección del cliente').fill('999');
+  await page.getByRole('button',{name:'Aplicar selección',exact:true}).click();
+  await page.getByText(/Fotos faltantes o sin conectar: IMG_999.jpg/).waitFor();
+  await page.getByLabel('Duración de las escenas').fill('0.5');
+  const videoDownload = await Promise.all([page.waitForEvent('download',{timeout:45000}),page.getByRole('button',{name:/^Grabar (MP4|WEBM)$/}).click()]).then(([download])=>download);
+  const videoPath=path.resolve('artifacts/'+videoDownload.suggestedFilename());
+  await videoDownload.saveAs(videoPath);
+  assert.ok(fs.statSync(videoPath).size>10000,'El video no está vacío');
+  const metadata=await page.evaluate(async ({base64,mime})=>{
+    const bytes=Uint8Array.from(atob(base64), char=>char.charCodeAt(0));
+    const video=document.createElement('video'); video.src=URL.createObjectURL(new Blob([bytes],{type:mime})); video.muted=true;
+    await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=reject;});
+    await video.play();
+    const stream=video.captureStream();
+    await new Promise(resolve=>setTimeout(resolve,150));
+    const result={duration:video.duration,width:video.videoWidth,height:video.videoHeight,audioTracks:stream.getAudioTracks().length};
+    video.pause(); stream.getTracks().forEach(track=>track.stop()); URL.revokeObjectURL(video.src);
+    return result;
+  },{base64:fs.readFileSync(videoPath).toString('base64'),mime:videoPath.endsWith('.mp4')?'video/mp4':'video/webm'});
+  assert.equal(metadata.width,1080); assert.equal(metadata.height,1920); assert.equal(metadata.audioTracks,1);
+  if (Number.isFinite(metadata.duration)) assert.ok(Math.abs(metadata.duration-2)<0.3,'Duración exportada ≈ 2 segundos');
+  // Record twice without playback: checks audio monitoring cleanup.
+  await Promise.all([page.waitForEvent('download',{timeout:45000}),page.getByRole('button',{name:/^Grabar (MP4|WEBM)$/}).click()]);
+  await page.waitForTimeout(700);
+  await page.reload();
+  await page.getByText(/Hay 5 fotos guardadas sin conectar/).waitFor();
+  await page.getByLabel('Elegir fotos',{exact:true}).setInputFiles(fixture.map(item=>({name:item.name,mimeType:'image/jpeg',buffer:Buffer.from(item.data,'base64')})));
+  await page.getByText('5 fotos conectadas',{exact:true}).waitFor();
+  await page.getByLabel('Formato',{exact:true}).selectOption('1080x1080');
+  await page.evaluate(()=>scrollTo(0,0)); await page.screenshot({path:path.resolve('artifacts/editor-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:innerWidth}));
+  assert.ok(dimensions.width<=dimensions.viewport+1,'Sin desborde horizontal en móvil');
+  await page.screenshot({path:path.resolve('artifacts/editor-mobile.png'),fullPage:true});
+  assert.deepEqual(errors,[],'Sin errores de consola');
+  await page.getByRole('button',{name:'Cómo usar AutoReel'}).click();
+  await page.getByRole('dialog').waitFor({state:'visible'});
+  await page.keyboard.press('Escape');
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  const backup=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Nuevo proyecto',exact:true}).click()]).then(([download])=>download);
+  assert.ok(backup.suggestedFilename().includes('_respaldo.autoreel.json'));
+  await page.getByText('Conectá tus fotos y aplicá una selección para empezar.').waitFor();
+  fs.writeFileSync('artifacts/browser-report.json',JSON.stringify({status:'passed',inspection,metadata,mobile:dimensions,consoleErrors:errors},null,2));
+  console.log(JSON.stringify({status:'passed',inspection,metadata,mobile:dimensions,videoPath},null,2));
+  await browser.close();
+})().catch(error=>{console.error(error); if(activeBrowser) activeBrowser.close().finally(()=>process.exit(1)); else process.exit(1);});
+
+
+
+
+
