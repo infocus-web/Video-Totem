@@ -2,6 +2,18 @@
 
 ## Uso
 
+### Reconexión automática de originales
+
+En Chrome/Edge compatibles, **Fotos / clips**, **Carpeta** y **Cargar** abren el selector nativo y recuerdan los accesos de lectura. Se conserva únicamente el handle de cada archivo usado y el identificador del proyecto, en IndexedDB. No se guardan copias de multimedia ni se suben archivos a Vercel. La selección de carpeta continúa preparando solo los archivos de la lista, cuando la hay.
+
+Al recargar, reiniciar el navegador o abrir el JSON del mismo proyecto en este navegador/dominio, la app consulta el permiso y reconecta los archivos vinculados. Conserva escenas, giros, encuadres, movimientos, recorte y contador. Si falta permiso, **Reconectar originales** lo solicita mediante un clic; Chrome puede ofrecer **Permitir en cada visita**. La app nunca solicita permiso automáticamente ni escritura sobre los originales. Si un archivo cambió de ubicación o fue borrado, informa cuál falta. Si cambió el contenido de la canción, pide elegirla para revisar la sincronización.
+
+Los archivos elegidos antes de esta función, o mediante el selector antiguo, deben elegirse una vez con los nuevos botones. El JSON mantiene compatibilidad con proyectos anteriores y recibe un identificador local al abrirse. Los handles no se exportan en JSON ni viajan a otros equipos, perfiles o dominios. Un proyecto nuevo tiene sus propios vínculos y no conecta los del anterior; Quitar música elimina su vínculo. Borrar los datos del sitio elimina estos accesos guardados. Los navegadores sin File System Access siguen usando la reconexión manual.
+
+Archivos: `src/utils/localFileLinks.ts` gestiona los selectores, handles, permisos y recuperación; `src/components/LocalFilePicker.tsx` presenta los botones con selección manual compatible; `src/App.tsx` integra importación y reconexión; `src/utils/projectStorage.ts` conserva el identificador local; `src/components/ClientInputPanel.tsx` y `src/components/EntranceControls.tsx` comparten los selectores. `README.md`, este documento y `src/components/FaqGuideModal.tsx` explican el nuevo flujo. `scripts/local-links-smoke.cjs` prueba la reconexión; `scripts/music-trim-smoke.cjs` y `scripts/entrance-clips-smoke.cjs` usan selectores exactos para distinguir el botón nativo del campo compatible, y la prueba musical posiciona la escucha antes de reproducir el recorte.
+
+Verificación local: `npm test`, `npm run build` y `scripts/local-links-smoke.cjs`. La prueba de Chrome usa handles reales de un directorio de prueba del navegador, reemplaza el selector nativo para automatizarlo y simula la pérdida de permiso; comprueba selección, fotos/clips/música tras reiniciar Chrome, edición y JSON, faltantes y aislamiento de proyectos. Para comprobar el selector del disco y los permisos reales, elegí tus originales, recargá, cerrá/reabrí Chrome y probá Reconectar originales si aparece. Repetí después de Commit, Push y deploy en Vercel, usando siempre el mismo dominio. No se agregaron dependencias.
+
 ### Recortar música y escuchar el corte
 
 En **Música** y **Entrada**, cargá una canción para ver su forma de onda. Arrastrá el marcador violeta de inicio y el amarillo de final, o ajustá los segundos en los campos. El deslizador inferior permite escuchar desde cualquier posición. Con **Autoescucha**, mover el inicio reproduce hasta tres segundos desde ese punto; mover el final reproduce los dos segundos anteriores al corte. **Escuchar** reproduce toda la selección, **Pausa** la detiene y **Toda** restaura la canción completa. La escucha del corte pausa la vista previa para que no se mezclen dos reproducciones.
@@ -11,6 +23,14 @@ En Entrada, el video dura exactamente el tramo seleccionado. Los tiempos de **Go
 Los marcadores se guardan en el JSON y se conservan al reconectar el mismo audio. Una canción distinta restaura el tramo completo y limpia sus golpes. Las escuchas se detienen al cambiar de panel, cargar otro archivo o comenzar la exportación. No se modifica ni sobrescribe el archivo de música original.
 
 ### Herramientas compartidas para Entrada
+
+**Barra espaciadora** alterna Play/Pausa de la canción en Música y Entrada. Reanuda desde la posición de escucha dentro del recorte; al terminar vuelve a arrancar desde el inicio seleccionado. También funciona después de mover un deslizador. No actúa mientras escribís en un campo ni dentro de una ventana modal. El botón **Escuchar** usa el mismo comportamiento.
+
+El bloque **Contador**, justo debajo de la música, reúne 5/10 → 0, **Empezar en**, el deslizador **Momento** y Opacidad. Para fijarlo al oído, posicioná o reproducí la canción y tocá **Contador aquí**; también podés arrastrar su marcador rosa sobre la forma de onda. Los segundos son de la canción original, y el bloque muestra dónde comienza dentro del video recortado. Se limita para que la cuenta termine dentro de la música. Si lo adelantás antes del inicio de golpes, ese inicio se adelanta al mismo segundo. **Al final** recupera el contador en los últimos cinco/diez segundos.
+
+Archivos: `MusicTimeline.tsx` agrega el atajo y el marcador; `EntranceControls.tsx` reúne y sincroniza los controles del contador; `index.css` distingue el bloque rosa. Para probar localmente y en Vercel después del deploy: Espacio, pausa, Espacio para reanudar; luego Contador aquí y verificá el segundo en Empezar en. Probá también arrastrar el marcador, escribir un segundo y guardar/reabrir el JSON.
+
+La línea de tiempo musical tiene **Zoom** de 1× a 32× y también responde a la rueda del mouse sobre la forma de onda. El zoom mantiene el segundo bajo el puntero; el deslizador mantiene el centro visible. Usá la barra horizontal o **Shift + rueda** para recorrer el tema ampliado, y **Ajustar** para ver toda la canción. Cambia únicamente la vista: no mueve los cortes, ni altera el audio o la duración. Está disponible en Música y Entrada. Archivos: `src/components/MusicTimeline.tsx` y `src/index.css`. Para probar localmente y después del deploy, ampliá, desplazate, arrastrá un marcador y comprobá la autoescucha; ajustá la vista y verificá que los límites se mantengan.
 
 El botón **Giro, encuadre y movimientos** de Entrada abre **Encuadre**. Ahí tenés posición, zoom, giro de 90°, giro inteligente y **Movimiento**: Fija, Acercar, Alejar, Subir y Bajar. El selector **Aplicar a** permite editar la foto actual, las marcadas o todas. Tocá **Listo** para volver a reproducir. Los movimientos avanzan dentro del intervalo real de cada foto de Entrada y vuelven a empezar en cada repetición. Cuando una foto dura un solo fotograma, no hay tiempo para mostrar un desplazamiento entre cuadros. Los cambios al golpe y durante el contador siguen siendo cortes directos para conservar la sincronización.
 
@@ -32,7 +52,7 @@ Archivos del ajuste de opacidad: `src/components/EntranceControls.tsx` agrega el
 
 El detector de golpes es una ayuda de edición: canciones con ataques suaves, voces o ritmos complejos pueden necesitar correcciones manuales. La línea de tiempo conserva las escenas fuente; los cortes de Entrada se ajustan en su panel. El XML de Premiere conserva la secuencia base y no representa el contador ni la repetición acelerada. En escenas con clips, el XML base tampoco representa su inicio ni repetición; usá MP4 para conservar esos ajustes.
 
-Los proyectos JSON guardan tiempos, cortes y encuadres, pero no fotos, clips ni canciones. Al abrirlos, reconectá los mismos archivos. La huella SHA-256 de la canción permite conservar los cortes ajustados al reconectar el mismo audio; una canción distinta limpia los golpes anteriores para evitar una sincronización incorrecta.
+Los proyectos JSON guardan tiempos, cortes y encuadres, pero no fotos, clips ni canciones. En el navegador/dominio donde vinculaste los originales, se reconectan automáticamente si Chrome conserva el permiso. En otro entorno, elegí los mismos archivos. La huella SHA-256 de la canción permite conservar los cortes ajustados al reconectar el mismo audio; una canción distinta elegida manualmente limpia los golpes anteriores para evitar una sincronización incorrecta.
 
 ## Cambios de código
 

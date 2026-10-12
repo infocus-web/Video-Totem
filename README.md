@@ -161,7 +161,9 @@ No se genera un ExtendScript incompleto ni se promete ejecutar Premiere desde el
 
 El montaje se guarda automáticamente en localStorage de este navegador y dominio, con una versión de formato. El JSON conserva configuración, escenas, selección, nombres y rutas, pero **no incluye las fotos ni la música**.
 
-Al recargar o abrir un JSON, volvé a elegir la carpeta de fotos y el audio. Las URLs temporales de archivos no se guardan. El guardado local no sincroniza entre dispositivos ni entre diferentes URLs de Vercel. Descargá JSON para tener un respaldo portátil.
+En Chrome/Edge compatibles, los botones Fotos, Carpeta y Cargar música recuerdan el acceso de lectura a los originales. Al recargar, reiniciar Chrome o abrir el JSON del mismo proyecto, se reconectan automáticamente mientras el permiso siga vigente. Si Chrome necesita renovarlo, aparece **Reconectar originales**: al tocarlo podés elegir **Permitir en cada visita** si el navegador ofrece esa opción. Los archivos cargados antes de esta función requieren elegirse una vez con los nuevos botones. En navegadores sin esta API sigue disponible la selección manual.
+
+Se guardan únicamente los handles de acceso en IndexedDB, separados por proyecto; no se guardan copias de fotos, clips o canciones ni se suben a Vercel. El JSON incluye un identificador local, pero no los handles. Si abrís el proyecto en otro equipo, perfil de Chrome o dominio, elegí los originales allí. Si moviste o borraste un archivo, elegí su nueva ubicación; la app no puede recorrer carpetas a las que no le diste acceso. Borrar los datos del sitio elimina los vínculos locales. Descargá JSON para tener un respaldo portátil de la edición.
 
 El JSON incluye rutas de archivos de tu computadora y textos del evento. Revisalo antes de compartirlo o publicarlo en un repositorio. El editor no necesita guardar datos de clientes en GitHub.
 
@@ -196,7 +198,7 @@ Los resultados quedan en artifacts, excluido de Git. El script también acepta l
 3. Reproducí el montaje y escuchá la música.
 4. Grabá un video corto; verificá resolución, duración, textos y audio.
 5. Exportá el XML e importalo en Premiere en la misma computadora donde están los originales.
-6. Recargá la página: el montaje debe conservarse y pedir reconectar las fotos.
+6. En Chrome, elegí fotos y música con los botones que recuerdan la ubicación. Recargá y reiniciá el navegador: deben reconectarse conservando la edición. Si el permiso caduca, usá Reconectar originales. Un archivo elegido con el selector antiguo o en un navegador sin esta API requiere reconexión manual.
 7. Revisá la consola del navegador y que Vercel haya completado el build.
 8. En Línea de tiempo, elegí Todas: Wipe y cambiá una escena a Fundido. Comprobá la vista previa, la grabación y el guardado JSON.
 9. En Encuadre y giro, activá Rellenar cuadro. Probá una foto horizontal sola, un apilado y la separación de 0px. El video descargado debe cubrir el cuadro. Al volver a Mostrar foto completa, debe recuperarse el encuadre anterior.

@@ -113,6 +113,17 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
   .music-trim-panel { grid-column: 1 / -1; min-width: 0; padding: 8px 0; border-bottom: 1px solid #373047; }
   .music-trim-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; }
   .music-autoplay { margin-left: auto; display: flex; gap: 6px; align-items: center; color: #a3a3a3; }
+  .music-zoom-toolbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: #a3a3a3; }
+  .music-zoom-toolbar label { display: flex; align-items: center; gap: 8px; }
+  .music-zoom-toolbar input { width: 130px; accent-color: #6366f1; }
+  .music-zoom-toolbar output { min-width: 36px; font-variant-numeric: tabular-nums; }
+  .music-zoom-toolbar .quick-button { padding: 3px 8px; font-size: 11px; }
+  .music-timeline-viewport { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-color: #6366f1 #171717; }
+  .music-timeline-viewport::-webkit-scrollbar { height: 10px; }
+  .music-timeline-viewport::-webkit-scrollbar-track { background: #171717; }
+  .music-timeline-viewport::-webkit-scrollbar-thumb { background: #6366f1; border: 2px solid #171717; border-radius: 5px; }
+  .music-timeline-viewport:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
+  .music-timeline-content { min-width: 100%; }
   .music-waveform { position: relative; margin-top: 6px; height: 72px; background: #0a0a0a; border: 1px solid #373047; border-radius: 5px; overflow: hidden; }
   .music-waveform svg { width: 100%; height: 100%; }
   .music-wave-dim { position: absolute; top: 0; bottom: 0; background: #09090bcc; pointer-events: none; }
@@ -123,10 +134,23 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
   .music-end-marker::-webkit-slider-thumb { border-color: #fbbf24; background: #f59e0b44; }
   .music-end-marker::-moz-range-thumb { border-color: #fbbf24; background: #f59e0b44; }
   .music-marker-range:focus-visible { outline: 2px solid #a5b4fc; outline-offset: -2px; }
-  .music-time-ruler { display: flex; justify-content: space-between; font-size: 10px; color: #a3a3a3; font-variant-numeric: tabular-nums; }
+  .music-time-ruler { position: relative; height: 18px; font-size: 10px; color: #a3a3a3; font-variant-numeric: tabular-nums; }
+  .music-time-ruler span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .music-time-ruler span:first-child { transform: none; }
+  .music-time-ruler span:last-child { transform: translateX(-100%); }
   .music-listen-range { width: 100%; height: 18px; }
   .music-audition-button { display: flex; align-items: center; gap: 4px; }
   .music-audition-button svg { width: 14px; height: 14px; }
+  .music-audition-button kbd { font-size: 10px; color: #a3a3a3; border: 1px solid #525252; border-radius: 3px; padding: 0 3px; }
+  .music-countdown-region { position: absolute; top: 0; bottom: 0; background: #ec489926; border-top: 2px solid #f472b6; pointer-events: none; }
+  .music-countdown-region span { position: absolute; left: 6px; top: 2px; color: #f9a8d4; font-size: 10px; white-space: nowrap; }
+  .music-countdown-marker { top: 42px; height: 28px; }
+  .music-countdown-marker::-webkit-slider-thumb { height: 26px; border-color: #f9a8d4; background: #ec4899; }
+  .music-countdown-marker::-moz-range-thumb { height: 24px; border-color: #f9a8d4; background: #ec4899; }
+  .countdown-position-button { border-color: #ec489980; color: #f9a8d4; }
+  .entrance-countdown-panel { padding: 8px; margin: 8px 0; border: 1px solid #ec48994d; border-radius: 6px; background: #ec489908; }
+  .entrance-countdown-panel .property-control { max-width: none; }
+  .countdown-timing { margin: 4px 0 4px 112px; color: #f9a8d4; }
   .music-trim-toolbar .studio-input { height: 28px; padding: 3px 6px; font-size: 12px; width: 85px; }
   .property-value { min-width: 44px; flex-shrink: 0; text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; }
   .property-note { min-width: 0; color: #a3a3a3; font-size: 11px; line-height: 1.4; }

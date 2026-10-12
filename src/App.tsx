@@ -22,6 +22,8 @@ import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from 
 import { sequenceDuration } from './utils/entrance';
 import { setMusicTrim } from './utils/musicTrim';
 import { downloadBlob } from './utils/download';
+import { authorizeLocalLinks, chooseLocalMusic, chooseLocalPhotos, readLocalLinks, reconnectLocalLinks, rememberLocalLinks, supportsLocalLinks, type LocalFileLinks, type PhotoLink } from './utils/localFileLinks';
+import { photoFileInfo } from './utils/photoFiles';
 
 const TimelineView = lazy(() => import('./components/TimelineView').then(module => ({ default: module.TimelineView })));
 const PremiereInspectorModal = lazy(() => import('./components/PremiereInspectorModal').then(module => ({ default: module.PremiereInspectorModal })));
@@ -36,8 +38,8 @@ function DeferredDialog({ open, children }: { open: boolean; children: ReactNode
 }
 
 function initialProject(): SavedProject {
-  try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) return decodeProject(stored); } catch { /* An invalid or unavailable saved draft never prevents opening the app. */ }
-  return { version: 1, rawText: '', config: { ...DEFAULT_CONFIG }, library: [], slides: [] };
+  try { const stored = localStorage.getItem(STORAGE_KEY); if (stored) { const saved = decodeProject(stored); return { ...saved, localLinkId: saved.localLinkId || crypto.randomUUID() }; } } catch { /* An invalid or unavailable saved draft never prevents opening the app. */ }
+  return { version: 1, localLinkId: crypto.randomUUID(), rawText: '', config: { ...DEFAULT_CONFIG }, library: [], slides: [] };
 }
 export default function App() {
   const [project, setProject] = useState(initialProject);
@@ -52,6 +54,8 @@ export default function App() {
   const [importProgress, setImportProgress] = useState<FilePreparationProgress | null>(null);
   const [message, setMessage] = useState(''), [saveStatus, setSaveStatus] = useState('Guardando…');
   const [musicName, setMusicName] = useState(''), [musicRevision, setMusicRevision] = useState(0);
+  const [linkPermissionNeeded, setLinkPermissionNeeded] = useState(false);
+  const linkedFiles = useRef<LocalFileLinks | null>(null), linkEpoch = useRef(0);
   const preview = useRef<PreviewHandle>(null), importAbort = useRef<AbortController | null>(null);
   const urls = useRef(new Set<string>());
   const { config, rawText, slides, library } = project;
@@ -79,6 +83,10 @@ export default function App() {
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const fromFolder = event.currentTarget.hasAttribute('webkitdirectory');
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
+    linkEpoch.current++;
+    await importLocalPhotos(files, fromFolder);
+  };
+  const importLocalPhotos = async (files: File[], fromFolder: boolean, handles?: Map<string, PhotoLink['handle']>, restoring = false) => {
     setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
     try {
       const requested = fromFolder && rawText.trim() && !reconnect ? parseClientSelectionText(rawText, {
@@ -111,15 +119,37 @@ export default function App() {
         ? buildSlidesFromPhotos(montagePhotos, config.horizontalGrouping, config.defaultDuration, config)
         : prev.slides.map(slide => ({ ...slide, photos: slide.photos.map(photo => ({
           ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
+      let linkWarning = '';
+      if (!restoring && project.localLinkId) {
+        const links = result.connected.flatMap((photo, index) => {
+          const handle = handles?.get(imported[index].id);
+          return handle ? [{ id: photo.id, path: photo.relativePath || photo.filename, handle }] : [];
+        });
+        try {
+          await rememberLocalLinks(project.localLinkId, links, undefined, handles ? [] : result.connected.map(photo => photo.id));
+          linkedFiles.current = await readLocalLinks(project.localLinkId);
+          if (result.library.every(photo => photo.previewUrl) && (audioEngine.getTrack() || !config.musicFingerprint)) setLinkPermissionNeeded(false);
+        }
+        catch { linkWarning = ' Se cargaron los archivos, pero Chrome no pudo recordar su acceso.'; }
+      }
       const pending = result.library.filter(photo => !photo.previewUrl);
       const pendingNotice = pending.length ? ' Quedan ' + pending.length + ' sin conectar: ' + pending.slice(0, 3).map(photo => photo.relativePath || photo.filename).join(', ') + '. Elegí la carpeta original si hay nombres repetidos.' : '';
-      setMessage(result.reconnected
+      setMessage((result.reconnected
         ? `Se reconectaron ${result.reconnected} fotos. Se conservó la edición.${pendingNotice}`
         : filtered
           ? `Se cargaron ${imported.length} de ${filtered.total} fotos de la carpeta. ` + (createMontage ? 'Selección aplicada; el montaje está listo.' : 'Aplicá la selección para actualizar el montaje.') + pendingNotice
-          : imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.') + pendingNotice);
+          : imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.') + pendingNotice) + linkWarning);
     } catch (error) { notify(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.'); }
-    finally { setImporting(false); setImportProgress(null); importAbort.current = null; }
+    finally { if (!restoring) setImporting(false); setImportProgress(null); importAbort.current = null; }
+  };
+  const pickPhotos = async (folder: boolean) => {
+    if (importing || busy) return;
+    linkEpoch.current++;
+    try {
+      const items = await chooseLocalPhotos(folder, () => { setImporting(true); setImportProgress(null); setMessage(''); });
+      if (items.length) await importLocalPhotos(items.map(item => item.file), folder, new Map(items.map(item => [photoFileInfo(item.file).id, item.handle])));
+    } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) notify(error instanceof Error ? error.message : 'No se pudo abrir la carpeta.'); }
+    finally { setImporting(false); }
   };
   const applySelection = () => {
     try {
@@ -179,25 +209,82 @@ export default function App() {
     try {
       if (file.size > 2000000) throw new Error('El archivo de proyecto es demasiado grande.');
       const restored = decodeProject(await file.text());
+      restored.localLinkId ||= crypto.randomUUID(); linkEpoch.current++; linkedFiles.current = null; setLinkPermissionNeeded(false);
+      try { localStorage.setItem(STORAGE_KEY, serializeProject(restored)); }
+      catch { setSaveStatus('No se pudo guardar automáticamente. Descargá el proyecto JSON.'); }
       urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear();
       audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
       setPreviewReady(false); setPreviewSession(value => value + 1); setEditorSection(1);
-      setProject(restored); notify('Proyecto abierto. Volvé a conectar su carpeta de fotos y su música.');
+      setProject(restored); notify('Proyecto abierto. Recuperando los originales que Chrome tenga vinculados.');
     } catch (error) { notify(error instanceof Error ? error.message : 'Proyecto inválido.'); }
   };
   const uploadMusic = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
+    linkEpoch.current++;
+    await loadMusicFile(file);
+  };
+  const loadMusicFile = async (file: File, handle?: PhotoLink['handle'], restoring = false) => {
     setImporting(true); setImportProgress(null);
     try {
       const fingerprint = await audioEngine.loadTrack(file);
       const sameTrack = fingerprint === config.musicFingerprint;
+      if (restoring && !sameTrack) { audioEngine.clearTrack(); throw new Error('La canción original cambió. Volvé a elegirla para revisar sus cortes.'); }
       const loadedConfig = { ...config, musicFingerprint: fingerprint, musicTrack: config.musicTrack === 'none' ? 'chill' : config.musicTrack,
         ...(config.entrance ? { entrance: { ...config.entrance, beatTimes: sameTrack ? config.entrance.beatTimes : [] } } : {}) };
       changeConfig(setMusicTrim(loadedConfig, sameTrack ? config.musicTrim : undefined, audioEngine.getTrack()!.duration));
       setMusicName(file.name); setMusicRevision(value => value + 1);
+      if (!restoring && project.localLinkId) {
+        try {
+          await rememberLocalLinks(project.localLinkId, [], handle ? { handle, fingerprint } : null);
+          linkedFiles.current = await readLocalLinks(project.localLinkId);
+          if (library.every(photo => photo.previewUrl)) setLinkPermissionNeeded(false);
+        }
+        catch { notify('La canción se cargó, pero Chrome no pudo recordar su acceso.'); }
+      }
     }
     catch (error) { notify(error instanceof Error ? error.message : 'Audio no compatible.'); }
-    finally { setImporting(false); }
+    finally { if (!restoring) setImporting(false); }
+  };
+  const pickMusic = async () => {
+    if (importing || busy) return;
+    linkEpoch.current++;
+    try { const selected = await chooseLocalMusic(); await loadMusicFile(selected.file, selected.handle); }
+    catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) notify(error instanceof Error ? error.message : 'No se pudo elegir la canción.'); }
+  };
+  const restoreLocalFiles = async (signal?: AbortSignal) => {
+    if (!project.localLinkId || !supportsLocalLinks()) return;
+    const epoch = linkEpoch.current;
+    try {
+      const links = await readLocalLinks(project.localLinkId);
+      if (signal?.aborted || epoch !== linkEpoch.current) return;
+      linkedFiles.current = links; setLinkPermissionNeeded(false);
+      if (!links) return;
+      setImporting(true); setImportProgress(null);
+      const result = await reconnectLocalLinks(links, library, config.musicFingerprint);
+      if (signal?.aborted || epoch !== linkEpoch.current) return;
+      setLinkPermissionNeeded(result.permissionNeeded);
+      if (result.files.length) await importLocalPhotos(result.files, true, undefined, true);
+      if (signal?.aborted || epoch !== linkEpoch.current) return;
+      if (result.music && !audioEngine.getTrack()) await loadMusicFile(result.music, undefined, true);
+      if (result.unavailable.length) notify('No se encontraron los originales vinculados: ' + result.unavailable.slice(0,3).join(', ') + '. Elegí su nueva ubicación.');
+      else if (result.permissionNeeded) notify('Chrome necesita renovar el permiso. Tocá «Reconectar originales»; no hace falta volver a elegirlos.');
+    } catch { if (!signal?.aborted) notify('No se pudo recuperar el acceso guardado. Elegí los originales una vez para volver a vincularlos.'); }
+    finally { if (!signal?.aborted && epoch === linkEpoch.current) setImporting(false); }
+  };
+  const restoreAction = useRef(restoreLocalFiles); restoreAction.current = restoreLocalFiles;
+  useEffect(() => {
+    const controller = new AbortController(); void restoreAction.current(controller.signal);
+    return () => { controller.abort(); linkEpoch.current++; };
+  }, [project.localLinkId, previewSession]);
+  const renewLocalPermission = async () => {
+    if (!linkedFiles.current || importing || busy) return;
+    await authorizeLocalLinks(linkedFiles.current);
+    await restoreLocalFiles();
+  };
+  const clearMusic = () => {
+    linkEpoch.current++; audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
+    if (!reconnect) setLinkPermissionNeeded(false);
+    if (project.localLinkId) void rememberLocalLinks(project.localLinkId, [], null).catch(() => notify('No se pudo quitar el vínculo guardado de la música.'));
   };
   const newProject = (name: string) => {
     const trimmedName = name.trim();
@@ -206,7 +293,8 @@ export default function App() {
     if (backedUp) downloadBlob(new Blob([serializeProject(project)], { type:'application/json' }), (config.name || 'AutoReel') + '_respaldo.autoreel.json');
     urls.current.forEach(url => URL.revokeObjectURL(url)); urls.current.clear();
     audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
-    const fresh: SavedProject = { version:1, rawText:'', config:{ ...DEFAULT_CONFIG, name: trimmedName }, library:[], slides:[] };
+    linkEpoch.current++; linkedFiles.current = null; setLinkPermissionNeeded(false);
+    const fresh: SavedProject = { version:1, localLinkId: crypto.randomUUID(), rawText:'', config:{ ...DEFAULT_CONFIG, name: trimmedName }, library:[], slides:[] };
     setPreviewReady(false); setPreviewSession(value => value + 1);
     setProject(fresh); setTab('editor'); setEditorSection(1); setNewProjectOpen(false);
     try { localStorage.setItem(STORAGE_KEY, serializeProject(fresh)); setSaveStatus('Guardado en este navegador'); }
@@ -222,9 +310,10 @@ export default function App() {
         <label className="project-button" title="Abrir proyecto"><FolderOpen aria-hidden="true" /><span className="project-button-label">Abrir</span><input aria-label="Abrir proyecto" type="file" accept=".json" disabled={busy || importing} className="sr-only" onChange={event => void loadProject(event)} /></label>
       </>} />
     <main className="app-main">
-      {(message || importing || reconnect > 0) && <div className="app-notices">
+      {(message || importing || reconnect > 0 || linkPermissionNeeded) && <div className="app-notices">
         {message && <div role="status" className="app-notice"><p>{message}</p><button aria-label="Cerrar aviso" onClick={() => setMessage('')}>✕</button></div>}
         {importing && <PreparationProgress title={importProgress ? (reconnect > 0 ? 'Reconectando fotos' : 'Preparando fotos') : 'Preparando archivos locales'} progress={importProgress} />}
+        {linkPermissionNeeded && <button type="button" className="project-button" disabled={busy || importing} onClick={() => void renewLocalPermission()}><FolderOpen aria-hidden="true" />Reconectar originales</button>}
         {reconnect > 0 && !importing && <p role="status" className="app-notice text-amber-300">Hay {reconnect} fotos guardadas sin conectar. Volvé a elegir las fotos o su carpeta para recuperar la vista previa.</p>}
       </div>}
       <div className="editor-workspace">
@@ -232,7 +321,7 @@ export default function App() {
           {tab === 'editor' ? <ClientInputPanel activeSection={editorSection} onSectionChange={setEditorSection} rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
             libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
-            onAuditionStart={pauseForAudition} onMusicUpload={event => void uploadMusic(event)} musicName={musicName} musicRevision={musicRevision} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
+            onAuditionStart={pauseForAudition} onMusicUpload={event => void uploadMusic(event)} onChoosePhotos={supportsLocalLinks() ? folder => void pickPhotos(folder) : undefined} onChooseMusic={supportsLocalLinks() ? () => void pickMusic() : undefined} musicName={musicName} musicRevision={musicRevision} onClearMusic={clearMusic} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>

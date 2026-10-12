@@ -28,7 +28,7 @@ const tone = (duration, sampleRate = 22050) => {
   await page.getByRole('button',{name:'Reproducir',exact:true}).waitFor();
   await tab('Escenas');await page.getByRole('button',{name:'Individual (1 foto por escena)',exact:true}).click();
   await tab('Entrada');await page.getByLabel('Activar entrada de quince').check();
-  await page.getByLabel('Cargar canción de entrada').setInputFiles({name:'golpes.wav',mimeType:'audio/wav',buffer:tone(12)});
+  await page.getByLabel('Cargar canción de entrada',{exact:true}).setInputFiles({name:'golpes.wav',mimeType:'audio/wav',buffer:tone(12)});
   await page.getByText('golpes.wav · 12.0s',{exact:true}).waitFor();
   await page.getByLabel('Duración inicial por foto').fill('2');await page.getByLabel('Golpes desde segundo').fill('4');
   await page.getByRole('button',{name:'Detectar golpes',exact:true}).click();
@@ -52,6 +52,7 @@ const tone = (duration, sampleRate = 22050) => {
   await page.getByLabel('Final de música en segundos').fill('11');
   await page.waitForFunction(()=>window.audioStarts.some(s=>s.live&&!s.loop&&Math.abs(s.offset-9)<0.01&&Math.abs(s.duration-2)<0.01));
   await page.getByLabel('Escucha automática al mover').uncheck();
+  await page.getByLabel('Posición de escucha de la canción').fill('2');
   await page.getByRole('button',{name:'Escuchar selección de música',exact:true}).click();
   await page.getByRole('button',{name:'Detener escucha de música',exact:true}).waitFor();
   await page.waitForFunction(()=>window.audioStarts.some(s=>s.live&&!s.loop&&s.offset===2&&s.duration===9));
@@ -86,7 +87,7 @@ const tone = (duration, sampleRate = 22050) => {
   const power=f=>{let re=0,im=0;for(let i=0;i<4000;i++){const phase=i/22050*f*Math.PI*2;re+=audio[i+1000]*Math.cos(phase);im+=audio[i+1000]*Math.sin(phase);}return re*re+im*im;};
   assert.ok(power(880)>power(330)*20,'El MP4 empieza en el segundo dos de la canción');
   await page.getByLabel('Abrir proyecto',{exact:true}).setInputFiles('artifacts/music-trim-project.json');await page.getByLabel('Elegir fotos',{exact:true}).setInputFiles(files);await tab('Entrada');
-  await page.getByLabel('Cargar canción de entrada').setInputFiles({name:'misma.wav',mimeType:'audio/wav',buffer:tone(12)});await page.getByText('misma.wav · 12.0s',{exact:true}).waitFor();
+  await page.getByLabel('Cargar canción de entrada',{exact:true}).setInputFiles({name:'misma.wav',mimeType:'audio/wav',buffer:tone(12)});await page.getByText('misma.wav · 12.0s',{exact:true}).waitFor();
   assert.equal(await page.getByLabel('Inicio de música en segundos').inputValue(),'2');assert.equal(await page.getByLabel('Final de música en segundos').inputValue(),'11');
   await page.getByRole('button',{name:'Usar canción completa',exact:true}).click();assert.equal(await page.getByLabel('Inicio de música en segundos').inputValue(),'0');assert.equal(await page.getByLabel('Final de música en segundos').inputValue(),'12');
 

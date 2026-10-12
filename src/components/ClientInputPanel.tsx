@@ -5,6 +5,7 @@ import { EditorTool, EditorToolButton } from './EditorTool';
 import { EntranceControls } from './EntranceControls';
 import { MusicTimeline } from './MusicTimeline';
 import { TextOverlayControls } from './TextOverlayControls';
+import { LocalFilePicker } from './LocalFilePicker';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
@@ -20,6 +21,7 @@ interface Props {
   onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string; musicRevision: number;
   onClearMusic: () => void; onError: (message: string) => void; busy: boolean;
   onAuditionStart: () => void;
+  onChoosePhotos?: (folder: boolean) => void; onChooseMusic?: () => void;
 }
 const modes: { value: HorizontalGroupMode; title: string; detail: string; slots: number; caption: string }[] = [
   { value: 'auto-split-2', title: '2 en 1 (Arriba y Abajo)', detail: 'Apilá dos fotos horizontales en pares, dividiendo la pantalla al 50%.', slots: 2, caption: '2 en 1' },
@@ -102,10 +104,8 @@ export function ClientInputPanel(props: Props) {
     <fieldset disabled={busy} className="editor-section-grid min-w-0 text-sm disabled:opacity-60">
     <EditorSection activeSection={activeSection} number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
       <EditorPropertyRow label="Archivos" help="Pegá la selección antes de elegir Carpeta: solo se preparan esas fotos. Fotos permite elegir archivos manualmente.">
-        <EditorTool label="Subir fotos locales"><label className="editor-icon-button"><PlusCircle aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Fotos / clips</span>
-          <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime,.mov" onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
-        <EditorTool label={props.rawText.trim() ? 'Elegir carpeta: cargar solo las fotos de la lista. Al reabrir un proyecto, reconecta sus fotos conservando la edición.' : 'Elegir carpeta: sin una selección, carga todas las fotos compatibles.'}><label className="editor-icon-button"><FolderOpen aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Carpeta</span>
-          <input aria-label="Elegir carpeta" type="file" multiple {...{ webkitdirectory: '', directory: '' }} onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
+        <LocalFilePicker label="Elegir fotos" caption="Fotos / clips" icon={<PlusCircle aria-hidden="true" />} multiple accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime,.mov" onChange={props.onUploadPhotos} onChoose={props.onChoosePhotos ? () => props.onChoosePhotos!(false) : undefined} />
+        <LocalFilePicker label="Elegir carpeta" caption="Carpeta" icon={<FolderOpen aria-hidden="true" />} multiple directory onChange={props.onUploadPhotos} onChoose={props.onChoosePhotos ? () => props.onChoosePhotos!(true) : undefined} />
         <span className="property-note">{props.libraryCount} fotos conectadas</span>
       </EditorPropertyRow>
       <EditorPropertyRow label="Selección" help="Pegá números, rangos o nombres y elegí Carpeta para cargar solo esas imágenes.">
@@ -192,7 +192,7 @@ export function ClientInputPanel(props: Props) {
     <EditorSection activeSection={activeSection} number={7} title="Música y volumen" detail="Elegir música, cargar un archivo y ajustar su volumen.">
       <EditorPropertyRow label="Música"><select aria-label="Música" value={config.musicTrack} onChange={e => change('musicTrack', e.target.value)} className="studio-input">
           <option value="chill">Chill · Sintética (112 BPM)</option><option value="upbeat">Fiesta · Sintética (124 BPM)</option><option value="cinematic">Cinemática · Sintética (95 BPM)</option><option value="none">Sin música</option></select></EditorPropertyRow>
-      <EditorPropertyRow label="Audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><EditorTool label="Cargar música"><label className="editor-icon-button"><Music2 aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Cargar</span><input aria-label="Cargar música" type="file" accept="audio/*" onChange={props.onMusicUpload} className="sr-only" /></label></EditorTool>
+      <EditorPropertyRow label="Audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><LocalFilePicker label="Cargar música" caption="Cargar" icon={<Music2 aria-hidden="true" />} accept="audio/*" onChange={props.onMusicUpload} onChoose={props.onChooseMusic} />
         {props.musicName && <><span className="property-note break-all">{props.musicName}</span><EditorToolButton label="Quitar música cargada" caption="Quitar" onClick={props.onClearMusic}><Trash2 aria-hidden="true" /></EditorToolButton></>}</EditorPropertyRow>
       <EditorPropertyRow label="Volumen"><input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(config.musicVolume * 100)}%</span></EditorPropertyRow>
       {activeSection === 7 && <MusicTimeline config={config} onChange={onConfigChange} musicRevision={props.musicRevision} active disabled={props.busy} onAuditionStart={props.onAuditionStart} onError={props.onError} />}
@@ -207,7 +207,7 @@ export function ClientInputPanel(props: Props) {
       </EditorPropertyRow>
     </EditorSection>
     <EditorSection activeSection={activeSection} number={9} title="Entrada de quince" detail="Fotos en ciclo, cambios al golpe de la canción y contador final.">
-      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onEditPhotos={() => props.onSectionChange(3)} />
+      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onChooseMusic={props.onChooseMusic} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onEditPhotos={() => props.onSectionChange(3)} />
     </EditorSection>
     </fieldset>
     </div>

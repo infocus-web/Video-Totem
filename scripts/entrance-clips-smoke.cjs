@@ -27,7 +27,7 @@ const tone = (duration, sampleRate = 22050) => {
   await page.getByRole('button',{name:'Reproducir',exact:true}).waitFor();
   await tab('Escenas');await page.getByRole('button',{name:'Individual (1 foto por escena)',exact:true}).click();
   await tab('Entrada');await page.getByLabel('Activar entrada de quince').check();
-  await page.getByLabel('Cargar canción de entrada').setInputFiles({name:'golpes.wav',mimeType:'audio/wav',buffer:tone(12)});
+  await page.getByLabel('Cargar canción de entrada',{exact:true}).setInputFiles({name:'golpes.wav',mimeType:'audio/wav',buffer:tone(12)});
   await page.getByText('golpes.wav · 12.0s',{exact:true}).waitFor();
   await page.getByLabel('Duración inicial por foto').fill('2');await page.getByLabel('Golpes desde segundo').fill('4');
   await page.getByRole('button',{name:'Detectar golpes',exact:true}).click();
@@ -69,7 +69,7 @@ const tone = (duration, sampleRate = 22050) => {
   await page.getByLabel('Abrir proyecto',{exact:true}).setInputFiles('artifacts/entrance-project.json');
   await page.getByLabel('Elegir fotos',{exact:true}).setInputFiles(files);
   await tab('Entrada');
-  await page.getByLabel('Cargar canción de entrada').setInputFiles({name:'golpes-reconectados.wav',mimeType:'audio/wav',buffer:tone(12)});
+  await page.getByLabel('Cargar canción de entrada',{exact:true}).setInputFiles({name:'golpes-reconectados.wav',mimeType:'audio/wav',buffer:tone(12)});
   await page.getByText('golpes-reconectados.wav · 12.0s',{exact:true}).waitFor();
   assert.equal(await page.getByLabel('Tiempos de los cortes').inputValue(),project.config.entrance.beatTimes.join(', '),'Reconectar el mismo audio conserva cortes manuales, incluso si se renombra');
   await page.getByLabel('Activar entrada de quince').uncheck();

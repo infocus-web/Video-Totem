@@ -5,7 +5,7 @@ import { normalizeTextStyle, overlayFont, TEXT_LAYERS } from './textOverlay.ts';
 import { normalizeEntrance } from './entrance.ts';
 import { normalizeMusicTrim } from './musicTrim.ts';
 
-export interface SavedProject { version: 1; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
+export interface SavedProject { version: 1; localLinkId?: string; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
 export const STORAGE_KEY = 'autoreel-project-v1';
 const transitions = ['none', 'dissolve', 'fade', 'zoom', 'wipe', 'flash', 'pan'];
 const motions = ['static', 'zoom-in', 'zoom-out', 'pan-up', 'pan-down'];
@@ -79,6 +79,6 @@ export function decodeProject(raw: string): SavedProject {
       transition: transitions.includes(String(value.transition)) ? value.transition as SequenceSlide['transition'] : 'dissolve' };
   });
   if (new Set(slides.map(slide => slide.id)).size !== slides.length) throw new Error('Escenas duplicadas.');
-  return { version: 1, rawText: string(data.rawText), config, library, slides };
+  return { version: 1, ...(typeof data.localLinkId === 'string' && /^[a-f0-9-]{36}$/i.test(data.localLinkId) ? { localLinkId: data.localLinkId } : {}), rawText: string(data.rawText), config, library, slides };
 }
 
