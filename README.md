@@ -237,4 +237,4 @@ Con npm run preview activo en el puerto 4173, **node scripts/fit-smoke.cjs** gen
 
 ## Entrada de quince y clips
 
-La pestaña Entrada permite elegir un tramo de canción, detectar y ajustar golpes, repetir fotos en ciclo y añadir un contador de 5 o 10 hasta 0 con cambios acelerados. También admite clips locales en las escenas, con inicio ajustable y sin audio propio. Consultá [uso y verificación](ENTRADA-Y-CLIPS.md).
+Entrada usa la canción completa: fotos a duración fija al principio, golpes desde un segundo elegido y aceleración desde el contador de 5 o 10 hasta 0. Repite las fotos en ciclo y permite corregir los cortes detectados. También admite clips locales en las escenas, con inicio ajustable y sin audio propio. Consultá [uso y verificación](ENTRADA-Y-CLIPS.md).

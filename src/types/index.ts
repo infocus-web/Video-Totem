@@ -88,8 +88,11 @@ export interface SequenceConfig {
 
 export interface EntranceConfig {
   enabled: boolean;
-  musicStart: number;
-  musicEnd: number;
+  musicStart: number; // Legacy JSON field; full-song playback always starts at zero.
+  musicEnd: number; // Full duration of the loaded song, in seconds.
+  initialDuration: number;
+  beatStart: number;
+  countdownStart: number | null; // null places the countdown at the end of the song.
   countdown: 5 | 10;
   beatTimes: number[];
   beatShift: number;

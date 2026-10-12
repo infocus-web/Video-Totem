@@ -188,7 +188,10 @@ export default function App() {
     try {
       const fingerprint = await audioEngine.loadTrack(file);
       changeConfig({ ...config, musicFingerprint: fingerprint, musicTrack: config.musicTrack === 'none' ? 'chill' : config.musicTrack,
-        ...(config.entrance ? { entrance: { ...config.entrance, beatTimes: fingerprint === config.musicFingerprint ? config.entrance.beatTimes : [] } } : {}) });
+        ...(config.entrance ? { entrance: { ...config.entrance, musicStart: 0, musicEnd: audioEngine.getTrack()!.duration,
+          countdownStart: config.entrance.countdownStart === null ? null : Math.min(config.entrance.countdownStart, Math.max(0, audioEngine.getTrack()!.duration - config.entrance.countdown)),
+          beatStart: Math.min(config.entrance.beatStart, Math.max(0, audioEngine.getTrack()!.duration - config.entrance.countdown), config.entrance.countdownStart ?? Infinity),
+          beatTimes: fingerprint === config.musicFingerprint ? config.entrance.beatTimes : [] } } : {}) });
       setMusicName(file.name); setMusicRevision(value => value + 1);
     }
     catch (error) { notify(error instanceof Error ? error.message : 'Audio no compatible.'); }

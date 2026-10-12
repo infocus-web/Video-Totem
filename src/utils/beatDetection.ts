@@ -10,7 +10,7 @@ export function detectBeats(samples: Float32Array, sampleRate: number, start: nu
     energy.push(Math.sqrt(sum / hop));
   }
   const onset = energy.map((value, i) => Math.max(0, value - (energy[i - 1] || 0)));
-  const maximum = Math.max(0, ...onset);
+  const maximum = onset.reduce((max, value) => Math.max(max, value), 0);
   if (maximum < 0.0001) return [];
   const peaks: { time: number; strength: number }[] = [];
   for (let i = 0; i < onset.length; i++) {

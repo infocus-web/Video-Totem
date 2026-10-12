@@ -29,7 +29,7 @@ const tone = (duration, sampleRate = 22050) => {
   await tab('Entrada');await page.getByLabel('Activar entrada de quince').check();
   await page.getByLabel('Cargar canción de entrada').setInputFiles({name:'golpes.wav',mimeType:'audio/wav',buffer:tone(12)});
   await page.getByText('golpes.wav · 12.0s',{exact:true}).waitFor();
-  await page.getByLabel('Inicio de música',{exact:true}).fill('2');await page.getByLabel('Segundo del cero').fill('9');
+  await page.getByLabel('Duración inicial por foto').fill('2');await page.getByLabel('Golpes desde segundo').fill('4');
   await page.getByRole('button',{name:'Detectar golpes',exact:true}).click();
   await page.getByText(/golpes detectados/).waitFor();
   const cuts=(await page.getByLabel('Tiempos de los cortes').inputValue()).split(',').map(Number);
@@ -41,22 +41,23 @@ const tone = (duration, sampleRate = 22050) => {
     await page.waitForTimeout(130);
     return page.locator('.preview-column canvas').evaluate(c=>Array.from(c.getContext('2d').getImageData(100,100,1,1).data));
   };
-  const red=await samplePreview(0.25),green=await samplePreview(0.75),blue=await samplePreview(1.25),repeat=await samplePreview(1.75);
+  const red=await samplePreview(0.25),green=await samplePreview(2.25),blue=await samplePreview(4.25),repeat=await samplePreview(4.75);
   assert.ok(red[0]>150&&red[0]>red[1]*2);assert.ok(green[1]>green[0]*2);assert.ok(blue[2]>blue[0]*2);assert.ok(repeat[0]>repeat[1]*2);
-  await samplePreview(3);await page.screenshot({path:'artifacts/entrada-contador.png'});
+  await samplePreview(8);await page.screenshot({path:'artifacts/entrada-contador.png'});
   const projectDownload=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Guardar proyecto JSON',exact:true}).click()]).then(([d])=>d);
   await projectDownload.saveAs('artifacts/entrance-project.json');
   const project=JSON.parse(fs.readFileSync('artifacts/entrance-project.json','utf8'));
-  assert.equal(project.slides.length,3);assert.equal(project.config.entrance.musicStart,2);assert.equal(project.config.fps,60);assert.ok(!JSON.stringify(project).includes('blob:'));
+  assert.equal(project.slides.length,3);assert.equal(project.config.entrance.musicStart,0);assert.equal(project.config.fps,60);assert.ok(!JSON.stringify(project).includes('blob:'));
   await page.getByRole('button',{name:/Exportar \(/}).click();
   const output=await Promise.all([page.waitForEvent('download',{timeout:180000}),page.getByRole('button',{name:'Grabar y descargar video',exact:true}).click()]).then(([d])=>d);
   await output.saveAs('artifacts/entrance-video.mp4');
   const meta=JSON.parse(execFileSync('ffprobe',['-v','error','-count_frames','-show_streams','-show_format','-of','json','artifacts/entrance-video.mp4'],{encoding:'utf8'}));
-  const video=meta.streams.find(s=>s.codec_type==='video');assert.equal(video.width,1920);assert.equal(video.height,1080);assert.equal(video.nb_read_frames,'480');assert.equal(video.avg_frame_rate,'60/1');
+  const video=meta.streams.find(s=>s.codec_type==='video');assert.equal(video.width,1920);assert.equal(video.height,1080);assert.equal(video.nb_read_frames,'720');assert.equal(video.avg_frame_rate,'60/1');
+  assert.ok(Math.abs(Number(meta.format.duration)-12)<0.05,'El video dura toda la canción, sin agregar un segundo');
   const exported=await page.evaluate(async base64=>{
     const blob=new Blob([Uint8Array.from(atob(base64),v=>v.charCodeAt(0))],{type:'video/mp4'}),v=document.createElement('video');v.muted=true;v.src=URL.createObjectURL(blob);
     await new Promise((res,rej)=>{v.onloadeddata=res;v.onerror=rej;});const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d');const result=[];
-    for(const time of [0.25,0.75,1.25,1.75,3,7.2]) {v.currentTime=time;await new Promise(r=>v.onseeked=r);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));ctx.drawImage(v,0,0);result.push({corner:Array.from(ctx.getImageData(100,100,1,1).data),white:ctx.getImageData(700,250,520,580).data.filter((value,i)=>i%4===0&&value>220).length});}
+    for(const time of [0.25,2.25,4.25,4.75,8,12-1/60]) {v.currentTime=time;await new Promise(r=>v.onseeked=r);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));ctx.drawImage(v,0,0);result.push({corner:Array.from(ctx.getImageData(100,100,1,1).data),white:ctx.getImageData(700,250,520,580).data.filter((value,i)=>i%4===0&&value>220).length});}
     URL.revokeObjectURL(v.src);return result;
   },fs.readFileSync('artifacts/entrance-video.mp4').toString('base64'));
   for(let i=0;i<4;i++) { const a=exported[i].corner,b=[red,green,blue,repeat][i];assert.ok(a.slice(0,3).every((n,j)=>Math.abs(n-b[j])<12), 'MP4 conserva el corte '+i); }
@@ -64,7 +65,7 @@ const tone = (duration, sampleRate = 22050) => {
   execFileSync('ffmpeg',['-v','error','-y','-i','artifacts/entrance-video.mp4','-vn','-ac','1','-ar','22050','-f','f32le','artifacts/entrance-audio.raw']);
   const audio=fs.readFileSync('artifacts/entrance-audio.raw'), samples=new Float32Array(audio.buffer,audio.byteOffset,Math.floor(audio.length/4));
   const power=f=>{let re=0,im=0;for(let i=0;i<4000;i++){const phase=i/22050*f*Math.PI*2;re+=samples[i+1000]*Math.cos(phase);im+=samples[i+1000]*Math.sin(phase);}return re*re+im*im;};
-  assert.ok(power(880)>power(330)*20,'Audio exportado comienza desde el segundo elegido, no desde cero');
+  assert.ok(power(330)>power(880)*20,'La canción exportada comienza desde cero');
   await page.getByLabel('Abrir proyecto',{exact:true}).setInputFiles('artifacts/entrance-project.json');
   await page.getByLabel('Elegir fotos',{exact:true}).setInputFiles(files);
   await tab('Entrada');
@@ -106,5 +107,5 @@ const tone = (duration, sampleRate = 22050) => {
   const pixel=(54*192+144)*3;assert.ok(mixRgb[pixel]>200&&mixRgb[pixel+1]<100,'La foto vecina sigue dibujada junto al clip');
   assert.deepEqual(errors,[]);
   fs.writeFileSync('artifacts/entrance-clips-report.json',JSON.stringify({cuts,video:video.nb_read_frames,exported,clipFrames:45,clipSilent:maximum,errors},null,2));
-  console.log('Entrada: detección, cortes, ciclo, contador, MP4 1920x1080/60, audio desplazado y clip sin sonido: OK');
+  console.log('Entrada: detección, cortes, ciclo, contador, MP4 1920x1080/60, canción completa desde cero y clip sin sonido: OK');
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(async()=>{await browser?.close();});

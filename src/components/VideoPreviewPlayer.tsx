@@ -93,10 +93,10 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useEffect(() => { if (!isPlaying) clips.current?.stop(); }, [isPlaying]);
   useEffect(() => {
-    audioEngine.setTrackRange(config.entrance?.enabled ? config.entrance.musicStart : 0, !config.entrance?.enabled);
+    audioEngine.setTrackRange(0, !config.entrance?.enabled);
     audioEngine.setStyle(config.musicTrack);
     if (playing.current) audioEngine.play(time.current);
-  }, [config.musicTrack, musicRevision, config.entrance?.enabled, config.entrance?.musicStart]);
+  }, [config.musicTrack, musicRevision, config.entrance?.enabled]);
   useEffect(() => { audioEngine.setVolume(muted ? 0 : config.musicVolume); }, [config.musicVolume, muted]);
   useEffect(() => {
     if (!framingMode) time.current = Math.min(time.current, total);
@@ -323,7 +323,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       <button type="button" disabled={disabled} onClick={() => { downloadBlob(pendingVideo.blob, pendingVideo.filename); setPendingVideo(null); setSaveMessage('Se inició la descarga con la configuración de tu navegador.'); }} className="quick-button">Descargar sin elegir ubicación</button>
     </div></div>}
     {saveMessage && <p role="status" className="text-xs text-emerald-200">{saveMessage}</p>}
-    <p className="preview-export-note text-xs text-neutral-500">Exportación local, hasta 5 minutos. En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
+    <p className="preview-export-note text-xs text-neutral-500">{config.entrance?.enabled ? 'Entrada: canción completa.' : 'Exportación local, hasta 5 minutos.'} En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
     </div>
   </section></>;
 });

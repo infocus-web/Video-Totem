@@ -12,7 +12,7 @@ export async function encodeVideo(slides: SequenceSlide[], config: SequenceConfi
   const checkAbort = () => { if (signal.aborted) throw new DOMException('Exportación cancelada', 'AbortError'); };
   checkAbort(); validateEntrance(config, audioEngine.getTrack()?.duration ?? null);
   const duration = sequenceDuration(slides, config);
-  if (!duration || duration > 300) throw new Error('La exportación admite montajes de hasta 5 minutos.');
+  if (!Number.isFinite(duration) || duration <= 0 || (!config.entrance?.enabled && duration > 300)) throw new Error('La exportación admite montajes de hasta 5 minutos; Entrada usa la canción completa.');
   // Prioritize photo detail. The bitrate is also the fallback for encoders without quantizer control.
   const dimensions = videoOutput(config), quality = new Quality({ quantizer: 18, bitrate: Math.min(60000000, Math.round(bitrate * 1.6)), bitrateMode: 'variable' });
   phase('Comprobando codificador MP4');
@@ -32,7 +32,7 @@ export async function encodeVideo(slides: SequenceSlide[], config: SequenceConfi
   const video = new CanvasSource(canvas, { codec: 'avc', quality, latencyMode: 'quality', keyFrameInterval: 2, onEncodedPacket: () => { encodedFrames++; } });
   const audio = new AudioBufferSource({ codec: 'aac', quality: new Quality(192000) });
   output.addVideoTrack(video, { frameRate: config.fps }); output.addAudioTrack(audio);
-  const renderAudio = audioEngine.createAudioRenderer(config.musicTrack, config.musicVolume, config.entrance?.enabled ? config.entrance.musicStart : 0, !config.entrance?.enabled);
+  const renderAudio = audioEngine.createAudioRenderer(config.musicTrack, config.musicVolume, 0, !config.entrance?.enabled);
   const frameCount = Math.ceil(duration * config.fps - 1e-8);
   const abort = () => { void output.cancel().catch(() => {}); };
   signal.addEventListener('abort', abort, { once: true });
