@@ -167,7 +167,9 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
     </div>
     <div className="music-time-ruler" aria-hidden="true">{Array.from({ length: tickCount + 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{clock(duration * index / tickCount)}</span>)}</div>
     <input aria-label="Posición de escucha de la canción" type="range" min="0" max={duration} step="0.01" value={Math.min(cursor,duration)} disabled={disabled} className="music-listen-range accent-indigo-500" onChange={event => {
-      const time = Number(event.target.value); if (autoplay) listen(time, Math.min(duration, time+3), 160); else seek(time);
+      const time = Number(event.target.value);
+      if (autoplay) listen(Math.max(range.start, Math.min(time, range.end)), range.end, 160);
+      else seek(time);
     }} />
     </div></div>
     <div className="music-trim-toolbar property-inline-fields">

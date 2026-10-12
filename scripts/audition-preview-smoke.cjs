@@ -17,7 +17,7 @@ const tone = seconds => {
   await page.addInitScript(() => {
     window.audioStarts = []; window.previewCounters = [];
     const start = AudioBufferSourceNode.prototype.start, text = CanvasRenderingContext2D.prototype.fillText;
-    AudioBufferSourceNode.prototype.start = function(...args) { window.audioStarts.push({ offset: args[1], loop: this.loop }); return start.apply(this, args); };
+    AudioBufferSourceNode.prototype.start = function(...args) { window.audioStarts.push({ offset: args[1], duration: args[2], loop: this.loop }); return start.apply(this, args); };
     CanvasRenderingContext2D.prototype.fillText = function(...args) { if (this.canvas.getAttribute('aria-label') === 'Vista previa del montaje') window.previewCounters.push(String(args[0])); return text.apply(this, args); };
   });
   await page.goto(process.argv[4] || 'http://127.0.0.1:4176/', { waitUntil: 'networkidle' });
@@ -71,6 +71,17 @@ const tone = seconds => {
   await page.waitForTimeout(1150); await page.keyboard.press('Space');
   assert.ok(await page.evaluate(() => window.previewCounters.includes('5') && window.previewCounters.includes('4')), 'Contador progresa durante la prueba musical');
   await page.getByLabel('Escucha automática al mover').check();
+  await audio.fill('6');
+  await page.getByRole('button', { name: 'Detener escucha de música', exact: true }).waitFor();
+  assert.deepEqual(await page.evaluate(() => { const last = window.audioStarts.at(-1); return { offset: last.offset, duration: last.duration }; }), { offset: 6, duration: 12 }, 'Autoescucha programa el resto del recorte, sin límite de tres segundos');
+  await page.waitForTimeout(4100);
+  assert.ok(await page.getByRole('button', { name: 'Detener escucha de música', exact: true }).isVisible(), 'Audio e imágenes siguen reproduciéndose después de tres segundos');
+  assert.ok(Number(await audio.inputValue()) > 9.8);
+  assert.ok(Math.abs(Number(await video.inputValue()) - (Number(await audio.inputValue()) - 3)) < 0.15, 'Autoescucha mantiene sincronizados audio y montaje');
+  await audio.focus(); await page.keyboard.press('Space');
+  await page.getByRole('button', { name: 'Escuchar selección de música', exact: true }).waitFor();
+  const autoPaused = await video.inputValue(); await page.waitForTimeout(250);
+  assert.equal(await video.inputValue(), autoPaused, 'Espacio pausa la Autoescucha continua');
   await audio.fill('15');
   await page.getByRole('button', { name: 'Detener escucha de música', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Escuchar selección de música', exact: true }).waitFor({ timeout: 6000 });
