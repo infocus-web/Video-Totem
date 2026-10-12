@@ -242,3 +242,26 @@ Con npm run preview activo en el puerto 4173, **node scripts/fit-smoke.cjs** gen
 Entrada usa la canción completa: fotos a duración fija al principio, golpes desde un segundo elegido y aceleración desde el contador de 5 o 10 hasta 0. Repite las fotos en ciclo y permite corregir los cortes detectados. También admite clips locales en las escenas, con inicio ajustable y sin audio propio. Consultá [uso y verificación](ENTRADA-Y-CLIPS.md).
 
 En Música y Entrada podés recortar una canción con dos marcadores sobre su forma de onda y escuchar automáticamente cada punto. Entrada dura el tramo elegido; en montajes normales la selección se repite para acompañar las escenas. Encuadre ahora comparte giros y movimientos para ambos modos.
+
+## App de Windows (.exe)
+
+También se puede usar sin navegador ni Vercel. El ejecutable portable incluye la interfaz, fuentes y modelo de orientación facial; no requiere internet para editar o exportar. Se abre con doble clic, sin instalar Node ni pedir permisos de administrador. Conserva la misma codificación y funciones de la web: usar un .exe no garantiza corregir cualquier problema de rendimiento del equipo.
+
+Para generar el archivo en Windows, con Node >=22.12 instalado:
+
+```powershell
+npm install
+npm run desktop:exe
+```
+
+Resultado: `release/AutoReel-Studio-1.0.0-Windows.exe`. `npm run desktop` ejecuta la app de escritorio desde el proyecto; `npm run desktop:pack` genera la carpeta `release/win-unpacked` para QA. Se necesita internet solo para instalar las herramientas y descargar Electron/NSIS durante el primer build. La versión web continúa usando `npm run build` y `dist` en Vercel.
+
+Los proyectos del ejecutable se guardan en `%APPDATA%/AutoReel Studio`, separados de Chrome. Para trasladar una edición: guardar el JSON desde la web, abrirlo en la app y elegir fotos/carpeta y música una vez. Los originales permanecen en sus carpetas y se recuerdan con los mismos handles del navegador integrado. Si Windows cambia los permisos o se mueven los archivos, habrá que reconectarlos. Guardar y exportar muestra el diálogo de Windows para elegir destino. Los links web externos quedan bloqueados en esta versión offline.
+
+El portable no tiene firma digital comercial; Windows puede mostrar una advertencia de editor desconocido. El archivo pesa más que una página web porque incluye Chromium/Electron. La exportación sigue siendo local y requiere memoria/CPU/GPU; la app de escritorio permite conservar la web, pero no reemplaza el motor por FFmpeg. Las actualizaciones se hacen recompilando el exe; no hay actualizador automático ni cobros de Vercel por utilizarlo.
+
+Archivos nuevos: `electron/main.cjs` abre la ventana y sirve recursos locales con sandbox, contexto aislado y Node desactivado en la interfaz; `electron-builder.json` genera el portable de usuario; `scripts/desktop-smoke.cjs` verifica el paquete. Cambios en `package.json` y `package-lock.json`: Electron y electron-builder son herramientas de desarrollo, comandos de escritorio y metadatos; `.gitignore` excluye `release`; este README explica uso y limitaciones. No se modificó el código del editor para empaquetarlo.
+
+Verificación: build y TypeScript, 68 tests y prueba del exe empaquetado sin servidor, sincronización musical, recuperación tras reiniciar y MP4 H.264 de 1920×1080, 60 FPS y 12 segundos. QA utiliza handles reales del almacenamiento sandbox de Chromium como fixture, sustituye el selector en la prueba y simula frames en una ventana oculta; los diálogos nativos y el rendimiento con proyectos grandes requieren prueba manual. `npm audit --omit=dev` no reporta vulnerabilidades; el empaquetador tiene 8 advertencias moderadas transitivas en sus herramientas de desarrollo, sin solución compatible publicada para la librería señalada.
+
+Prueba manual: abrir el exe, cargar originales y canción, probar Entrada/contador, girar y encuadrar, cerrar y volver a abrir; exportar y elegir una carpeta de destino. Repetir con un proyecto real grande para evaluar los trabones. Para producción web, mantener la configuración de Vercel y comprobar el build después del Commit/Push; `release` no se publica con la web.

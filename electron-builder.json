@@ -1,0 +1,15 @@
+{
+  "appId": "com.infocus.autoreel",
+  "productName": "AutoReel Studio",
+  "copyright": "Copyright © InFocus",
+  "directories": { "output": "release" },
+  "files": ["dist/**/*", "electron/**/*", "package.json"],
+  "asar": true,
+  "npmRebuild": false,
+  "win": {
+    "target": [{ "target": "portable", "arch": ["x64"] }],
+    "signAndEditExecutable": false,
+    "artifactName": "AutoReel-Studio-${version}-Windows.exe"
+  },
+  "portable": { "requestExecutionLevel": "user" }
+}
