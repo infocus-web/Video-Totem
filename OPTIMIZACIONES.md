@@ -43,3 +43,18 @@ Abrí `http://localhost:3000`, cargá fotos, reproducí y cambiá el recorte, lo
 Para las pruebas de navegador, iniciá `npm run preview` y ejecutá los scripts con un módulo Playwright y Chrome disponibles. No son dependencias del producto. Los reportes y capturas quedan en `artifacts`, excluido de Git.
 
 En GitHub Desktop, revisá los archivos, hacé commit y pulsá Push origin. Cuando Vercel marque el despliegue como Ready, repetí el flujo en la URL de producción. La grabación sigue siendo en tiempo real y depende del navegador; un reintento en WebM requiere otra grabación. El XML conserva su alcance anterior: secuencia base sin todos los efectos ni el recorte del video final.
+
+
+## Purgar caché de vista previa
+
+El botón **Caché** de la barra superior (ayuda: **Purgar caché**) pausa audio y video, libera las imágenes decodificadas y los reproductores de clips, limpia el buffer de transiciones y reconstruye la vista previa con avance de carga. Conserva el instante actual, proyecto, selección, encuadres, giros, contador, foto final, canción cargada y vínculos a originales. No descarta un MP4 pendiente de guardar. No requiere volver a elegir los archivos.
+
+Se deshabilita durante importaciones, análisis, purga y exportación. Si falta un original conectado, informa el problema para reconectarlo. El navegador administra su propia memoria: liberar referencias no obliga a Chrome a devolver inmediatamente toda la RAM al sistema. El botón no borra el almacenamiento de proyectos ni limpia toda la caché HTTP de Chrome.
+
+También se redujeron actualizaciones de interfaz durante la escucha: el montaje sigue cada instante de audio y el cursor musical visible se actualiza diez veces por segundo; la vista previa evita dibujos duplicados al actualizar el reloj. No cambia la resolución ni los FPS del MP4. Una comparación local de ocho segundos con treinta fotos originales pasó de 482 a 361 dibujos de vista previa; no se reprodujo el bloqueo informado en esa prueba corta y no implica que todos los equipos funcionen igual.
+
+Archivos: `src/components/Navbar.tsx` agrega el botón; `src/App.tsx` coordina estado, mensajes y bloqueo temporal de controles; `VideoPreviewPlayer.tsx` libera y reconstruye imágenes/clips y evita repintados duplicados; `MusicTimeline.tsx` reduce actualizaciones del cursor; `src/utils/canvasRenderer.ts` libera el buffer de transición; `scripts/cache-purge-smoke.cjs` verifica purgas repetidas, audio, edición y exportación; este documento explica alcance y pruebas. Sin dependencias nuevas.
+
+Para probar localmente: `npm test`, `npm run build`, `npm run dev`. Cargá fotos y una canción, activá Entrada y ajustá encuadre, contador y foto final. Reproducí, tocá Caché y esperá la preparación: debe quedar pausado en el mismo punto, con todas las opciones conservadas. Retomá la escucha y exportá. Repetí la purga varias veces. En Vercel, hacé commit/push, esperá el deploy y repetí después de recargar la web. El ejecutable ya generado necesita recompilarse para incluir el botón.
+
+La prueba de navegador se ejecuta con `node scripts/cache-purge-smoke.cjs <ruta-a-playwright> <ruta-a-chrome> <URL-local>` y usa FFmpeg/FFprobe para verificar el MP4; esas herramientas no se agregan a la app. También pasó la regresión de audio/fotos/contador/Espacio en `scripts/audition-preview-smoke.cjs`, además de los 71 tests de lógica y el build.

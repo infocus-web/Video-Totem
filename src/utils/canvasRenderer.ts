@@ -20,6 +20,11 @@ export function drawVideoFrame(canvas: HTMLCanvasElement, composition: HTMLCanva
   ctx.drawImage(composition, -composition.width / 2, -composition.height / 2); ctx.restore();
 }
 const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+export function clearRendererCache(canvas: HTMLCanvasElement | null) {
+  if (!canvas) return;
+  const buffer = transitionBuffers.get(canvas);
+  if (buffer) { buffer.width = buffer.height = 0; transitionBuffers.delete(canvas); }
+}
 
 export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void, cached: ImageMap = new Map()): Promise<ImageMap> {
   const photos = [...new Map(slides.flatMap(slide => slide.photos).map(photo => [photo.id, photo])).values()];

@@ -1,4 +1,4 @@
-import { Film, FileCode2, HelpCircle, Download } from 'lucide-react';
+import { Film, FileCode2, HelpCircle, Download, BrushCleaning } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { ViewTab } from '../types';
 interface Props {
@@ -6,6 +6,7 @@ interface Props {
   onOpenPremiereModal: () => void; onOpenExportModal: () => void; onOpenFaqModal: () => void;
   totalPhotos: number; totalDuration: number; formatLabel: string; busy: boolean;
   projectActions: ReactNode;
+  onPurgeCache: () => void; purgingCache: boolean;
 }
 export function Navbar(props: Props) {
   const header = useRef<HTMLElement>(null);
@@ -31,6 +32,7 @@ export function Navbar(props: Props) {
       </nav>
       <div className="app-project-actions">{props.projectActions}</div>
       <div className="app-main-actions">
+        <button aria-label="Purgar caché" disabled={props.busy} onClick={props.onPurgeCache} className="quick-button" title="Liberar y reconstruir la caché de vista previa sin borrar el proyecto ni los originales"><BrushCleaning aria-hidden="true" /><span>{props.purgingCache ? 'Purgando…' : 'Caché'}</span></button>
         <button aria-label="Inspector XML" disabled={props.busy} onClick={props.onOpenPremiereModal} className="quick-button" title="Examinar XML de intercambio para Premiere"><FileCode2 aria-hidden="true" className="!text-violet-400" /><span className="app-inspector-label">Inspector XML</span></button>
         <button aria-label="Cómo usar AutoReel" onClick={props.onOpenFaqModal} className="preview-control"><HelpCircle aria-hidden="true" className="h-4 w-4" /></button>
         <button disabled={props.busy} onClick={props.onOpenExportModal} className="primary-button"><Download aria-hidden="true" className="app-export-icon h-3.5 w-3.5" />Exportar ({props.totalDuration.toFixed(1)}s)</button>

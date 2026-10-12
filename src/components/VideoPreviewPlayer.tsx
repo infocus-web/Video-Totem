@@ -5,7 +5,7 @@ import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorToolButton } from './EditorTool';
-import { drawFrame, loadImages, sceneAtTime, imageWidth, imageHeight, imageSource, type ImageMap } from '../utils/canvasRenderer';
+import { clearRendererCache, drawFrame, loadImages, sceneAtTime, imageWidth, imageHeight, imageSource, type ImageMap } from '../utils/canvasRenderer';
 import { sequenceDuration, validateEntrance, entranceSceneStart } from '../utils/entrance';
 import { normalizeFraming, photoGeometry, photoSlots } from '../utils/photoFraming';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
@@ -20,7 +20,7 @@ import type { QuarterTurn } from '../utils/faceOrientation';
 import { PreviewClips } from '../utils/previewClips';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
-export interface PreviewHandle { record: (chooseLocation?: boolean) => void; pause: () => void; syncAudition: (songTime: number, running: boolean) => void }
+export interface PreviewHandle { record: (chooseLocation?: boolean) => void; pause: () => void; purgeCache: () => Promise<void>; syncAudition: (songTime: number, running: boolean) => void }
 interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; onPhotoAutoRotate: (rotations: Record<string, QuarterTurn>) => void; onClipStart: (id: string, start: number) => void; onPhotoMotion: (ids: string[], motion: PhotoItem['kenBurns']) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
 export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, onPhotoAutoRotate, onClipStart, onPhotoMotion, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
@@ -38,6 +38,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const [images, setImages] = useState<ImageMap>(() => new Map());
   const clips = useRef<PreviewClips | null>(null);
   const imageCache = useRef<ImageMap>(new Map());
+  const imageLoad = useRef<AbortController | null>(null);
   const time = useRef(0), playing = useRef(false), abort = useRef<AbortController | null>(null);
   const [displayTime, setDisplayTime] = useState(0), [isPlaying, setPlaying] = useState(false);
   const audition = useRef(false), auditionDraw = useRef(0), auditionUi = useRef(0);
@@ -72,7 +73,8 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       setReady(true); onReadyChange(photos.size > 0);
       return;
     }
-    const controller = new AbortController();
+    imageLoad.current?.abort();
+    const controller = new AbortController(); imageLoad.current = controller;
     setReady(false); onReadyChange(false); setImageError(''); playing.current = false; setPlaying(false); audioEngine.stop();
     time.current = 0; setDisplayTime(0); setImages(new Map());
     setPreparationProgress(null);
@@ -105,12 +107,12 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   useEffect(() => { audioEngine.setVolume(muted ? 0 : config.musicVolume); }, [config.musicVolume, muted]);
   useEffect(() => {
     if (!framingMode) time.current = Math.min(time.current, total);
-    if (canvas.current && !isPlaying) renderPreview(framingMode);
-  }, [slides, config, images, ready, isPlaying, displayTime, total, framingMode]);
+    if (canvas.current && !previewPlaying && !audition.current) renderPreview(framingMode);
+  }, [slides, config, images, ready, previewPlaying, displayTime, total, framingMode]);
   useEffect(() => {
     let cancelled = false;
     void prepareTextFonts(config).then(() => {
-      if (!cancelled && canvas.current && !playing.current) renderPreview(framingMode);
+      if (!cancelled && canvas.current && !playing.current && !audition.current) renderPreview(framingMode);
     }).catch(() => { /* Canvas keeps the system fallback if a font cannot load. */ });
     return () => { cancelled = true; };
   }, [config, slides, images, framingMode]);
@@ -138,7 +140,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     document.addEventListener('visibilitychange', hidden);
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); };
   }, [slides, config, total, ready, images, isPlaying, disabled]);
-  useEffect(() => () => { abort.current?.abort(); rotationAbort.current?.abort(); audioEngine.stop(); }, []);
+  useEffect(() => () => { abort.current?.abort(); imageLoad.current?.abort(); rotationAbort.current?.abort(); audioEngine.stop(); }, []);
   const toggle = async () => {
     if (!ready || !total || disabled) return;
     if (audition.current) { audioEngine.stopAudition(); return; }
@@ -271,6 +273,25 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useImperativeHandle(ref, () => ({
     record: chooseLocation => { void record(chooseLocation); },
+    purgeCache: async () => {
+      if (disabled || abort.current || rotationAbort.current) throw new Error('Esperá a que termine la operación actual antes de purgar.');
+      audioEngine.stop(); playing.current = false; audition.current = false;
+      setPlaying(false); setAuditioning(false); resumeAfterFraming.current = false; drag.current = null;
+      imageLoad.current?.abort(); clips.current?.clear(); clearRendererCache(canvas.current);
+      for (const image of imageCache.current.values()) if ('removeAttribute' in image) image.removeAttribute('src');
+      imageCache.current.clear(); setImages(new Map()); setReady(false); onReadyChange(false); setImageError('');
+      setPreparationProgress(null); setDisplayTime(time.current);
+      if (!slides.length) return;
+      const controller = new AbortController(); imageLoad.current = controller;
+      try {
+        const map = await loadImages(slides, controller.signal, value => { if (!controller.signal.aborted) setPreparationProgress(value); });
+        controller.signal.throwIfAborted();
+        imageCache.current = map; setImages(map); setReady(true); onReadyChange(map.size > 0);
+      } catch (error) {
+        if (!controller.signal.aborted) setImageError(error instanceof Error ? error.message : 'No se pudo preparar la vista previa.');
+        throw error;
+      }
+    },
     pause: () => { playing.current = false; setPlaying(false); resumeAfterFraming.current = false; audioEngine.stop(); clips.current?.stop(); },
     syncAudition: (songTime, running) => {
       if (!running) { audition.current = false; setAuditioning(false); clips.current?.stop(); }

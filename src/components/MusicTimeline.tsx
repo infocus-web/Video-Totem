@@ -101,7 +101,14 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
         auditionPosition.current = position;
         notifyFrame.current(position(), true);
         setListening(true);
-        const tick = () => { if (generation.current !== revision || !ownsAudio.current) return; const time = position(); setCursor(time); notifyFrame.current(time, true); frame.current = requestAnimationFrame(tick); };
+        let lastUi = 0;
+        const tick = (now: number) => {
+          if (generation.current !== revision || !ownsAudio.current) return;
+          const time = position();
+          // The montage follows every audio tick; the timeline UI needs only 10 updates/s.
+          if (now - lastUi >= 100) { setCursor(time); lastUi = now; }
+          notifyFrame.current(time, true); frame.current = requestAnimationFrame(tick);
+        };
         frame.current = requestAnimationFrame(tick);
       } catch (error) { if (generation.current === revision) { stop(); onError(error instanceof Error ? error.message : 'No se pudo escuchar la canción.'); } }
     };
