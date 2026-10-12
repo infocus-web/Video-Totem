@@ -9,7 +9,7 @@ export function photoFileInfo(file: Pick<File, 'name' | 'webkitRelativePath'>) {
 
 export function selectPhotoFiles<T extends Pick<File, 'name' | 'webkitRelativePath'>>(files: T[], requested: PhotoItem[]) {
   // Only inspect filenames here. Image decoding and object URLs happen after matching.
-  const candidates = files.filter(file => /\.(jpe?g|png|webp|avif)$/i.test(file.name));
+  const candidates = files.filter(file => /\.(jpe?g|png|webp|avif|mp4|webm|mov)$/i.test(file.name));
   const selection = matchPhotoSelection(requested, candidates.map(file => ({ ...photoFileInfo(file), file })));
   return { files: selection.resolved.map(photo => photo.file), total: candidates.length,
     missing: selection.missing, ambiguous: selection.ambiguous };

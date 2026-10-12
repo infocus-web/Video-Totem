@@ -73,7 +73,9 @@ La barra y las acciones usan miniaturas con icono y texto corto dentro del botó
 
 Ocho pestañas, en este orden: **Fotos → Formato → Encuadre → Escenas → Ritmo → Textos → Música → Premiere**. Cada botón reemplaza el contenido por su propio panel; no necesitás desplazarte para encontrar otro grupo. La pestaña activa se resalta y conserva los ajustes al cambiar. Las flechas izquierda/derecha, Inicio y Fin recorren las pestañas con teclado. La vista previa permanece visible y, en pantallas chicas, aparece arriba.
 
-En Encuadre y giro, **Encuadrar foto** abre los ajustes individuales. **Anterior** y **Siguiente** recorren las fotos en el orden del montaje, también dentro de escenas apiladas. Volver a una foto conserva su posición, zoom y giro. Exportar sigue en la barra superior y la línea de tiempo mantiene las ediciones por escena. [Archivos y pruebas](PANEL-DE-EDICION.md).
+En **Encuadre y giro**, los controles de posición, zoom, giro y navegación están siempre visibles. **Arrastrar** pausa la escena para mover la foto directamente; cambiar un control también inicia la edición sin otro clic. **Listo** conserva los controles visibles y retoma la reproducción si estaba activa. **Anterior** y **Siguiente** recorren todas las fotos del montaje sin perder sus ajustes.
+
+**Auto / Giro inteligente** analiza los rostros localmente y endereza las personas en pasos de 90°. Respeta **Aplicar giro a**: esta foto, las marcadas o todas. Las fotos sin evidencia clara conservan su giro; cancelar conserva todo el montaje anterior. Es una acción opcional: revisá poses acostadas o intencionalmente inclinadas. No cambia los originales ni el giro de salida Tótem. MediaPipe y el modelo se cargan recién al usar la herramienta, sin API ni clave. [Archivos, límites y pruebas](PANEL-DE-EDICION.md#encuadre-desplegado-y-giro-inteligente).
 
 ## Flujo de uso
 
@@ -232,3 +234,7 @@ Para probar también la compilación de producción: primero ejecutá browser-sm
 Con npm run preview activo en el puerto 4173, **node scripts/fit-smoke.cjs** genera sus propias fotos de prueba y comprueba la función de rellenar, sin depender de las otras pruebas de navegador.
 
 **node scripts/optimization-smoke.cjs**, con npm run preview activo, comprueba reproducción continua mientras editás, caché de fotos, ausencia de animación estando pausada, carga diferida de herramientas, compatibilidad de Fade y móviles. **node scripts/progress-smoke.cjs** verifica el avance de carga y reconexión de 31 fotos. Ver [OPTIMIZACIONES.md](OPTIMIZACIONES.md) para los cambios y mediciones.
+
+## Entrada de quince y clips
+
+La pestaña Entrada permite elegir un tramo de canción, detectar y ajustar golpes, repetir fotos en ciclo y añadir un contador de 5 o 10 hasta 0 con cambios acelerados. También admite clips locales en las escenas, con inicio ajustable y sin audio propio. Consultá [uso y verificación](ENTRADA-Y-CLIPS.md).

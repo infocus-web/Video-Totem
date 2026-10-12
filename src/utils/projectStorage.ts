@@ -2,6 +2,7 @@ import type { PhotoItem, SequenceConfig, SequenceSlide } from '../types';
 import { DEFAULT_CONFIG, clampDuration } from './config.ts';
 import { normalizeFraming } from './photoFraming.ts';
 import { normalizeTextStyle, overlayFont, TEXT_LAYERS } from './textOverlay.ts';
+import { normalizeEntrance } from './entrance.ts';
 
 export interface SavedProject { version: 1; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
 export const STORAGE_KEY = 'autoreel-project-v1';
@@ -28,10 +29,12 @@ export function decodeProject(raw: string): SavedProject {
   const fps = Number(data.config.fps);
   if (![24, 25, 30, 50, 60].includes(fps)) throw new Error('FPS no compatibles. Usá 24, 25, 30, 50 o 60.');
   config.fps = fps;
+  if (data.config.entrance !== undefined) config.entrance = normalizeEntrance(data.config.entrance);
   config.aspectRatio = config.width === config.height ? '1:1' : config.width > config.height ? '16:9' : config.height / config.width === 1.25 ? '4:5' : '9:16';
   if (config.width < config.height && (data.config.outputRotation === 90 || data.config.outputRotation === 270)) config.outputRotation = data.config.outputRotation;
   config.defaultDuration = clampDuration(Number(data.config.defaultDuration));
   config.musicVolume = Math.max(0, Math.min(1, Number(data.config.musicVolume) || 0));
+  if (typeof data.config.musicFingerprint === 'string' && /^[a-f0-9]{64}$/.test(data.config.musicFingerprint)) config.musicFingerprint = data.config.musicFingerprint;
   config.splitGapSize = Math.max(0, Math.min(80, Number(data.config.splitGapSize) || 0));
   config.showOverlayText = data.config.showOverlayText === true;
   config.fontFamily = overlayFont(data.config.fontFamily);
@@ -51,6 +54,7 @@ export function decodeProject(raw: string): SavedProject {
     const relativePath = string(value.relativePath) || value.filename;
     if (/(^|[/\\])\.\.([/\\]|$)/.test(relativePath) || /^[/\\]|^[A-Za-z]:/.test(relativePath)) throw new Error('Ruta relativa de foto inválida.');
     return { id: string(value.id), filename: value.filename, relativePath, fullLocalPath: string(value.fullLocalPath), previewUrl: '',
+      ...(value.mediaType === 'video' ? { mediaType: 'video' as const, mediaDuration: Math.max(0.01, Math.min(36000, Number(value.mediaDuration) || 1)), clipStart: Math.max(0, Math.min(Number(value.mediaDuration) || 1, Number(value.clipStart) || 0)) } : {}),
       ...(value.framing === undefined ? {} : { framing: normalizeFraming(value.framing) }),
       number: string(value.number), orientation: value.orientation === 'horizontal' ? 'horizontal' : value.orientation === 'vertical' ? 'vertical' : 'square',
       width: Math.max(1, Math.min(50000, Number(value.width) || 1080)), height: Math.max(1, Math.min(50000, Number(value.height) || 1920)),

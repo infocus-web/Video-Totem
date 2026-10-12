@@ -31,9 +31,9 @@ let browser, page;
   };
   assert.equal(await page.getByRole('region', { name: 'Panel de edición', exact: true }).count(), 1);
   assert.deepEqual(await page.locator('.editor-section-heading h3').allTextContents(),
-    ['Fotos del proyecto', 'Formato de salida', 'Encuadre y giro', 'Composición de escenas', 'Ritmo y estilo', 'Textos y marca', 'Música y volumen', 'Premiere y Google Drive']);
+    ['Fotos del proyecto', 'Formato de salida', 'Encuadre y giro', 'Composición de escenas', 'Ritmo y estilo', 'Textos y marca', 'Música y volumen', 'Premiere y Google Drive', 'Entrada de quince']);
   assert.equal(await page.locator('.editor-panel details').count(), 0, 'Las herramientas no están detrás de desplegables');
-  assert.equal(await page.getByRole('tablist', { name: 'Herramientas de edición' }).getByRole('tab').count(), 8);
+  assert.equal(await page.getByRole('tablist', { name: 'Herramientas de edición' }).getByRole('tab').count(), 9);
   const previewBeforeJump = await page.getByLabel('Vista previa del montaje', { exact: true }).boundingBox();
   await goToSection('Música y volumen');
   await page.getByLabel('Música', { exact: true }).waitFor({ state: 'visible' });

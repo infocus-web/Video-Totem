@@ -3,6 +3,23 @@ import type { SavedProject } from './projectStorage';
 import { clampDuration, localPath } from './config.ts';
 import { buildSlidesFromPhotos } from './photoParser.ts';
 import { normalizeFraming } from './photoFraming.ts';
+import type { QuarterTurn } from './faceOrientation.ts';
+
+export function updateClipStart(project: SavedProject, id: string, start: number): SavedProject {
+  const update = (photo: SavedProject['library'][number]) => photo.id === id && photo.mediaType === 'video' ? { ...photo,
+    clipStart: Math.max(0, Math.min((photo.mediaDuration || 1) - 0.001, Number.isFinite(start) ? start : 0)) } : photo;
+  return { ...project, library: project.library.map(update), slides: project.slides.map(slide => ({ ...slide, photos: slide.photos.map(update) })) };
+}
+
+export function setProjectPhotoRotations(project: SavedProject, rotations: Record<string, QuarterTurn>): SavedProject {
+  const changed = new Set(project.slides.flatMap(slide => slide.photos)
+    .filter(photo => rotations[photo.id] !== undefined && rotations[photo.id] !== (photo.framing?.rotation || 0)).map(photo => photo.id));
+  if (!changed.size) return project;
+  const update = (photo: SavedProject['library'][number]) => changed.has(photo.id)
+    ? { ...photo, framing: normalizeFraming({ ...normalizeFraming(photo.framing), rotation: rotations[photo.id] }) } : photo;
+  return { ...project, library: project.library.map(update), slides: project.slides.map(slide =>
+    slide.photos.some(photo => changed.has(photo.id)) ? { ...slide, photos: slide.photos.map(update) } : slide) };
+}
 
 export function updatePhotoFraming(project: SavedProject, slideIndex: number, photoIndex: number, value: PhotoFraming): SavedProject {
   const selected = project.slides[slideIndex]?.photos[photoIndex];

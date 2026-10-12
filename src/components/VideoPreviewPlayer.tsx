@@ -5,7 +5,8 @@ import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorToolButton } from './EditorTool';
-import { drawFrame, loadImages, sceneAtTime, type ImageMap } from '../utils/canvasRenderer';
+import { drawFrame, loadImages, sceneAtTime, imageWidth, imageHeight, imageSource, type ImageMap } from '../utils/canvasRenderer';
+import { sequenceDuration, validateEntrance, entranceSceneStart } from '../utils/entrance';
 import { normalizeFraming, photoGeometry, photoSlots } from '../utils/photoFraming';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
 import { audioEngine } from '../utils/audioSynthesizer';
@@ -14,12 +15,14 @@ import { saveVideoAs } from '../utils/saveVideo';
 import { supportsBackgroundExport } from '../utils/videoRecorder';
 import { videoOutput } from '../utils/videoOutput';
 import { prepareTextFonts } from '../utils/textOverlay';
+import type { QuarterTurn } from '../utils/faceOrientation';
+import { PreviewClips } from '../utils/previewClips';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
 export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
-interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
+interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; onPhotoAutoRotate: (rotations: Record<string, QuarterTurn>) => void; onClipStart: (id: string, start: number) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
-export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
+export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, onPhotoAutoRotate, onClipStart, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
   const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
   const media = useRef<HTMLDivElement>(null);
@@ -32,6 +35,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     return () => observer.disconnect();
   }, []);
   const [images, setImages] = useState<ImageMap>(() => new Map());
+  const clips = useRef<PreviewClips | null>(null);
   const imageCache = useRef<ImageMap>(new Map());
   const time = useRef(0), playing = useRef(false), abort = useRef<AbortController | null>(null);
   const [displayTime, setDisplayTime] = useState(0), [isPlaying, setPlaying] = useState(false);
@@ -41,12 +45,15 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const [preparationProgress, setPreparationProgress] = useState<FilePreparationProgress | null>(null);
   const [framingMode, setFramingMode] = useState(false), [selectedPhoto, setSelectedPhoto] = useState(0);
   const resumeAfterFraming = useRef(false), drag = useRef<FramingDrag | null>(null);
+  const rotationAbort = useRef<AbortController | null>(null);
+  const [rotationProgress, setRotationProgress] = useState<FilePreparationProgress | null>(null);
+  const [rotationMessage, setRotationMessage] = useState('');
   const [pendingVideo, setPendingVideo] = useState<{ blob: Blob; filename: string } | null>(null);
   const [savingVideo, setSavingVideo] = useState(false), [saveMessage, setSaveMessage] = useState('');
-  const total = slides.reduce((sum, slide) => sum + slide.duration, 0);
+  const total = sequenceDuration(slides, config);
   const format = recordingFormat();
   const disabled = busy || importing || savingVideo;
-  const scene = sceneAtTime(slides, displayTime), currentSlide = slides[scene.index];
+  const scene = sceneAtTime(slides, displayTime, framingMode ? undefined : config), currentSlide = slides[scene.index];
   const photoIndex = Math.min(selectedPhoto, Math.max(0, (currentSlide?.photos.length || 1) - 1));
   const selectedSlot = photoSlots(currentSlide?.photos.length || 1, config.width, config.height, config.splitGapSize)[photoIndex];
   useEffect(() => {
@@ -57,7 +64,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       time.current = 0; setDisplayTime(0);
       return;
     }
-    if (photos.size === imageCache.current.size && [...photos.values()].every(photo => photo.previewUrl && imageCache.current.get(photo.id)?.src === photo.previewUrl)) {
+    if (photos.size === imageCache.current.size && [...photos.values()].every(photo => photo.previewUrl && imageSource(imageCache.current.get(photo.id)) === photo.previewUrl)) {
       setReady(true); onReadyChange(photos.size > 0);
       return;
     }
@@ -72,19 +79,33 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     });
     return () => controller.abort();
   }, [slides, onReadyChange]);
+  const clipSources = JSON.stringify(slides.flatMap(slide => slide.photos.filter(photo => photo.mediaType === 'video').map(photo => [photo.id, photo.sourceUrl])));
+  useEffect(() => { const player = new PreviewClips(slides); clips.current = player; return () => { player.clear(); if (clips.current === player) clips.current = null; }; }, [clipSources]);
   useEffect(() => {
+    if (isPlaying || !ready || disabled) return;
+    const timer = window.setInterval(() => { if (slides.some(slide => slide.photos.some(photo => photo.mediaType === 'video'))) renderPreview(framingMode); }, 100);
+    return () => window.clearInterval(timer);
+  }, [clipSources, slides, config, images, isPlaying, ready, disabled, framingMode]);
+  const renderPreview = (editing = false) => {
+    if (!canvas.current) return;
+    const frameImages = new Map(images); clips.current?.sync(frameImages, slides, config, time.current, playing.current, editing);
+    drawFrame(canvas.current, slides, config, frameImages, time.current, editing);
+  };
+  useEffect(() => { if (!isPlaying) clips.current?.stop(); }, [isPlaying]);
+  useEffect(() => {
+    audioEngine.setTrackRange(config.entrance?.enabled ? config.entrance.musicStart : 0, !config.entrance?.enabled);
     audioEngine.setStyle(config.musicTrack);
     if (playing.current) audioEngine.play(time.current);
-  }, [config.musicTrack, musicRevision]);
+  }, [config.musicTrack, musicRevision, config.entrance?.enabled, config.entrance?.musicStart]);
   useEffect(() => { audioEngine.setVolume(muted ? 0 : config.musicVolume); }, [config.musicVolume, muted]);
   useEffect(() => {
-    time.current = Math.min(time.current, total);
-    if (canvas.current && !isPlaying) drawFrame(canvas.current, slides, config, images, time.current, framingMode);
+    if (!framingMode) time.current = Math.min(time.current, total);
+    if (canvas.current && !isPlaying) renderPreview(framingMode);
   }, [slides, config, images, ready, isPlaying, displayTime, total, framingMode]);
   useEffect(() => {
     let cancelled = false;
     void prepareTextFonts(config).then(() => {
-      if (!cancelled && canvas.current && !playing.current) drawFrame(canvas.current, slides, config, images, time.current, framingMode);
+      if (!cancelled && canvas.current && !playing.current) renderPreview(framingMode);
     }).catch(() => { /* Canvas keeps the system fallback if a font cannot load. */ });
     return () => { cancelled = true; };
   }, [config, slides, images, framingMode]);
@@ -92,8 +113,8 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     if (disabled) { playing.current = false; setPlaying(false); audioEngine.stop(); }
   }, [disabled]);
   useEffect(() => {
-    if (disabled || !ready || !slides.length) { setFramingMode(false); drag.current = null; resumeAfterFraming.current = false; }
-  }, [disabled, ready, slides.length]);
+    if ((disabled && !rotationProgress) || !ready || !slides.length) { setFramingMode(false); drag.current = null; resumeAfterFraming.current = false; }
+  }, [disabled, rotationProgress, ready, slides.length]);
   useEffect(() => {
     if (!isPlaying || !ready || disabled || !total) return;
     let frame = 0, last = performance.now(), lastUi = 0, lastDraw = 0;
@@ -102,7 +123,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       if (time.current >= total) { time.current %= total; audioEngine.play(time.current); }
       last = now;
       if (canvas.current && now - lastDraw >= 1000 / config.fps) {
-        drawFrame(canvas.current, slides, config, images, time.current); lastDraw = now;
+        renderPreview(); lastDraw = now;
       }
       if (now - lastUi > 100) { setDisplayTime(time.current); lastUi = now; }
       frame = requestAnimationFrame(tick);
@@ -112,28 +133,32 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     document.addEventListener('visibilitychange', hidden);
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', hidden); };
   }, [slides, config, total, ready, images, isPlaying, disabled]);
-  useEffect(() => () => { abort.current?.abort(); audioEngine.stop(); }, []);
+  useEffect(() => () => { abort.current?.abort(); rotationAbort.current?.abort(); audioEngine.stop(); }, []);
   const toggle = async () => {
     if (!ready || !total || disabled) return;
     setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
     try {
       if (playing.current) { playing.current = false; setDisplayTime(time.current); audioEngine.stop(); }
-      else { await audioEngine.resume(); playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
+      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null); await audioEngine.resume(); playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
       setPlaying(playing.current);
     } catch (error) { onError(error instanceof Error ? error.message : 'No se pudo iniciar el audio.'); }
+  };
+  const beginFraming = (index = scene.index) => {
+    if (framingMode || disabled || !ready || !slides[index]) return;
+    resumeAfterFraming.current = playing.current;
+    playing.current = false; setPlaying(false); audioEngine.stop();
+    time.current = slides.slice(0, index).reduce((sum, slide) => sum + slide.duration, 0);
+    setDisplayTime(time.current); setFramingMode(true);
   };
   const toggleFraming = () => {
     if (framingMode) {
       const resume = resumeAfterFraming.current;
+      if (config.entrance?.enabled) { time.current = entranceSceneStart(scene.index, config) || 0; setDisplayTime(time.current); }
       setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
       if (resume) void toggle();
       return;
     }
-    resumeAfterFraming.current = playing.current;
-    playing.current = false; setPlaying(false); audioEngine.stop();
-    const current = sceneAtTime(slides, time.current);
-    time.current = slides.slice(0, current.index).reduce((sum, slide) => sum + slide.duration, 0);
-    setDisplayTime(time.current); setSelectedPhoto(0); setFramingMode(true);
+    beginFraming();
   };
   useEffect(() => {
     if (!framingToolsVisible && framingMode) toggleFraming();
@@ -150,7 +175,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     if (index < 0) return;
     const photo = slide.photos[index], image = images.get(photo.id), slot = slots[index];
     if (!image) return;
-    const geometry = photoGeometry(photo, image.naturalWidth, image.naturalHeight, slot.width, slot.height, config.photoFit, current.progress);
+    const geometry = photoGeometry(photo, imageWidth(image), imageHeight(image), slot.width, slot.height, config.photoFit, current.progress);
     setSelectedPhoto(index);
     drag.current = { pointer: event.pointerId, scene: current.index, photo: index, sceneId: slide.id, photoId: photo.id, x: event.clientX, y: event.clientY,
       horizontalSpace: (slot.width - geometry.width) * bounds.width / width, verticalSpace: (slot.height - geometry.height) * bounds.height / height,
@@ -158,6 +183,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
   };
   const selectFramingPhoto = (index: number, photo = 0) => {
+    beginFraming(index);
     drag.current = null;
     time.current = slides.slice(0, index).reduce((sum, slide) => sum + slide.duration, 0);
     setDisplayTime(time.current); setSelectedPhoto(photo);
@@ -181,14 +207,40 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     event.preventDefault();
     const photo = currentSlide.photos[photoIndex], image = images.get(photo.id);
     if (!image) return;
-    const geometry = photoGeometry(photo, image.naturalWidth, image.naturalHeight, selectedSlot.width, selectedSlot.height, config.photoFit, scene.progress);
+    const geometry = photoGeometry(photo, imageWidth(image), imageHeight(image), selectedSlot.width, selectedSlot.height, config.photoFit, scene.progress);
     const framing = normalizeFraming(photo.framing), step = event.shiftKey ? 0.1 : 0.02;
     const horizontal = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
     const delta = (event.key === 'ArrowRight' || event.key === 'ArrowDown' ? step : -step) * Math.sign(horizontal ? selectedSlot.width - geometry.width : selectedSlot.height - geometry.height);
     onPhotoFramingChange(scene.index, photoIndex, normalizeFraming({ ...framing, [horizontal ? 'x' : 'y']: framing[horizontal ? 'x' : 'y'] + delta }));
   };
+  const smartRotate = async (ids: string[]) => {
+    if (disabled || !ready || rotationAbort.current) return;
+    const selected = new Set(ids);
+    const photos = [...new Map(slides.flatMap(slide => slide.photos).filter(photo => selected.has(photo.id) && photo.mediaType !== 'video').map(photo => [photo.id, photo])).values()];
+    if (!photos.length) return;
+    beginFraming(); drag.current = null;
+    const controller = new AbortController(); rotationAbort.current = controller;
+    setRotationProgress({ completed: 0, total: photos.length }); setRotationMessage('Preparando detector de rostros…'); onBusy(true);
+    try {
+      // Load the model, library and WASM only when this optional tool is used.
+      const { smartRotatePhotos } = await import('../utils/smartRotation');
+      const result = await smartRotatePhotos(photos, controller.signal, value => {
+        if (!controller.signal.aborted) { setRotationProgress(value); setRotationMessage('Analizando orientación de rostros…'); }
+      });
+      controller.signal.throwIfAborted();
+      const changed = photos.filter(photo => result.rotations[photo.id] !== undefined && result.rotations[photo.id] !== (photo.framing?.rotation || 0)).length;
+      onPhotoAutoRotate(result.rotations);
+      setRotationMessage(`Corregidas: ${changed} · Ya derechas: ${photos.length - result.skipped.length - changed} · Sin orientación segura: ${result.skipped.length} (conservadas).`);
+    } catch (error) {
+      if (!controller.signal.aborted) console.error('No se pudo analizar el giro:', error);
+      setRotationMessage(controller.signal.aborted ? 'Análisis cancelado. Se conservaron todos los giros anteriores.' : 'No se pudo analizar el giro. Se conservaron las fotos. Reintentá o usá los botones de giro manual.');
+    } finally {
+      rotationAbort.current = null; setRotationProgress(null); onBusy(false);
+    }
+  };
   const record = async (chooseLocation = false) => {
     if (!ready || !total || disabled || abort.current) { onError('Conectá las fotos y esperá a que termine la carga.'); return; }
+    try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null); } catch (error) { onError(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
     playing.current = false; setPlaying(false); audioEngine.stop();
     abort.current = new AbortController(); onBusy(true); setProgress(0); setPendingVideo(null); setSaveMessage('');
     try {
@@ -212,12 +264,17 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     finally { setSavingVideo(false); onBusy(false); }
   };
   useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
-  const framingControls = <fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
-    <EditorPropertyRow label="Editar"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} caption={framingMode ? 'Listo' : 'Encuadrar'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
-    {framingMode && <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={setSelectedPhoto} cover={config.photoFit === 'cover'}
+  const framingControls = <><fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
+    <EditorPropertyRow label="Vista previa"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} caption={framingMode ? 'Listo' : 'Arrastrar'} hint={framingMode ? 'Terminar la edición y retomar la vista previa. Los controles siguen visibles.' : 'Pausar esta escena para arrastrar la foto. Los controles ya están disponibles abajo.'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
+    <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={index => selectFramingPhoto(scene.index, index)} cover={config.photoFit === 'cover'}
       onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
-      onChange={framing => onPhotoFramingChange(scene.index, photoIndex, framing)} onRotate={onPhotoRotate} />}
-  </fieldset>;
+      onChange={framing => { beginFraming(); onPhotoFramingChange(scene.index, photoIndex, framing); }}
+      onRotate={(ids, direction) => { beginFraming(); onPhotoRotate(ids, direction); }} onSmartRotate={ids => void smartRotate(ids)} onClipStart={(id, start) => { beginFraming(); onClipStart(id, start); }} />
+  </fieldset></>;
+  const rotationStatus = rotationMessage && <div role="status" className="mt-3 text-xs text-indigo-200">{rotationMessage}{rotationProgress && <>
+    <div className="mt-2 flex flex-wrap items-center gap-3"><progress aria-label="Avance del giro inteligente" value={rotationProgress.completed} max={rotationProgress.total} className="min-w-0 flex-1" /><span>{Math.round(rotationProgress.completed / rotationProgress.total * 100)}% · {rotationProgress.completed}/{rotationProgress.total}</span>
+      <button type="button" className="btn-secondary" disabled={rotationAbort.current?.signal.aborted} onClick={() => { rotationAbort.current?.abort(); setRotationMessage('Cancelando análisis… se conservan todos los giros.'); }}>Cancelar análisis</button></div>
+  </>}</div>;
   return <>
   {framingControlsTarget && createPortal(framingControls, framingControlsTarget)}
   <section className="panel preview-panel">
@@ -246,6 +303,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     </div>
     <div className="preview-tools space-y-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de vista previa" tabIndex={0}>
     {!framingControlsTarget && framingControls}
+    {rotationStatus}
     {slides.length > 0 && imageError && <p role="alert" className="text-sm text-amber-300">{imageError}</p>}
     <div className="mx-auto max-w-[350px] space-y-2">
       <input aria-label="Posición del video" type="range" min="0" max={total || 1} step="0.05" value={Math.min(displayTime,total)} disabled={disabled || !ready} onChange={e => { time.current = Number(e.target.value); setDisplayTime(time.current); if (playing.current) audioEngine.play(time.current); }} className="w-full accent-indigo-500" />

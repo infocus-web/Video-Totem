@@ -2,6 +2,7 @@ import { useRef, type ReactNode, type ChangeEvent, type KeyboardEvent } from 're
 import { Camera, Check, Copy, Crop, ExternalLink, FileCode2, FolderOpen, Heart, House, Images, Layers, LayoutTemplate, Maximize, Music2, PartyPopper, PlusCircle, RefreshCw, Sparkles, Timer, Trash2, Type } from 'lucide-react';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorTool, EditorToolButton } from './EditorTool';
+import { EntranceControls } from './EntranceControls';
 import { TextOverlayControls } from './TextOverlayControls';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
@@ -15,7 +16,7 @@ interface Props {
   libraryCount: number; selectedCount: number; sceneCount: number;
   onUploadPhotos: (event: ChangeEvent<HTMLInputElement>) => void;
   onApplySelection: () => void; onUseAll: () => void; onRegroup: () => void;
-  onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string;
+  onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string; musicRevision: number;
   onClearMusic: () => void; onError: (message: string) => void; busy: boolean;
 }
 const modes: { value: HorizontalGroupMode; title: string; detail: string; slots: number; caption: string }[] = [
@@ -34,7 +35,7 @@ const presetIcons = [Heart, PartyPopper, Camera, House];
 const presetCaptions = ['Boda', 'Fiesta', 'Sesión', 'Tour'];
 const shortcuts = [
   { label: 'Fotos', icon: Images }, { label: 'Formato', icon: LayoutTemplate }, { label: 'Encuadre', icon: Crop }, { label: 'Escenas', icon: Layers },
-  { label: 'Ritmo', icon: Timer }, { label: 'Textos', icon: Type }, { label: 'Música', icon: Music2 }, { label: 'Premiere', icon: FileCode2 },
+  { label: 'Ritmo', icon: Timer }, { label: 'Textos', icon: Type }, { label: 'Música', icon: Music2 }, { label: 'Premiere', icon: FileCode2 }, { label: 'Entrada', icon: PartyPopper },
 ];
 const tabs = shortcuts.map((shortcut, index) => ({ ...shortcut, section: index + 1 }));
 
@@ -99,8 +100,8 @@ export function ClientInputPanel(props: Props) {
     <fieldset disabled={busy} className="editor-section-grid min-w-0 text-sm disabled:opacity-60">
     <EditorSection activeSection={activeSection} number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
       <EditorPropertyRow label="Archivos" help="Pegá la selección antes de elegir Carpeta: solo se preparan esas fotos. Fotos permite elegir archivos manualmente.">
-        <EditorTool label="Subir fotos locales"><label className="editor-icon-button"><PlusCircle aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Fotos</span>
-          <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
+        <EditorTool label="Subir fotos locales"><label className="editor-icon-button"><PlusCircle aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Fotos / clips</span>
+          <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime,.mov" onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
         <EditorTool label={props.rawText.trim() ? 'Elegir carpeta: cargar solo las fotos de la lista. Al reabrir un proyecto, reconecta sus fotos conservando la edición.' : 'Elegir carpeta: sin una selección, carga todas las fotos compatibles.'}><label className="editor-icon-button"><FolderOpen aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Carpeta</span>
           <input aria-label="Elegir carpeta" type="file" multiple {...{ webkitdirectory: '', directory: '' }} onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
         <span className="property-note">{props.libraryCount} fotos conectadas</span>
@@ -201,6 +202,9 @@ export function ClientInputPanel(props: Props) {
         <input aria-label="Link de Google Drive de la sesión" type="url" value={config.driveLink} onChange={e => change('driveLink', e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className="studio-input font-mono" />
         {drive.isValid && <EditorTool label="Abrir carpeta en Drive"><a href={config.driveLink} target="_blank" rel="noopener noreferrer" aria-label="Abrir carpeta en Drive" className="editor-icon-button"><ExternalLink aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Abrir</span></a></EditorTool>}
       </EditorPropertyRow>
+    </EditorSection>
+    <EditorSection activeSection={activeSection} number={9} title="Entrada de quince" detail="Fotos en ciclo, cambios al golpe de la canción y contador final.">
+      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onError={props.onError} />
     </EditorSection>
     </fieldset>
     </div>

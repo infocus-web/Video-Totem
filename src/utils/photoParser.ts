@@ -9,7 +9,7 @@ export function parseClientSelectionText(text: string, options: ParseOptions): P
   if (text.length > 20000) throw new Error('La selección es demasiado larga. Usá hasta 20.000 caracteres.');
   const identifiers: string[] = [];
   // Match filenames and camera codes before numbers, so their digits are never extracted twice.
-  const pattern = /[\p{L}\p{N}_().-]+\.(?:jpe?g|png|webp|avif)|\b(?:IMG|DSC|DSCF|PXL)[_-]?\d+\b|\b\d{1,9}\s*(?:-|–|a|al|to)\s*\d{1,9}\b|\b\d{1,9}[a-z]?\b/giu;
+  const pattern = /[\p{L}\p{N}_().-]+\.(?:jpe?g|png|webp|avif|mp4|webm|mov)|\b(?:IMG|DSC|DSCF|PXL)[_-]?\d+\b|\b\d{1,9}\s*(?:-|–|a|al|to)\s*\d{1,9}\b|\b\d{1,9}[a-z]?\b/giu;
   for (const match of text.matchAll(pattern)) {
     const token = match[0];
     const range = /^(\d+)\s*(?:-|–|a|al|to)\s*(\d+)$/i.exec(token);
@@ -26,7 +26,7 @@ export function parseClientSelectionText(text: string, options: ParseOptions): P
   for (const identifier of identifiers) {
     const numeric = /^\d+[a-z]?$/i.test(identifier);
     const number = numeric ? String(Number(identifier.match(/^\d+/)![0])).padStart(options.padding, '0') + (identifier.match(/[a-z]$/i)?.[0].toLowerCase() || '') : (identifier.match(/\d+/)?.[0] ?? identifier);
-    const filename = /\.(?:jpe?g|png|webp|avif)$/i.test(identifier) ? identifier : numeric ? `${options.prefix}${number}${extension}` : `${identifier}${extension}`;
+    const filename = /\.(?:jpe?g|png|webp|avif|mp4|webm|mov)$/i.test(identifier) ? identifier : numeric ? `${options.prefix}${number}${extension}` : `${identifier}${extension}`;
     const key = filename.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

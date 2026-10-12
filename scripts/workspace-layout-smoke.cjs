@@ -25,7 +25,7 @@ let browser, page;
   await selection.fill('');
   await page.getByRole('button', { name: 'Usar todas las fotos', exact: true }).click();
   const toolbar = page.getByRole('tablist', { name: 'Herramientas de edición' });
-  for (const [index, label] of ['Fotos', 'Formato', 'Encuadre', 'Escenas', 'Ritmo', 'Textos', 'Música', 'Premiere'].entries()) {
+  for (const [index, label] of ['Fotos', 'Formato', 'Encuadre', 'Escenas', 'Ritmo', 'Textos', 'Música', 'Premiere', 'Entrada'].entries()) {
     const tab = toolbar.getByRole('tab', { name: label, exact: true });
     await tab.click();
     assert.equal(await tab.getAttribute('aria-selected'), 'true');
@@ -37,9 +37,9 @@ let browser, page;
   await toolbar.getByRole('tab', { name: 'Fotos', exact: true }).press('ArrowRight');
   assert.equal(await toolbar.getByRole('tab', { name: 'Formato', exact: true }).getAttribute('aria-selected'), 'true');
   await toolbar.getByRole('tab', { name: 'Formato', exact: true }).press('End');
-  assert.equal(await toolbar.getByRole('tab', { name: 'Premiere', exact: true }).getAttribute('aria-selected'), 'true');
+  assert.equal(await toolbar.getByRole('tab', { name: 'Entrada', exact: true }).getAttribute('aria-selected'), 'true');
   assert.equal(await page.locator('.editor-section:visible').count(), 1, 'Solo se muestra el panel elegido');
-  await toolbar.getByRole('tab', { name: 'Premiere', exact: true }).press('Home');
+  await toolbar.getByRole('tab', { name: 'Entrada', exact: true }).press('Home');
   assert.equal(await toolbar.getByRole('tab', { name: 'Fotos', exact: true }).getAttribute('aria-selected'), 'true');
   await page.getByRole('button', { name: 'Reproducir', exact: true }).click();
   await toolbar.getByRole('tab', { name: 'Textos', exact: true }).click();

@@ -9,6 +9,10 @@ class BackgroundAudioEngine {
   private source: AudioBufferSourceNode | null = null;
   private buffer: AudioBuffer | null = null;
   private style = 'chill';
+  private trackOffset = 0;
+  private loopTrack = true;
+  public getTrack() { return this.buffer; }
+  public setTrackRange(offset = 0, loop = true) { this.trackOffset = Math.max(0, offset); this.loopTrack = loop; }
   private nextTime = 0;
   private step = 0;
   private nodes = new Set<AudioScheduledSourceNode>();
@@ -28,11 +32,15 @@ class BackgroundAudioEngine {
   public async resume() { await this.init().resume(); }
   public async loadTrack(file: File) {
     if (file.size > 50 * 1024 * 1024) throw new Error('La música admite archivos de hasta 50 MB.');
-    const decoded = await this.init().decodeAudioData(await file.arrayBuffer());
+    const bytes = await file.arrayBuffer();
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    const fingerprint = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+    const decoded = await this.init().decodeAudioData(bytes);
     this.stop(); this.buffer = decoded;
+    return fingerprint;
   }
   public clearTrack() { this.stop(); this.buffer = null; }
-  public createAudioRenderer(style: string, volume: number) {
+  public createAudioRenderer(style: string, volume: number, offset = 0, loop = true) {
     const track = this.buffer, sampleRate = 48000;
     return async (start: number, duration: number) => {
       // A short lead-in preserves note tails at chunk boundaries without keeping a five-minute buffer.
@@ -41,8 +49,9 @@ class BackgroundAudioEngine {
       const ctx = new OfflineAudioContext(2, length + skip, sampleRate), gain = ctx.createGain();
       gain.gain.value = Math.max(0, Math.min(1, volume)); gain.connect(ctx.destination);
       if (style !== 'none' && track) {
-        const source = ctx.createBufferSource(); source.buffer = track; source.loop = true;
-        source.connect(gain); source.start(0, base % track.duration);
+        const source = ctx.createBufferSource(); source.buffer = track; source.loop = loop;
+        source.connect(gain);
+        if (loop || base + offset < track.duration) source.start(0, loop ? (base + offset) % track.duration : base + offset);
       } else if (style !== 'none') {
         const stepDuration = musicStepDuration(style);
         for (let step = Math.max(0, Math.ceil(base / stepDuration) - 1); (step + 1) * stepDuration < start + duration; step++) {
@@ -85,8 +94,11 @@ class BackgroundAudioEngine {
     try { this.gain!.disconnect(ctx.destination); } catch { /* Monitoring may already be disconnected after export. */ }
     if (monitor) this.gain!.connect(ctx.destination);
     if (this.buffer) {
-      this.source = ctx.createBufferSource(); this.source.buffer = this.buffer; this.source.loop = true;
-      this.source.connect(this.gain!); this.source.start(0, offset % this.buffer.duration); return;
+      this.source = ctx.createBufferSource(); this.source.buffer = this.buffer; this.source.loop = this.loopTrack;
+      this.source.connect(this.gain!);
+      const trackTime = offset + this.trackOffset;
+      if (this.loopTrack || trackTime < this.buffer.duration) this.source.start(0, this.loopTrack ? trackTime % this.buffer.duration : trackTime);
+      return;
     }
     const stepDuration = musicStepDuration(this.style);
     this.step = Math.floor(offset / stepDuration);

@@ -1,5 +1,6 @@
 import type { SequenceConfig, SequenceSlide } from '../types';
 import { drawVideoFrame, sceneAtTime, type ImageMap } from './canvasRenderer';
+import { sequenceDuration, validateEntrance } from './entrance';
 import { videoOutput } from './videoOutput';
 import { prepareTextFonts } from './textOverlay';
 import { audioEngine } from './audioSynthesizer';
@@ -28,11 +29,14 @@ function nativeRecordingFormat(preference?: 'webm') {
 }
 
 export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
+  validateEntrance(config, audioEngine.getTrack()?.duration ?? null);
+  audioEngine.setTrackRange(config.entrance?.enabled ? config.entrance.musicStart : 0, !config.entrance?.enabled);
   if (supportsFrameEncoding()) {
     const { encodeVideo } = await import('./videoEncoder');
     const result = await encodeVideo(slides, config, images, signal, recordingBitrate(config), progress, onPhase);
     if (result) { progress(100); return result; }
   }
+  if (config.entrance?.enabled || slides.some(slide => slide.photos.some(photo => photo.mediaType === 'video'))) throw new Error('Para exportar entradas o clips necesitás Chrome o Edge con codificación por cuadros. Convertí clips no compatibles a MP4 H.264.');
   const format = nativeRecordingFormat();
   if (!format || (!supportsBackgroundRecording() && !HTMLCanvasElement.prototype.captureStream)) throw new Error('Este navegador no permite grabar video. Probá con Chrome o Edge actualizado.');
   onPhase('Grabando video');
@@ -81,7 +85,7 @@ function hasVideoTrack(blob: Blob, config: SequenceConfig, signal: AbortSignal):
 }
 
 async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, format: { mime: string; extension: string }, onPhase: (message: string) => void) {
-  const duration = slides.reduce((sum, slide) => sum + slide.duration, 0);
+  const duration = sequenceDuration(slides, config);
   if (!duration || duration > 300) throw new Error('La grabación admite montajes de hasta 5 minutos.');
   if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
   const originals = new RecordingImages(slides, images, signal);
@@ -168,7 +172,7 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
         if (recorder.state !== 'recording' || finishing) return;
         const captureTime = performance.now() / 1000;
         const elapsed = Math.min(duration, captureTime - (started + pausedMs) / 1000);
-        const scene = sceneAtTime(slides, elapsed).index;
+        const scene = sceneAtTime(slides, elapsed, config).index;
         if (!originals.isReady(scene) && !loading) {
           loading = true;
           onPhase('Preparando escena ' + (scene + 1) + ' de ' + slides.length);
@@ -179,7 +183,7 @@ async function recordWithFormat(slides: SequenceSlide[], config: SequenceConfig,
         }
         try {
           audioEngine.tick();
-          const current = slides[scene], position = sceneAtTime(slides, elapsed);
+          const current = slides[scene], position = sceneAtTime(slides, elapsed, config);
           const transitionWindow = Math.min(0.35, current.duration / 2);
           const needsNext = !!slides[scene + 1] && current.transition !== 'none' && position.progress * current.duration > current.duration - transitionWindow;
           // Keep capture and audio continuous while the next original loads.

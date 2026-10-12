@@ -9,6 +9,9 @@ export interface FilePreparationProgress {
 export interface PhotoFraming { x: number; y: number; zoom: number; rotation?: 0 | 90 | 180 | 270 }
 
 export interface PhotoItem {
+  mediaType?: 'image' | 'video';
+  mediaDuration?: number;
+  clipStart?: number;
   id: string;
   number: string;
   filename: string;
@@ -54,6 +57,7 @@ export interface OverlayTextStyle {
 }
 
 export interface SequenceConfig {
+  entrance?: EntranceConfig;
   name: string;
   aspectRatio: '9:16' | '1:1' | '16:9' | '4:5';
   width: number;
@@ -67,6 +71,7 @@ export interface SequenceConfig {
   horizontalGrouping: HorizontalGroupMode;
   splitGapSize: number; // gap between stacked photos in pixels (e.g. 6px)
   musicTrack: string;
+  musicFingerprint?: string;
   musicVolume: number;
   showOverlayText: boolean;
   eventTitle: string;
@@ -79,6 +84,16 @@ export interface SequenceConfig {
   filenamePrefix: string;
   filenamePadding: number;
   filenameExtension: string;
+}
+
+export interface EntranceConfig {
+  enabled: boolean;
+  musicStart: number;
+  musicEnd: number;
+  countdown: 5 | 10;
+  beatTimes: number[];
+  beatShift: number;
+  everyBeats: number;
 }
 
 export interface ParsedPremiereProject {

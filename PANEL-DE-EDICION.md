@@ -26,6 +26,18 @@ Archivos: `src/utils/photoFiles.ts` filtra por metadatos; `photoParser.ts` compa
 
 Para probar: ejecutá `npm test` y `npm run build`; en la app local pegá una lista corta y elegí una carpeta con muchas fotos. Revisá el contador y el orden del montaje. Repetí con un número inexistente y comprobá que se conserve el trabajo. En Vercel, repetí después de Commit → Push y del despliegue.
 
+## Encuadre desplegado y giro inteligente
+
+Encuadre y giro muestra siempre navegación, posición X/Y, zoom, alcance, giros y restablecer. Abrir la pestaña no pausa la reproducción. Editar un valor, cambiar de foto o tocar Arrastrar congela la escena mostrada; Listo o salir del panel retoma la reproducción si estaba activa. Los controles permanecen visibles y las fotos marcadas se conservan al terminar una edición.
+
+Auto / Giro inteligente analiza las cuatro orientaciones de cada foto y usa ojos, nariz y boca para elegir una orientación derecha. Las fotos con rostro pequeño se analizan además en recortes superpuestos; los resultados dudosos conservan el giro anterior. Se aplica una sola vez al terminar el lote, con avance y cancelación. Respeta esta foto, las marcadas o todas; conserva posición, zoom, escenas, originales y salida Tótem. El resultado se guarda y exporta como un giro individual normal. Revisá poses acostadas, perfiles o personas inclinadas: el modelo no conoce la intención de la foto y puede conservar fotos que requieran corrección manual.
+
+Dependencia autorizada: `@mediapipe/tasks-vision`, fijada en **0.10.32**, con BlazeFace short-range v1. Esta versión permite procesamiento sin telemetría de la biblioteca. WASM, JavaScript y modelo se sirven desde la misma app; no se usan CDN de terceros, claves ni endpoints de IA. Solo se descargan al activar Auto: aproximadamente 11.5 MB de WASM sin comprimir (una de las dos variantes), 205 KB de cargador, 137 KB de JavaScript y 230 KB de modelo. La transferencia depende de la compresión y caché del servidor; estos archivos aumentan el tráfico estático normal del sitio. Vite incluye las dos variantes en la compilación para compatibilidad; el navegador solicita solo la que soporta.
+
+Archivos modificados: `VideoPreviewPlayer.tsx` muestra los controles, congela la edición e integra carga/avance/cancelación; `PhotoFramingControls.tsx` agrega Auto junto a los giros; `src/App.tsx` y `projectConfig.ts` aplican orientaciones absolutas sin perder ajustes. `faceOrientation.ts` decide con evidencia facial; `smartRotation.ts` ejecuta MediaPipe bajo demanda; `public/models/` contiene el modelo y su procedencia. `package.json` y lock fijan la dependencia. `FaqGuideModal.tsx`, README y este documento explican el uso. `tests/core.test.ts` cubre incertidumbre, geometría facial e idempotencia; `scripts/smart-rotation-smoke.cjs` prueba el modelo real, alcances, cancelación, controles desplegados y ausencia de tráfico externo. Los archivos de prueba personales se leen desde un argumento y no se incluyen en el repositorio.
+
+En local: `npm test` y `npm run build`; recargá la app y abrí Encuadre sin tocar Arrastrar. Probá posición, zoom, giros, Siguiente y Listo. Elegí Aplicar a → Todas y Auto sobre fotos mezcladas. Comprobá que una foto sin rostro conserve su giro y que Cancelar no aplique resultados parciales. El script acepta las rutas de Playwright, Chrome, la URL local y una foto de prueba con rostro derecho. En Vercel, repetí después de Commit → Push y del despliegue; incluí `public/models/` y el lockfile en el commit. No hace falta configurar variables de entorno.
+
 ## Espacio de trabajo
 
 En formato horizontal, las escenas de dos o tres fotos se muestran en columnas, de izquierda a derecha; en vertical y Tótem se mantienen las filas. La agrupación automática reúne fotos verticales para el cuadro horizontal y horizontales para el vertical. Cambiar el formato conserva las escenas y sus ajustes; Reagrupar vuelve a distribuirlas según el formato actual. La vista previa, selección para encuadrar, MP4, miniaturas de la línea de tiempo y posiciones del XML de Premiere usan esta distribución.
@@ -92,7 +104,7 @@ En local, recargá y probá Nuevo → nombre → Crear, Cancelar y Escape. El pr
 
 ## Probar localmente
 
-Ejecutá `npm test`, `npm run build` y `npm run dev` en la carpeta del proyecto. Cargá tres fotos y entrá a Encuadre → Encuadrar foto. Modificá la primera, avanzá con Siguiente y volvé con Anterior: sus ajustes se conservan. Repetí con 2 en 1 desde Escenas y verificá que Siguiente pase de la segunda foto apilada a la siguiente escena. Elegí Música y comprobá que cambie el panel y la foto siga visible. Probá Textos y Premiere y volvé a Encuadre para comprobar los valores conservados.
+Ejecutá `npm test`, `npm run build` y `npm run dev` en la carpeta del proyecto. Cargá tres fotos y entrá a Encuadre: los controles ya están visibles. Modificá la primera, avanzá con Siguiente y volvé con Anterior: sus ajustes se conservan. Repetí con 2 en 1 desde Escenas y verificá que Siguiente pase de la segunda foto apilada a la siguiente escena. Elegí Música y comprobá que cambie el panel y la foto siga visible. Probá Textos y Premiere y volvé a Encuadre para comprobar los valores conservados.
 
 Las pruebas de navegador necesitan Playwright y Chrome externos; no se agregan dependencias a la app. Los scripts admiten el módulo Playwright, el ejecutable del navegador y la URL local como argumentos. Las capturas y videos de prueba quedan en `artifacts/`, excluido de Git.
 
@@ -103,3 +115,7 @@ Después de Commit y Push origin, esperá el despliegue y recargá con Ctrl + F5
 ## Alcance
 
 Se muestra un panel por pestaña. Los campos de nombres siguen en Fotos y Reagrupar en Escenas. No se usan acordeones. La edición y el exportador mantienen su comportamiento: reagrupar redistribuye escenas y Aplicar selección reconstruye el montaje. Los originales, proyectos guardados, giro de salida y calidad de codificación se conservan. No se agregan paquetes ni servicios.
+
+## Entrada y clips
+
+Entrada es el noveno panel: sincronización musical y contador final para pantalla horizontal. Fotos permite cargar clips además de imágenes; Inicio del clip aparece en Encuadre. Más detalles en [ENTRADA-Y-CLIPS.md](ENTRADA-Y-CLIPS.md).

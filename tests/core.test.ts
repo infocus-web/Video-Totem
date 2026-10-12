@@ -5,12 +5,47 @@ import { DEFAULT_CONFIG, localPath } from '../src/utils/config.ts';
 import { decodeProject, serializeProject, type SavedProject } from '../src/utils/projectStorage.ts';
 import { generatePremiereXml, fileUrl } from '../src/utils/premiereXmlGenerator.ts';
 import type { PhotoItem } from '../src/types/index.ts';
-import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from '../src/utils/projectConfig.ts';
+import { rotateProjectPhotos, setProjectPhotoRotations, updatePhotoFraming, updateProjectConfig } from '../src/utils/projectConfig.ts';
+import { chooseFaceOrientation, uprightFaceScore, type FaceEvidence } from '../src/utils/faceOrientation.ts';
 import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
 import { normalizeFraming, photoGeometry, photoSlots } from '../src/utils/photoFraming.ts';
 import { videoOutput } from '../src/utils/videoOutput.ts';
 import { normalizeTextStyle, textStyle, textFont, textPlacement } from '../src/utils/textOverlay.ts';
 import { photoFileInfo, reconnectPhotoFiles, selectPhotoFiles } from '../src/utils/photoFiles.ts';
+
+test('orientación facial usa ojos y boca, no las proporciones de la foto', () => {
+  const face: FaceEvidence = { categories: [{ score: 0.96 }], boundingBox: { width: 120, height: 180 },
+    keypoints: [{ x: 0.4, y: 0.3 }, { x: 0.6, y: 0.3 }, { x: 0.5, y: 0.4 }, { x: 0.5, y: 0.5 }] };
+  assert.ok(uprightFaceScore(face, 800, 600) > 0);
+  assert.ok(uprightFaceScore(face, 600, 800) > 0);
+  assert.equal(uprightFaceScore({ ...face, categories: [{ score: 0.6 }] }, 800, 600), 0);
+  assert.equal(uprightFaceScore({ ...face, keypoints: face.keypoints.map(point => ({ x: point.y, y: 1 - point.x })) }, 800, 600), 0);
+  assert.equal(uprightFaceScore({ ...face, keypoints: face.keypoints.map(point => ({ x: 1 - point.x, y: 1 - point.y })) }, 800, 600), 0);
+  assert.equal(uprightFaceScore({ ...face, keypoints: [] }, 800, 600), 0);
+});
+
+test('giro inteligente conserva orientación si no hay evidencia o los resultados se contradicen', () => {
+  assert.equal(chooseFaceOrientation([]), null);
+  assert.equal(chooseFaceOrientation([{ rotation: 90, score: 0 }, { rotation: 0, score: 0 }]), null);
+  assert.equal(chooseFaceOrientation([{ rotation: 90, score: 0.8 }, { rotation: 0, score: 0.7 }]), null);
+  assert.equal(chooseFaceOrientation([{ rotation: 90, score: 0.8 }, { rotation: 0, score: 0.1 }]), 90);
+  assert.equal(chooseFaceOrientation([{ rotation: 0, score: 0.8 }]), 0);
+});
+
+test('giro automático es absoluto e idempotente; conserva encuadre, biblioteca y escenas', () => {
+  const project = editedProject();
+  const id = project.slides[0].photos[0].id;
+  const changed = setProjectPhotoRotations(project, { [id]: 270 });
+  assert.equal(changed.slides[0].photos[0].framing?.rotation, 270);
+  assert.equal(changed.library[0].framing?.rotation, 270);
+  assert.deepEqual({ ...changed.slides[0].photos[0].framing, rotation: undefined }, { ...normalizeFraming(project.slides[0].photos[0].framing), rotation: undefined });
+  assert.equal(changed.slides[1], project.slides[1]);
+  assert.equal(changed.config, project.config);
+  assert.equal(setProjectPhotoRotations(changed, { [id]: 270 }), changed);
+  assert.equal(setProjectPhotoRotations(changed, {}), changed);
+  assert.equal(setProjectPhotoRotations(changed, { 'not-present': 90 }), changed);
+  assert.equal(setProjectPhotoRotations(changed, { [id]: 0 }).slides[0].photos[0].framing?.rotation, undefined);
+});
 
 test('escenas horizontales dividen dos o tres fotos en columnas y respetan la separación', () => {
   for (const count of [1, 2, 3]) {

@@ -47,6 +47,7 @@ export function reconnectPhotos(library: PhotoItem[], imported: PhotoItem[], bas
     if (!saved) return photo;
     const relativePath = saved.relativePath || saved.filename;
     return { ...saved, ...photo, id: saved.id, relativePath, fullLocalPath: localPath(basePath, relativePath),
+      ...(photo.mediaType === 'video' ? { clipStart: Math.min(saved.clipStart ?? photo.clipStart ?? 0, (photo.mediaDuration || 1) - 0.001) } : {}),
       duration: saved.duration, transition: saved.transition, kenBurns: saved.kenBurns, orientation: saved.orientation };
   });
   for (const photo of connected) merged.set(photo.id, photo);

@@ -22,6 +22,7 @@ export class RecordingImages {
         const photo = photos[index++];
         if (this.signal.aborted) throw new DOMException('Cancelado', 'AbortError');
         if (this.images.has(photo.id)) continue;
+        if (photo.mediaType === 'video') { if (this.previews.has(photo.id)) this.images.set(photo.id, this.previews.get(photo.id)!); continue; }
         if (!photo.sourceUrl && this.previews.has(photo.id)) { this.images.set(photo.id, this.previews.get(photo.id)!); continue; }
         const image = new Image();
         const abort = () => image.removeAttribute('src');

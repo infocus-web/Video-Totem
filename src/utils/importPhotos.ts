@@ -1,11 +1,12 @@
 import type { FilePreparationProgress, PhotoItem, SequenceConfig } from '../types';
 import { localPath } from './config';
+import { importClip } from './clipMedia';
 import { photoFileInfo } from './photoFiles';
 export async function importPhotos(files: File[], config: SequenceConfig, signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void): Promise<PhotoItem[]> {
-  const candidates = files.filter(file => /\.(jpe?g|png|webp|avif)$/i.test(file.name));
+  const candidates = files.filter(file => /\.(jpe?g|png|webp|avif|mp4|webm|mov)$/i.test(file.name));
   if (!candidates.length) throw new Error('No hay fotos compatibles. Convertí RAW o HEIC a JPG antes de cargarlas.');
   if (candidates.length > 400) throw new Error('Elegí hasta 400 fotos por sesión.');
-  if (candidates.some(file => file.size > 50 * 1024 * 1024)) throw new Error('Cada foto debe pesar hasta 50 MB.');
+  if (candidates.some(file => file.size > (/\.(mp4|webm|mov)$/i.test(file.name) ? 200 : 50) * 1024 * 1024)) throw new Error('Cada foto admite hasta 50 MB; cada clip, hasta 200 MB.');
   candidates.sort((a,b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true }));
   const result: PhotoItem[] = new Array(candidates.length);
   const created: string[] = [];
@@ -16,6 +17,11 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
       while (index < candidates.length) {
         const position = index++, file = candidates[position];
         if (signal.aborted) throw new DOMException('Cancelado','AbortError');
+        if (/\.(mp4|webm|mov)$/i.test(file.name)) {
+          const clip = await importClip(file, config, signal);
+          created.push(clip.previewUrl, clip.sourceUrl); result[position] = clip;
+          onProgress?.({ completed: ++completed, total: candidates.length }); continue;
+        }
         const original = URL.createObjectURL(file);
         created.push(original);
         const image = new Image();
