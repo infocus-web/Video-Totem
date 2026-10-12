@@ -20,7 +20,7 @@ import type { QuarterTurn } from '../utils/faceOrientation';
 import { PreviewClips } from '../utils/previewClips';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
-export interface PreviewHandle { record: (chooseLocation?: boolean) => void; pause: () => void }
+export interface PreviewHandle { record: (chooseLocation?: boolean) => void; pause: () => void; syncAudition: (songTime: number, running: boolean) => void }
 interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; onPhotoAutoRotate: (rotations: Record<string, QuarterTurn>) => void; onClipStart: (id: string, start: number) => void; onPhotoMotion: (ids: string[], motion: PhotoItem['kenBurns']) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
 export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, onPhotoAutoRotate, onClipStart, onPhotoMotion, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
@@ -40,6 +40,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const imageCache = useRef<ImageMap>(new Map());
   const time = useRef(0), playing = useRef(false), abort = useRef<AbortController | null>(null);
   const [displayTime, setDisplayTime] = useState(0), [isPlaying, setPlaying] = useState(false);
+  const audition = useRef(false), auditionDraw = useRef(0), auditionUi = useRef(0);
+  const [auditioning, setAuditioning] = useState(false);
+  const previewPlaying = isPlaying || auditioning;
   const [ready, setReady] = useState(false), [progress, setProgress] = useState(0), [muted, setMuted] = useState(false);
   const [imageError, setImageError] = useState('');
   const [recordPhase, setRecordPhase] = useState('Grabando video');
@@ -83,16 +86,16 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const clipSources = JSON.stringify(slides.flatMap(slide => slide.photos.filter(photo => photo.mediaType === 'video').map(photo => [photo.id, photo.sourceUrl])));
   useEffect(() => { const player = new PreviewClips(slides); clips.current = player; return () => { player.clear(); if (clips.current === player) clips.current = null; }; }, [clipSources]);
   useEffect(() => {
-    if (isPlaying || !ready || disabled) return;
+    if (previewPlaying || !ready || disabled) return;
     const timer = window.setInterval(() => { if (slides.some(slide => slide.photos.some(photo => photo.mediaType === 'video'))) renderPreview(framingMode); }, 100);
     return () => window.clearInterval(timer);
-  }, [clipSources, slides, config, images, isPlaying, ready, disabled, framingMode]);
+  }, [clipSources, slides, config, images, previewPlaying, ready, disabled, framingMode]);
   const renderPreview = (editing = false) => {
     if (!canvas.current) return;
-    const frameImages = new Map(images); clips.current?.sync(frameImages, slides, config, time.current, playing.current, editing);
+    const frameImages = new Map(images); clips.current?.sync(frameImages, slides, config, time.current, playing.current || audition.current, editing);
     drawFrame(canvas.current, slides, config, frameImages, time.current, editing);
   };
-  useEffect(() => { if (!isPlaying) clips.current?.stop(); }, [isPlaying]);
+  useEffect(() => { if (!previewPlaying) clips.current?.stop(); }, [previewPlaying]);
   useEffect(() => {
     const range = musicRange(config, audioEngine.getTrack()?.duration ?? 0);
     audioEngine.setTrackRange(range.start, !config.entrance?.enabled, range.end || null);
@@ -138,6 +141,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   useEffect(() => () => { abort.current?.abort(); rotationAbort.current?.abort(); audioEngine.stop(); }, []);
   const toggle = async () => {
     if (!ready || !total || disabled) return;
+    if (audition.current) { audioEngine.stopAudition(); return; }
     setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
     try {
       if (playing.current) { playing.current = false; setDisplayTime(time.current); audioEngine.stop(); }
@@ -265,7 +269,24 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     } catch (error) { setSaveMessage(error instanceof Error ? error.message + ' El video sigue listo para reintentar o descargar.' : 'No se pudo guardar. El video sigue listo para reintentar.'); }
     finally { setSavingVideo(false); onBusy(false); }
   };
-  useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); }, pause: () => { playing.current = false; setPlaying(false); resumeAfterFraming.current = false; audioEngine.stop(); clips.current?.stop(); } }));
+  useImperativeHandle(ref, () => ({
+    record: chooseLocation => { void record(chooseLocation); },
+    pause: () => { playing.current = false; setPlaying(false); resumeAfterFraming.current = false; audioEngine.stop(); clips.current?.stop(); },
+    syncAudition: (songTime, running) => {
+      if (!running) { audition.current = false; setAuditioning(false); clips.current?.stop(); }
+      if (disabled || !ready || !total) return;
+      const range = musicRange(config, audioEngine.getTrack()?.duration ?? 0);
+      const relative = Math.max(0, Math.min(range.end, songTime) - range.start);
+      // La prueba usa el reloj del audio; no inicia una segunda canción ni acumula deriva.
+      time.current = config.entrance?.enabled ? Math.min(total, relative) : relative % total;
+      if (audition.current !== running) { audition.current = running; setAuditioning(running); }
+      if (framingMode) setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
+      const now = performance.now();
+      if (!running || now - auditionDraw.current >= 1000 / config.fps) { renderPreview(); auditionDraw.current = now; }
+      if (!running || now - auditionUi.current >= 100) { setDisplayTime(time.current); auditionUi.current = now; }
+      if (!running) clips.current?.stop();
+    },
+  }));
   const framingControls = <><fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
     <EditorPropertyRow label="Vista previa"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} caption={framingMode ? 'Listo' : 'Arrastrar'} hint={framingMode ? 'Terminar la edición y retomar la vista previa. Los controles siguen visibles.' : 'Pausar esta escena para arrastrar la foto. Los controles ya están disponibles abajo.'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
     <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={index => selectFramingPhoto(scene.index, index)} cover={config.photoFit === 'cover'}
@@ -296,9 +317,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
           <div><p className="text-sm font-semibold text-neutral-200">Tu próximo reel empieza acá</p><p className="mt-2 text-xs leading-relaxed text-neutral-400">{libraryCount ? 'En el editor, aplicá una selección o elegí «Usar todas las fotos».' : 'Conectá tus fotos y aplicá una selección para empezar.'}</p></div>
         </div>}
         {slides.length > 0 && !ready && !imageError && <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-4"><PreparationProgress title="Preparando vista previa" progress={preparationProgress} /></div>}
-        {ready && total > 0 && !disabled && !framingMode && <button aria-label={isPlaying ? 'Pausar vista previa' : 'Reproducir vista previa'} onClick={() => void toggle()}
-          className={'absolute inset-0 flex items-center justify-center transition ' + (isPlaying ? 'opacity-0 hover:opacity-100 focus-visible:opacity-100' : 'bg-black/20 backdrop-blur-[2px]')}>
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600/90 text-white shadow-xl shadow-indigo-600/40">{isPlaying ? <Pause aria-hidden="true" className="h-7 w-7 fill-current" /> : <Play aria-hidden="true" className="ml-1 h-8 w-8 fill-current" />}</span>
+        {ready && total > 0 && !disabled && !framingMode && <button aria-label={previewPlaying ? 'Pausar vista previa' : 'Reproducir vista previa'} onClick={() => void toggle()}
+          className={'absolute inset-0 flex items-center justify-center transition ' + (previewPlaying ? 'opacity-0 hover:opacity-100 focus-visible:opacity-100' : 'bg-black/20 backdrop-blur-[2px]')}>
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600/90 text-white shadow-xl shadow-indigo-600/40">{previewPlaying ? <Pause aria-hidden="true" className="h-7 w-7 fill-current" /> : <Play aria-hidden="true" className="ml-1 h-8 w-8 fill-current" />}</span>
         </button>}
         {busy && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/75 p-6 text-center"><span className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" /><p className="text-sm font-bold">{savingVideo ? 'Guardando video' : recordPhase}…</p>{!savingVideo && <p className="font-mono text-xs text-indigo-300">{progress}%</p>}</div>}
       </div>
@@ -309,12 +330,12 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     {rotationStatus}
     {slides.length > 0 && imageError && <p role="alert" className="text-sm text-amber-300">{imageError}</p>}
     <div className="mx-auto max-w-[350px] space-y-2">
-      <input aria-label="Posición del video" type="range" min="0" max={total || 1} step="0.05" value={Math.min(displayTime,total)} disabled={disabled || !ready} onChange={e => { time.current = Number(e.target.value); setDisplayTime(time.current); if (playing.current) audioEngine.play(time.current); }} className="w-full accent-indigo-500" />
+      <input aria-label="Posición del video" type="range" min="0" max={total || 1} step="0.05" value={Math.min(displayTime,total)} disabled={disabled || !ready} onChange={e => { audioEngine.stopAudition(); time.current = Number(e.target.value); setDisplayTime(time.current); if (playing.current) audioEngine.play(time.current); }} className="w-full accent-indigo-500" />
       <div className="flex justify-between gap-2 font-mono text-[11px] text-neutral-400"><span>{displayTime.toFixed(1)}s</span><span className="text-neutral-500">{slides.length} escenas · {total.toFixed(1)}s</span><span>{total.toFixed(1)}s</span></div>
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-neutral-800 bg-neutral-900 px-2 py-2">
         <div className="flex gap-1">
-          <button aria-label={isPlaying ? 'Pausar' : 'Reproducir'} title={isPlaying ? 'Pausar' : 'Reproducir'} onClick={() => void toggle()} disabled={disabled || !ready || !total} className="preview-control !bg-neutral-800 !text-neutral-200">{isPlaying ? <Pause aria-hidden="true" className="h-4 w-4" /> : <Play aria-hidden="true" className="h-4 w-4 fill-current" />}</button>
-          <button aria-label="Reiniciar reproducción" title="Reiniciar reproducción" disabled={disabled || !total} onClick={() => { time.current = 0; setDisplayTime(0); if (playing.current) audioEngine.play(0); }} className="preview-control"><RotateCcw aria-hidden="true" className="h-4 w-4" /></button>
+          <button aria-label={previewPlaying ? 'Pausar' : 'Reproducir'} title={previewPlaying ? 'Pausar' : 'Reproducir'} onClick={() => void toggle()} disabled={disabled || !ready || !total} className="preview-control !bg-neutral-800 !text-neutral-200">{previewPlaying ? <Pause aria-hidden="true" className="h-4 w-4" /> : <Play aria-hidden="true" className="h-4 w-4 fill-current" />}</button>
+          <button aria-label="Reiniciar reproducción" title="Reiniciar reproducción" disabled={disabled || !total} onClick={() => { audioEngine.stopAudition(); time.current = 0; setDisplayTime(0); if (playing.current) audioEngine.play(0); }} className="preview-control"><RotateCcw aria-hidden="true" className="h-4 w-4" /></button>
           <button aria-label={muted ? 'Activar sonido' : 'Silenciar'} title={muted ? 'Activar sonido' : 'Silenciar'} onClick={() => setMuted(value => !value)} disabled={disabled} className="preview-control">{muted ? <VolumeX aria-hidden="true" className="h-4 w-4" /> : <Volume2 aria-hidden="true" className="h-4 w-4 text-indigo-400" />}</button>
         </div>
         <span className="text-[11px] text-neutral-400">Descargá desde Exportar</span>

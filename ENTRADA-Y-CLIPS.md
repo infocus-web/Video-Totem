@@ -2,6 +2,18 @@
 
 ## Uso
 
+### Prueba musical con vista previa sincronizada
+
+**Escuchar**, **Espacio** y **Autoescucha** ahora muestran el montaje mientras suena la canción: fotos, movimientos, clips sin sonido y contador usan el instante del audio. Mover el cursor musical también muestra ese fotograma, incluso con Autoescucha desactivada. Al pausar, terminar la prueba o cambiar de panel, la imagen queda detenida. La reproducción normal de la vista previa puede retomarse desde ese instante.
+
+El reloj de audio dirige el render sin iniciar una segunda canción. Se resta el inicio del recorte para convertir los segundos de la canción a segundos del video; Entrada respeta los cortes al golpe y la aceleración del contador. La prueba sigue limitada a tres segundos al mover el cursor, y Escuchar continúa hasta el final del tramo. Cambiar de panel sigue deteniendo la prueba.
+
+Archivos modificados: `src/components/MusicTimeline.tsx` publica posición y estado de la escucha; `src/App.tsx`, `src/components/ClientInputPanel.tsx` y `src/components/EntranceControls.tsx` conectan esos eventos; `src/components/VideoPreviewPlayer.tsx` dibuja el instante correcto y comparte pausa con el audio; `scripts/audition-preview-smoke.cjs` verifica sincronización y contador en Chrome; `scripts/music-trim-smoke.cjs` espera reproducción visual durante Autoescucha y elige explícitamente la primera foto antes de girarla. Este documento explica el uso y las pruebas. Sin dependencias nuevas ni cambios al formato del proyecto.
+
+Pruebas: 68 tests de lógica, TypeScript y build; prueba de Chrome de búsqueda con recorte, cambio de fotos al golpe, contador 5 → 0, pausa, Espacio, Autoescucha y salida del panel; regresión de Chrome con recorte, giro, movimiento, JSON y exportación MP4 de Entrada y montaje normal.
+
+Para probar localmente: `npm run dev`, abrir Entrada con fotos y canción, colocar el contador y mover el cursor musical cerca de ese segundo; usar Escuchar y Espacio, comprobar contador y cambios de fotos, pausar y verificar que ambos se detienen. Repetir con un inicio musical recortado. Para producción: hacer Commit/Push, esperar el deploy de Vercel y recargar; repetir el flujo en la web. El cambio solo afecta la vista previa durante pruebas de audio, sin modificar los originales ni los tiempos de exportación.
+
 ### Reconexión automática de originales
 
 En Chrome/Edge compatibles, **Fotos / clips**, **Carpeta** y **Cargar** abren el selector nativo y recuerdan los accesos de lectura. Se conserva únicamente el handle de cada archivo usado y el identificador del proyecto, en IndexedDB. No se guardan copias de multimedia ni se suben archivos a Vercel. La selección de carpeta continúa preparando solo los archivos de la lista, cuando la hay.

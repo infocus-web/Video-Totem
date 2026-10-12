@@ -20,7 +20,7 @@ interface Props {
   onApplySelection: () => void; onUseAll: () => void; onRegroup: () => void;
   onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string; musicRevision: number;
   onClearMusic: () => void; onError: (message: string) => void; busy: boolean;
-  onAuditionStart: () => void;
+  onAuditionStart: () => void; onAuditionFrame: (time: number, running: boolean) => void;
   onChoosePhotos?: (folder: boolean) => void; onChooseMusic?: () => void;
 }
 const modes: { value: HorizontalGroupMode; title: string; detail: string; slots: number; caption: string }[] = [
@@ -195,7 +195,7 @@ export function ClientInputPanel(props: Props) {
       <EditorPropertyRow label="Audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><LocalFilePicker label="Cargar música" caption="Cargar" icon={<Music2 aria-hidden="true" />} accept="audio/*" onChange={props.onMusicUpload} onChoose={props.onChooseMusic} />
         {props.musicName && <><span className="property-note break-all">{props.musicName}</span><EditorToolButton label="Quitar música cargada" caption="Quitar" onClick={props.onClearMusic}><Trash2 aria-hidden="true" /></EditorToolButton></>}</EditorPropertyRow>
       <EditorPropertyRow label="Volumen"><input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(config.musicVolume * 100)}%</span></EditorPropertyRow>
-      {activeSection === 7 && <MusicTimeline config={config} onChange={onConfigChange} musicRevision={props.musicRevision} active disabled={props.busy} onAuditionStart={props.onAuditionStart} onError={props.onError} />}
+      {activeSection === 7 && <MusicTimeline config={config} onChange={onConfigChange} musicRevision={props.musicRevision} active disabled={props.busy} onAuditionStart={props.onAuditionStart} onAuditionFrame={props.onAuditionFrame} onError={props.onError} />}
     </EditorSection>
     <EditorSection activeSection={activeSection} number={8} title="Premiere y Google Drive" detail="Opcional: vincular los originales en el proyecto XML.">
       <EditorPropertyRow label="Ruta local" help="Solo para el XML de Premiere. Copiá la ruta del Explorador; no hace falta para grabar el video.">
@@ -207,7 +207,7 @@ export function ClientInputPanel(props: Props) {
       </EditorPropertyRow>
     </EditorSection>
     <EditorSection activeSection={activeSection} number={9} title="Entrada de quince" detail="Fotos en ciclo, cambios al golpe de la canción y contador final.">
-      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onChooseMusic={props.onChooseMusic} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onEditPhotos={() => props.onSectionChange(3)} />
+      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onChooseMusic={props.onChooseMusic} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onAuditionFrame={props.onAuditionFrame} onEditPhotos={() => props.onSectionChange(3)} />
     </EditorSection>
     </fieldset>
     </div>

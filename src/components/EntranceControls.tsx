@@ -9,8 +9,8 @@ import { MusicTimeline } from './MusicTimeline';
 import { musicRange, setMusicTrim } from '../utils/musicTrim';
 import { LocalFilePicker } from './LocalFilePicker';
 
-interface Props { config: SequenceConfig; onChange: (config: SequenceConfig) => void; musicName: string; musicRevision: number; onUpload: (event: ChangeEvent<HTMLInputElement>) => void; onChooseMusic?: () => void; onError: (message: string) => void; active: boolean; disabled: boolean; onAuditionStart: () => void; onEditPhotos: () => void }
-export function EntranceControls({ config, onChange, musicName, musicRevision, onUpload, onChooseMusic, onError, active, disabled, onAuditionStart, onEditPhotos }: Props) {
+interface Props { config: SequenceConfig; onChange: (config: SequenceConfig) => void; musicName: string; musicRevision: number; onUpload: (event: ChangeEvent<HTMLInputElement>) => void; onChooseMusic?: () => void; onError: (message: string) => void; active: boolean; disabled: boolean; onAuditionStart: () => void; onAuditionFrame: (time: number, running: boolean) => void; onEditPhotos: () => void }
+export function EntranceControls({ config, onChange, musicName, musicRevision, onUpload, onChooseMusic, onError, active, disabled, onAuditionStart, onAuditionFrame, onEditPhotos }: Props) {
   const entry = config.entrance || DEFAULT_ENTRANCE;
   const [analyzing, setAnalyzing] = useState(false), [notice, setNotice] = useState('');
   const [manual, setManual] = useState(() => entry.beatTimes.join(', '));
@@ -52,7 +52,7 @@ export function EntranceControls({ config, onChange, musicName, musicRevision, o
     }} /><span aria-hidden="true" className="editor-switch-track"><span /></span></label></EditorTool><span className="property-note">Horizontal · Fotos en ciclo · Contador final</span></EditorPropertyRow>
     <EditorPropertyRow label="Canción"><LocalFilePicker label="Cargar canción de entrada" caption="Cargar" icon={<Music2 aria-hidden="true" />} accept="audio/*" onChange={onUpload} onChoose={onChooseMusic} /><span className="property-note">{musicName ? musicName + ' · ' + trackDuration?.toFixed(1) + 's' : 'Cargá o reconectá la canción'}</span></EditorPropertyRow>
     <fieldset disabled={analyzing} className="min-w-0">
-      {active && <MusicTimeline config={config} onChange={onChange} musicRevision={musicRevision} active disabled={disabled || analyzing} onAuditionStart={onAuditionStart} onError={onError} counter={entry.enabled ? { start: counterStart, duration: entry.countdown, onChange: placeCounter } : undefined} />}
+      {active && <MusicTimeline config={config} onChange={onChange} musicRevision={musicRevision} active disabled={disabled || analyzing} onAuditionStart={onAuditionStart} onAuditionFrame={onAuditionFrame} onError={onError} counter={entry.enabled ? { start: counterStart, duration: entry.countdown, onChange: placeCounter } : undefined} />}
       <section className="entrance-countdown-panel" aria-label="Ubicar el contador">
       <div className="music-trim-toolbar"><strong>Contador</strong><span className="property-note">{entry.enabled ? 'Arrastrá el marcador rosa o usá Contador aquí.' : 'Activá Entrada para incluirlo en el video.'}</span></div>
       <EditorPropertyRow label="Cuenta"><div role="group" aria-label="Duración del contador" className="property-buttons">{[5,10].map(seconds => <button type="button" className="property-choice" key={seconds} aria-pressed={entry.countdown === seconds} onClick={() => {

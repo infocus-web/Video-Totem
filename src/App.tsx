@@ -80,6 +80,7 @@ export default function App() {
   const autoRotatePhotos = useCallback((rotations: Record<string, QuarterTurn>) => setProject(previous => setProjectPhotoRotations(previous, rotations)), []);
   const changePhotoMotion = useCallback((ids: string[], motion: PhotoItem['kenBurns']) => setProject(previous => setProjectPhotoMotion(previous, ids, motion)), []);
   const pauseForAudition = useCallback(() => preview.current?.pause(), []);
+  const syncAudition = useCallback((time: number, running: boolean) => preview.current?.syncAudition(time, running), []);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const fromFolder = event.currentTarget.hasAttribute('webkitdirectory');
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
@@ -321,7 +322,7 @@ export default function App() {
           {tab === 'editor' ? <ClientInputPanel activeSection={editorSection} onSectionChange={setEditorSection} rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
             libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
-            onAuditionStart={pauseForAudition} onMusicUpload={event => void uploadMusic(event)} onChoosePhotos={supportsLocalLinks() ? folder => void pickPhotos(folder) : undefined} onChooseMusic={supportsLocalLinks() ? () => void pickMusic() : undefined} musicName={musicName} musicRevision={musicRevision} onClearMusic={clearMusic} busy={busy || importing} />
+            onAuditionStart={pauseForAudition} onAuditionFrame={syncAudition} onMusicUpload={event => void uploadMusic(event)} onChoosePhotos={supportsLocalLinks() ? folder => void pickPhotos(folder) : undefined} onChooseMusic={supportsLocalLinks() ? () => void pickMusic() : undefined} musicName={musicName} musicRevision={musicRevision} onClearMusic={clearMusic} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>

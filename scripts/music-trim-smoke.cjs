@@ -60,8 +60,10 @@ const tone = (duration, sampleRate = 22050) => {
   await page.getByLabel('Escucha automática al mover').check();
   await page.getByRole('button',{name:'Reproducir',exact:true}).click();
   await page.getByLabel('Posición de escucha de la canción').fill('4');
-  await page.getByRole('button',{name:'Reproducir',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Detener escucha de música',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Pausar',exact:true}).waitFor();
   await page.getByRole('button',{name:'Giro, encuadre y movimientos',exact:true}).click();
+  await page.getByLabel('Escena para encuadrar').selectOption('0');
   await page.getByRole('button',{name:'↷ Girar 90° a la derecha',exact:true}).click();
   await page.getByLabel('Aplicar giro a').selectOption('all');
   await page.getByRole('button',{name:'Movimiento: Acercar',exact:true}).click();

@@ -7,12 +7,13 @@ import { musicRange, setMusicTrim } from '../utils/musicTrim';
 interface Props {
   config: SequenceConfig; onChange: (config: SequenceConfig) => void; musicRevision: number;
   active: boolean; disabled: boolean; onAuditionStart: () => void; onError: (message: string) => void;
+  onAuditionFrame: (time: number, running: boolean) => void;
   counter?: { start: number; duration: number; onChange: (time: number) => void };
 }
 const clock = (time: number) => Math.floor(time / 60) + ':' + (time % 60).toFixed(2).padStart(5, '0');
 const waveformBins = 9600;
 
-export function MusicTimeline({ config, onChange, musicRevision, active, disabled, onAuditionStart, onError, counter }: Props) {
+export function MusicTimeline({ config, onChange, musicRevision, active, disabled, onAuditionStart, onAuditionFrame, onError, counter }: Props) {
   const track = audioEngine.getTrack(), duration = track?.duration ?? 0;
   const range = musicRange(config, duration);
   const [autoplay, setAutoplay] = useState(true), [listening, setListening] = useState(false), [cursor, setCursor] = useState(0);
@@ -48,7 +49,14 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
   }, [duration, disabled, changeZoom]);
   const generation = useRef(0), timer = useRef<number | null>(null), frame = useRef<number | null>(null), ownsAudio = useRef(false);
   const auditionPosition = useRef<(() => number) | null>(null);
+  const notifyFrame = useRef(onAuditionFrame); notifyFrame.current = onAuditionFrame;
+  const pendingSeek = useRef<number | null>(null);
+  useEffect(() => {
+    if (pendingSeek.current === null) return;
+    notifyFrame.current(pendingSeek.current, false); pendingSeek.current = null;
+  }, [config.musicTrim?.start, config.musicTrim?.end]);
   const stop = useCallback(() => {
+    if (ownsAudio.current) notifyFrame.current(auditionPosition.current?.() ?? 0, false);
     generation.current++;
     if (timer.current !== null) window.clearTimeout(timer.current); timer.current = null;
     if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null;
@@ -75,27 +83,31 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
   const listen = (start: number, end: number, delay = 0) => {
     stop(); setCursor(start);
     if (!active || disabled || !track || end <= start) return;
+    onAuditionStart(); notifyFrame.current(start, false);
     const revision = generation.current;
     const run = async () => {
-      timer.current = null; ownsAudio.current = true; onAuditionStart();
+      timer.current = null; ownsAudio.current = true;
       try {
         await audioEngine.resume();
         if (generation.current !== revision) return;
         const position = audioEngine.auditionTrack(start, end, config.musicVolume, finished => {
           if (generation.current !== revision) return;
+          const finalTime = finished ? end : auditionPosition.current?.() ?? start;
+          notifyFrame.current(finalTime, false); setCursor(finalTime);
           ownsAudio.current = false; setListening(false);
           auditionPosition.current = null;
           if (frame.current !== null) cancelAnimationFrame(frame.current); frame.current = null;
-          if (finished) setCursor(end);
         });
         auditionPosition.current = position;
+        notifyFrame.current(position(), true);
         setListening(true);
-        const tick = () => { if (generation.current !== revision || !ownsAudio.current) return; setCursor(position()); frame.current = requestAnimationFrame(tick); };
+        const tick = () => { if (generation.current !== revision || !ownsAudio.current) return; const time = position(); setCursor(time); notifyFrame.current(time, true); frame.current = requestAnimationFrame(tick); };
         frame.current = requestAnimationFrame(tick);
       } catch (error) { if (generation.current === revision) { stop(); onError(error instanceof Error ? error.message : 'No se pudo escuchar la canción.'); } }
     };
     if (delay) timer.current = window.setTimeout(() => void run(), delay); else void run();
   };
+  const seek = (time: number) => { stop(); setCursor(time); onAuditionStart(); notifyFrame.current(time, false); };
   const toggleListening = () => {
     if (ownsAudio.current) { const position = auditionPosition.current?.() ?? cursor; stop(); setCursor(position); }
     else listen(cursor >= range.start && cursor < range.end ? cursor : range.start, range.end);
@@ -120,7 +132,7 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
     const end = side === 'end' ? Math.min(duration, Math.max(value, range.start + minimum)) : range.end;
     onChange(setMusicTrim(config, { start, end }, duration));
     if (autoplay) listen(side === 'start' ? start : Math.max(start, end - 2), side === 'start' ? Math.min(end, start + 3) : end, 160);
-    else { stop(); setCursor(side === 'start' ? start : end); }
+    else { pendingSeek.current = side === 'start' ? start : end; seek(pendingSeek.current); }
   };
   if (!track) return null;
   const percent = (time: number) => duration ? time / duration * 100 : 0;
@@ -148,7 +160,7 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
     </div>
     <div className="music-time-ruler" aria-hidden="true">{Array.from({ length: tickCount + 1 }, (_, index) => <span key={index} style={{ left: `${index / tickCount * 100}%` }}>{clock(duration * index / tickCount)}</span>)}</div>
     <input aria-label="Posición de escucha de la canción" type="range" min="0" max={duration} step="0.01" value={Math.min(cursor,duration)} disabled={disabled} className="music-listen-range accent-indigo-500" onChange={event => {
-      const time = Number(event.target.value); if (autoplay) listen(time, Math.min(duration, time+3), 160); else { stop(); setCursor(time); }
+      const time = Number(event.target.value); if (autoplay) listen(time, Math.min(duration, time+3), 160); else seek(time);
     }} />
     </div></div>
     <div className="music-trim-toolbar property-inline-fields">
