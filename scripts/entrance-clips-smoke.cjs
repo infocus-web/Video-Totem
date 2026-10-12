@@ -16,6 +16,8 @@ const tone = (duration, sampleRate = 22050) => {
   return audio;
 };
 (async()=>{
+  fs.mkdirSync('artifacts', { recursive: true });
+  if (!fs.existsSync('artifacts/fixture-clip.mp4')) execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30:duration=2', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=2', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', 'artifacts/fixture-clip.mp4']);
   browser=await chromium.launch({headless:true, executablePath:process.argv[3], args:['--autoplay-policy=no-user-gesture-required']});
   const page=await browser.newPage({viewport:{width:1920,height:1080},acceptDownloads:true});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

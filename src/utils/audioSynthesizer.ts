@@ -76,7 +76,9 @@ class BackgroundAudioEngine {
   }
   public setStyle(style: string) { this.style = style; }
   public setVolume(volume: number) {
-    this.init(); this.gain!.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx!.currentTime);
+    const value = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 0;
+    this.init(); this.gain!.gain.setValueAtTime(value, this.ctx!.currentTime);
+    this.auditionGain?.gain.setValueAtTime(value, this.ctx!.currentTime);
   }
   public getCaptureStream() { this.init(); return this.destination!.stream; }
   public stopAudition() {
@@ -86,14 +88,14 @@ class BackgroundAudioEngine {
     this.auditionGain?.disconnect(); this.auditionGain = null;
     const ended = this.auditionEnded; this.auditionEnded = null; ended?.(false);
   }
-  public auditionTrack(start: number, end: number, volume: number, onEnded: (finished: boolean) => void) {
+  public auditionTrack(start: number, end: number, onEnded: (finished: boolean) => void) {
     this.stopAudition();
     const ctx = this.init(), track = this.buffer;
     if (!track) throw new Error('Cargá o reconectá la canción.');
     const position = Math.max(0, Math.min(start, track.duration)), finish = Math.min(end, track.duration);
     if (finish <= position) { onEnded(true); return () => position; }
     const source = ctx.createBufferSource(), gain = ctx.createGain();
-    source.buffer = track; gain.gain.value = Math.max(0, Math.min(1, volume));
+    source.buffer = track; gain.gain.value = this.gain!.gain.value;
     source.connect(gain); gain.connect(ctx.destination);
     this.auditionSource = source; this.auditionGain = gain; this.auditionEnded = onEnded;
     source.onended = () => { if (this.auditionSource !== source) return; source.disconnect(); gain.disconnect(); this.auditionSource = null; this.auditionGain = null; this.auditionEnded = null; onEnded(true); };

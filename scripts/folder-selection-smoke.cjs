@@ -33,7 +33,7 @@ let browser;
   const originalCount = () => page.evaluate(() => window.openedOriginals.length);
   const saved = async (count = 3) => {
     await page.waitForFunction(count => JSON.parse(localStorage.getItem('autoreel-project-v1'))?.library.length === count, count);
-    return page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
+    return page.evaluate(() => JSON.parse(JSON.stringify(JSON.parse(localStorage.getItem('autoreel-project-v1')), (key, value) => ['sourceUrl', 'previewUrl'].includes(key) ? undefined : value)));
   };
   await selection.fill('461b, 29, 13');
   await folderInput.setInputFiles(fixture);

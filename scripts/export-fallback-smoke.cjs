@@ -20,6 +20,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const photo = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 300; canvas.height = 200; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ff0000'; ctx.fillRect(0, 0, 300, 200); return canvas.toDataURL().split(',')[1]; });
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles([{ name: 'IMG_001.png', mimeType: 'image/png', buffer: Buffer.from(photo, 'base64') }]);
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+  await page.getByRole('tab', { name: 'Música', exact: true }).click();
   await page.getByLabel('Música', { exact: true }).selectOption('none');
   await page.getByRole('button', { name: /Exportar \(/ }).click();
   assert.ok(await page.getByRole('checkbox', { name: 'Elegir dónde guardar al terminar' }).isDisabled());

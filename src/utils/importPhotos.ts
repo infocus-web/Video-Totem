@@ -10,45 +10,47 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
   candidates.sort((a,b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, undefined, { numeric: true }));
   const result: PhotoItem[] = new Array(candidates.length);
   const created: string[] = [];
-  let index = 0, completed = 0;
+  let index = 0, completed = 0, failed = false;
   onProgress?.({ completed, total: candidates.length });
   try {
     const workers = await Promise.allSettled(Array.from({ length: Math.min(3,candidates.length) }, async () => {
-      while (index < candidates.length) {
-        const position = index++, file = candidates[position];
-        if (signal.aborted) throw new DOMException('Cancelado','AbortError');
-        if (/\.(mp4|webm|mov)$/i.test(file.name)) {
-          const clip = await importClip(file, config, signal);
-          created.push(clip.previewUrl, clip.sourceUrl); result[position] = clip;
-          onProgress?.({ completed: ++completed, total: candidates.length }); continue;
+      try {
+        while (!failed && index < candidates.length) {
+          const position = index++, file = candidates[position];
+          if (signal.aborted) throw new DOMException('Cancelado','AbortError');
+          if (/\.(mp4|webm|mov)$/i.test(file.name)) {
+            const clip = await importClip(file, config, signal);
+            created.push(clip.previewUrl, clip.sourceUrl); result[position] = clip;
+            onProgress?.({ completed: ++completed, total: candidates.length }); continue;
+          }
+          const original = URL.createObjectURL(file);
+          created.push(original);
+          const image = new Image();
+          try {
+            image.src = original; await image.decode();
+            if (signal.aborted) throw new DOMException('Cancelado','AbortError');
+            const width = image.naturalWidth, height = image.naturalHeight;
+            if (!width || !height || width * height > 100000000) throw new Error('Imagen demasiado grande o inválida: ' + file.name);
+            const scale = Math.min(1,1920 / Math.max(width,height));
+            const canvas = document.createElement('canvas'); canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('Canvas 2D no disponible.');
+            context.drawImage(image,0,0,canvas.width,canvas.height);
+            const blob = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar ' + file.name)), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.94));
+            if (signal.aborted) throw new DOMException('Cancelado','AbortError');
+            const previewUrl = URL.createObjectURL(blob); created.push(previewUrl);
+            const info = photoFileInfo(file);
+            result[position] = { ...info, fullLocalPath: localPath(config.localBasePath,info.relativePath),
+              previewUrl, sourceUrl: original, width, height,
+              orientation: width > height ? 'horizontal' : width < height ? 'vertical' : 'square',
+              duration: config.defaultDuration, transition: config.defaultTransition, kenBurns: 'zoom-in' };
+            onProgress?.({ completed: ++completed, total: candidates.length });
+            // Give the browser a chance to paint progress before preparing another photo.
+            await new Promise<void>(resolve => window.setTimeout(resolve, 0));
+          } catch (error) { throw new Error('No se pudo cargar ' + file.name + ': ' + (error instanceof Error ? error.message : 'archivo inválido')); }
+          finally { image.removeAttribute('src'); }
         }
-        const original = URL.createObjectURL(file);
-        created.push(original);
-        const image = new Image();
-        try {
-          image.src = original; await image.decode();
-          if (signal.aborted) throw new DOMException('Cancelado','AbortError');
-          const width = image.naturalWidth, height = image.naturalHeight;
-          if (!width || !height || width * height > 100000000) throw new Error('Imagen demasiado grande o inválida: ' + file.name);
-          const scale = Math.min(1,1920 / Math.max(width,height));
-          const canvas = document.createElement('canvas'); canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
-          const context = canvas.getContext('2d');
-          if (!context) throw new Error('Canvas 2D no disponible.');
-          context.drawImage(image,0,0,canvas.width,canvas.height);
-          const blob = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar ' + file.name)), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.94));
-          if (signal.aborted) throw new DOMException('Cancelado','AbortError');
-          const previewUrl = URL.createObjectURL(blob); created.push(previewUrl);
-          const info = photoFileInfo(file);
-          result[position] = { ...info, fullLocalPath: localPath(config.localBasePath,info.relativePath),
-            previewUrl, sourceUrl: original, width, height,
-            orientation: width > height ? 'horizontal' : width < height ? 'vertical' : 'square',
-            duration: config.defaultDuration, transition: config.defaultTransition, kenBurns: 'zoom-in' };
-          onProgress?.({ completed: ++completed, total: candidates.length });
-          // Give the browser a chance to paint progress before preparing another photo.
-          await new Promise<void>(resolve => window.setTimeout(resolve, 0));
-        } catch (error) { throw new Error('No se pudo cargar ' + file.name + ': ' + (error instanceof Error ? error.message : 'archivo inválido')); }
-        finally { image.removeAttribute('src'); }
-      }
+      } catch (error) { failed = true; throw error; }
     }));
     const failure = workers.find(worker => worker.status === 'rejected');
     if (failure?.status === 'rejected') throw failure.reason;

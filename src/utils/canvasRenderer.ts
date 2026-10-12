@@ -36,20 +36,32 @@ export async function loadImages(slides: SequenceSlide[], signal: AbortSignal, o
   });
   onProgress?.({ completed: images.size, total: photos.length });
   // Limit concurrent decoding to avoid a memory spike on large folders.
-  let index = 0;
-  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
-    while (index < pending.length) {
-      const photo = pending[index++];
-      if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-      if (!photo.previewUrl) throw new Error('Volvé a conectar la foto ' + photo.filename);
-      const image = new Image();
-      image.src = photo.previewUrl;
-      await image.decode();
-      if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
-      images.set(photo.id, image);
-      onProgress?.({ completed: images.size, total: photos.length });
-    }
+  let index = 0, failed = false;
+  const created: HTMLImageElement[] = [];
+  const workers = await Promise.allSettled(Array.from({ length: Math.min(4, pending.length) }, async () => {
+    try {
+      while (!failed && index < pending.length) {
+        const photo = pending[index++];
+        if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+        if (!photo.previewUrl) throw new Error('Volvé a conectar la foto ' + photo.filename);
+        const image = new Image(); created.push(image);
+        const abort = () => image.removeAttribute('src');
+        signal.addEventListener('abort', abort, { once: true });
+        try {
+          image.src = photo.previewUrl;
+          await image.decode();
+          if (signal.aborted) throw new DOMException('Cancelado', 'AbortError');
+          images.set(photo.id, image);
+          onProgress?.({ completed: images.size, total: photos.length });
+        } finally { signal.removeEventListener('abort', abort); }
+      }
+    } catch (error) { failed = true; throw error; }
   }));
+  const failure = workers.find(worker => worker.status === 'rejected');
+  if (failure?.status === 'rejected') {
+    created.forEach(image => image.removeAttribute('src'));
+    throw failure.reason;
+  }
   return images;
 }
 

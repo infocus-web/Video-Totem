@@ -127,7 +127,13 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     let frame = 0, last = performance.now(), lastUi = 0, lastDraw = 0;
     const tick = (now: number) => {
       time.current += (now - last) / 1000;
-      if (time.current >= total) { time.current %= total; audioEngine.play(time.current); }
+      if (time.current >= total) {
+        if (config.entrance?.enabled) {
+          time.current = total; playing.current = false; setPlaying(false); audioEngine.stop();
+          renderPreview(); setDisplayTime(total); return;
+        }
+        time.current %= total; audioEngine.play(time.current);
+      }
       last = now;
       if (canvas.current && now - lastDraw >= 1000 / config.fps) {
         renderPreview(); lastDraw = now;
@@ -147,7 +153,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
     try {
       if (playing.current) { playing.current = false; setDisplayTime(time.current); audioEngine.stop(); }
-      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); await audioEngine.resume(); playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
+      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); await audioEngine.resume(); if (time.current >= total) time.current = 0; playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
       setPlaying(playing.current);
     } catch (error) { onError(error instanceof Error ? error.message : 'No se pudo iniciar el audio.'); }
   };
@@ -250,12 +256,12 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     if (!ready || !total || disabled || abort.current) { onError('Conectá las fotos y esperá a que termine la carga.'); return; }
     try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); } catch (error) { onError(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
     playing.current = false; setPlaying(false); audioEngine.stop();
-    abort.current = new AbortController(); onBusy(true); setProgress(0); setPendingVideo(null); setSaveMessage('');
+    abort.current = new AbortController(); onBusy(true); setProgress(0); setSaveMessage('');
     try {
       const result = await recordVideo(slides, config, images, abort.current.signal, setProgress, setRecordPhase);
       const filename = (config.name || 'AutoReel') + '.' + result.extension;
       if (chooseLocation) setPendingVideo({ blob: result.blob, filename });
-      else downloadBlob(result.blob, filename);
+      else { downloadBlob(result.blob, filename); setPendingVideo(null); }
       if (result.extension !== format?.extension) onError('Chrome no pudo completar el MP4. Se generó un video WebM verificado.' + (chooseLocation ? ' Elegí dónde guardarlo.' : ' Se inició su descarga.'));
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) onError(error instanceof Error ? error.message : 'No se pudo grabar el video.');

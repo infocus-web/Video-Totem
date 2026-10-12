@@ -17,13 +17,14 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
 @media (prefers-reduced-motion: reduce) { .preparation-progress { animation: none; } .preparation-progress::-webkit-progress-value { transition: none; } }
 @layer components {
   .app-shell { min-height: 100dvh; }
-  .app-navbar-inner { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; }
+  .app-navbar-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 44px; padding: 6px 12px; }
   .app-brand { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   .app-brand h1 { font-size: 14px; }
   .app-brand-icon { @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-violet-600 via-indigo-600 to-amber-400; }
   .app-format-badge { @apply rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-400; }
   .app-editor-nav { @apply flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950 p-0.5 text-xs; white-space: nowrap; }
-  .app-project-actions, .app-main-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+  .app-project-actions, .app-main-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+  .app-project-actions { margin-left: auto; }
   .project-button { @apply relative inline-flex h-7 items-center justify-center gap-1 rounded-md border border-neutral-700/60 bg-neutral-800 px-2 text-xs text-neutral-300 hover:bg-neutral-700 disabled:opacity-50; }
   .project-button svg { width: 14px; height: 14px; }
   .project-save-status { margin-right: 4px; font-size: 10px; color: #a3a3a3; }
@@ -196,19 +197,22 @@ body { font-family: 'Plus Jakarta Sans', Arial, sans-serif; }
     .app-format-badge, .project-save-status, .app-inspector-label { display: none; }
   }
   @media (max-width: 1023px) {
-    .app-navbar-inner { grid-template-columns: minmax(0, 1fr) auto; }
-    .app-brand { grid-column: 1; grid-row: 1; }
-    .app-main-actions { grid-column: 2; grid-row: 1; }
-    .app-editor-nav { grid-column: 1; grid-row: 2; justify-self: start; }
-    .app-project-actions { grid-column: 2; grid-row: 2; }
     .preview-column { grid-row: 1; position: sticky; top: var(--app-header-height, 96px); z-index: 10; }
     .preview-panel { --preview-screen-height: clamp(90px, calc((100dvh - var(--app-header-height, 96px) - 120px) * 0.32), 260px); padding: 12px; gap: 8px; }
     .editor-panel { max-height: max(240px, calc((100dvh - var(--app-header-height, 96px)) * 0.44)); }
     .preview-export-note { display: none; }
   }
   @media (max-width: 639px) {
+    .app-navbar-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px; }
+    .app-brand { grid-column: 1; grid-row: 1; }
+    .app-editor-nav { grid-column: 2; grid-row: 1; font-size: 10px; gap: 0; }
+    .app-editor-nav button { padding-left: 5px; padding-right: 5px; }
+    .app-project-actions { grid-column: 1; grid-row: 2; margin-left: 0; justify-content: flex-start; }
+    .app-main-actions { grid-column: 2; grid-row: 2; gap: 2px; }
+    .app-main-actions .quick-button { padding: 5px 6px; }
+    .app-main-actions [aria-label="Purgar caché"] span { display: none; }
     .app-brand { gap: 6px; }
-    .app-brand h1 { font-size: 12px; }
+    .app-brand h1 { font-size: 11px; }
     .app-brand-icon { width: 24px; height: 24px; }
     .app-main-actions .primary-button { font-size: 11px; padding: 6px 8px; }
     .app-main-actions .preview-control { width: 24px; height: 28px; }

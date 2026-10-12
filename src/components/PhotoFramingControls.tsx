@@ -62,7 +62,7 @@ export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneCh
     <EditorPropertyRow label="Giro"><div className="property-buttons" role="group" aria-label="Girar foto">
       <EditorToolButton disabled={!rotationIds.length} label="↶ Girar 90° a la izquierda" caption="90° izq." onClick={() => onRotate(rotationIds, -90)}><RotateCcw aria-hidden="true" /></EditorToolButton>
       <EditorToolButton disabled={!rotationIds.length} label="↷ Girar 90° a la derecha" caption="90° der." onClick={() => onRotate(rotationIds, 90)}><RotateCw aria-hidden="true" /></EditorToolButton>
-      <EditorToolButton disabled={!rotationIds.length || photo.mediaType === 'video'} label="Giro inteligente" caption="Auto" hint="Giro inteligente: enderezar rostros. Las fotos dudosas se conservan. Se analiza en tu navegador." onClick={() => onSmartRotate(rotationIds)}><ScanFace aria-hidden="true" /></EditorToolButton>
+      <EditorToolButton disabled={!photos.some(item => rotationIds.includes(item.id) && item.mediaType !== 'video')} label="Giro inteligente" caption="Auto" hint="Giro inteligente: enderezar rostros. Las fotos dudosas se conservan. Se analiza en tu navegador." onClick={() => onSmartRotate(rotationIds)}><ScanFace aria-hidden="true" /></EditorToolButton>
       <span className="property-value">{framing.rotation || 0}°</span>
     </div></EditorPropertyRow>
     <EditorPropertyRow label="Movimiento"><div className="property-buttons" role="group" aria-label="Movimiento de las fotos">{([

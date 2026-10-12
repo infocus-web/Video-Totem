@@ -90,7 +90,7 @@ export function MusicTimeline({ config, onChange, musicRevision, active, disable
       try {
         await audioEngine.resume();
         if (generation.current !== revision) return;
-        const position = audioEngine.auditionTrack(start, end, config.musicVolume, finished => {
+        const position = audioEngine.auditionTrack(start, end, finished => {
           if (generation.current !== revision) return;
           const finalTime = finished ? end : auditionPosition.current?.() ?? start;
           notifyFrame.current(finalTime, false); setCursor(finalTime);

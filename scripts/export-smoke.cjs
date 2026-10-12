@@ -68,16 +68,22 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const inputs = pictures.map((base64, index) => ({ name: 'IMG_00' + (index + 1) + '.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') }));
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(inputs);
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
+  await page.getByRole('tab', { name: 'Escenas', exact: true }).click();
   await page.getByRole('button', { name: /Individual \(1 foto por escena\)/ }).click();
+  await page.getByRole('tab', { name: 'Encuadre', exact: true }).click();
   await page.getByRole('button', { name: /Rellenar cuadro \(recortar\)/ }).click();
+  await page.getByRole('tab', { name: 'Textos', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Mostrar textos', exact: true }).uncheck();
+  await page.getByRole('tab', { name: 'Música', exact: true }).click();
   await page.getByLabel('Música', { exact: true }).selectOption('chill');
+  await page.getByRole('tab', { name: 'Ritmo', exact: true }).click();
   for (let i = 0; i < 10; i++) await page.getByLabel('Duración de las escenas').press('ArrowRight');
   assert.equal(await page.getByLabel('Duración de las escenas').inputValue(), '2.5');
   await page.getByRole('button', { name: 'Línea de tiempo', exact: true }).click();
   await page.getByRole('button', { name: 'Todas: corte directo', exact: true }).click();
   for (let i = 1; i <= 4; i++) await page.getByLabel('Movimiento IMG_00' + i + '.png').selectOption('static');
   await page.getByRole('button', { name: 'Editor', exact: true }).click();
+  await page.getByRole('tab', { name: 'Encuadre', exact: true }).click();
   await page.getByRole('button', { name: 'Encuadrar foto', exact: true }).click();
   const right = page.getByRole('button', { name: '↷ Girar 90° a la derecha', exact: true }), left = page.getByRole('button', { name: '↶ Girar 90° a la izquierda', exact: true });
   await right.click(); await pause(750);
@@ -103,9 +109,12 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   await page.reload(); await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(inputs);
   await page.getByRole('button', { name: 'Reproducir vista previa', exact: true }).waitFor();
   if (totem) {
-    await page.getByLabel('Formato', { exact: true }).selectOption('totem-' + outputRotation);
-    await page.getByLabel('Título', { exact: true }).fill('TOTEM TV');
-    await page.getByRole('checkbox', { name: 'Mostrar textos', exact: true }).check();
+    await page.getByRole('tab', { name: 'Formato', exact: true }).click();
+  await page.getByLabel('Formato', { exact: true }).selectOption('totem-' + outputRotation);
+    await page.getByRole('tab', { name: 'Textos', exact: true }).click();
+  await page.getByLabel('Título', { exact: true }).fill('TOTEM TV');
+    await page.getByRole('tab', { name: 'Textos', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Mostrar textos', exact: true }).check();
     await pause(750);
     const before = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
     assert.equal(before.config.outputRotation, outputRotation); assert.equal(before.config.width, 1080);
@@ -134,6 +143,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.equal(await page.evaluate(() => document.hidden), true, 'La pestaña de la app realmente queda oculta');
   const pausedProgress = await page.evaluate(() => document.querySelector('progress[aria-label="Avance de exportación"]')?.value);
   await pause(3500);
+  if (process.argv[5] !== 'webm') await page.waitForFunction(() => window.exportProbe.frames.filter(frame => frame.hidden).length > 45, { timeout: 90000 });
   const whileHidden = await page.evaluate(() => ({ hidden: document.hidden, progress: document.querySelector('progress[aria-label="Avance de exportación"]')?.value ?? (document.body.innerText.includes('Elegir ubicación y guardar video') ? 100 : 0), frames: window.exportProbe.frames.filter(frame => frame.hidden).length }));
   assert.equal(whileHidden.hidden, true);
   if (process.argv[5] === 'webm') {
@@ -141,7 +151,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.ok(await page.evaluate(() => document.body.innerText.includes('Grabación en pausa')));
     await page.bringToFront();
   } else {
-    assert.ok(whileHidden.progress > 15); assert.ok(whileHidden.frames > 45, 'La grabación conserva fotogramas en segundo plano');
+    assert.ok(whileHidden.progress > pausedProgress); assert.ok(whileHidden.frames > 45, 'La grabación conserva fotogramas en segundo plano');
   }
   for (let i = 0; process.argv[5] !== 'webm' && i < 300; i++) {
     if (await page.evaluate(() => document.body.innerText.includes('Grabación completa: volvé a esta pestaña para verificar y guardar') || document.body.innerText.includes('Elegir ubicación y guardar video'))) break;
@@ -233,7 +243,8 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert.equal(await page.getByRole('button', { name: 'Cancelar grabación', exact: true }).count(), 0);
   assert.equal(await save.count(), 0); assert.deepEqual(errors, []);
   if (totem) {
-    await page.getByLabel('Formato', { exact: true }).selectOption('1080x1920'); await pause(750);
+    await page.getByRole('tab', { name: 'Formato', exact: true }).click();
+  await page.getByLabel('Formato', { exact: true }).selectOption('1080x1920'); await pause(750);
     const normal = await page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
     assert.equal(normal.config.outputRotation, 0); assert.equal(normal.slides[0].photos[0].framing.rotation, 90);
   }

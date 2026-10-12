@@ -12,9 +12,9 @@
     "semantic_hash": ""
   },
   "electron/main.cjs": {
-    "mtime": 1791781708.335018,
-    "seen": 1791784748.148411,
-    "ast_hash": "7ca1a50b9dc28497a9c5172010bc1601",
+    "mtime": 1791788630.0879786,
+    "seen": 1791789966.9593678,
+    "ast_hash": "1609c9ee4d2a9d7e114f804a9834e476",
     "semantic_hash": ""
   },
   "package.json": {
@@ -30,9 +30,9 @@
     "semantic_hash": ""
   },
   "scripts/browser-smoke.cjs": {
-    "mtime": 1791752107.3641393,
-    "seen": 1791784748.148411,
-    "ast_hash": "32c5bfac60117e3a98eeddbad0b81831",
+    "mtime": 1791789134.7501965,
+    "seen": 1791789966.9593678,
+    "ast_hash": "e525f560ab001ed53cafb6d47032cd1a",
     "semantic_hash": ""
   },
   "scripts/desktop-smoke.cjs": {
@@ -42,27 +42,27 @@
     "semantic_hash": ""
   },
   "scripts/encoding-smoke.cjs": {
-    "mtime": 1791709014.7974102,
-    "seen": 1791784748.148411,
-    "ast_hash": "3619fde3c88337d457f33e51b963f913",
+    "mtime": 1791789847.2357645,
+    "seen": 1791789966.9593678,
+    "ast_hash": "9e270b46a7ea2f048fd89597c3da24c1",
     "semantic_hash": ""
   },
   "scripts/entrance-clips-smoke.cjs": {
-    "mtime": 1791779393.9618993,
-    "seen": 1791784748.148411,
-    "ast_hash": "13dbccf9ba9ee36fe1c54c8d1a068d99",
+    "mtime": 1791790186.569015,
+    "seen": 1791790241.4890842,
+    "ast_hash": "87a16583b596a19a5490986966ad67f7",
     "semantic_hash": ""
   },
   "scripts/export-fallback-smoke.cjs": {
-    "mtime": 1791708579.000956,
-    "seen": 1791784748.148411,
-    "ast_hash": "378de4b2980dc3466d351804c731ef71",
+    "mtime": 1791789350.0746658,
+    "seen": 1791789966.9593678,
+    "ast_hash": "2fb5309f7560e6155b50614731bfbe9d",
     "semantic_hash": ""
   },
   "scripts/export-smoke.cjs": {
-    "mtime": 1791709203.6963904,
-    "seen": 1791784748.148411,
-    "ast_hash": "e73a3a79fafd86c39faf0ef0d98ebd4c",
+    "mtime": 1791789619.1467645,
+    "seen": 1791789966.9593678,
+    "ast_hash": "0f0f2d685c4395734596c95fd329d400",
     "semantic_hash": ""
   },
   "scripts/final-photo-smoke.cjs": {
@@ -72,15 +72,15 @@
     "semantic_hash": ""
   },
   "scripts/fit-smoke.cjs": {
-    "mtime": 1791697526.4723866,
-    "seen": 1791784748.148411,
-    "ast_hash": "6ec64fe79c7af731b72a468c2efa62c1",
+    "mtime": 1791789618.708544,
+    "seen": 1791789966.9593678,
+    "ast_hash": "eb1ab158646acb2f429e7778bdaf3092",
     "semantic_hash": ""
   },
   "scripts/folder-selection-smoke.cjs": {
-    "mtime": 1791766034.9758444,
-    "seen": 1791784748.148411,
-    "ast_hash": "a43a8ca9ec23e7325c55209aadf61a5e",
+    "mtime": 1791789134.7501965,
+    "seen": 1791789966.9593678,
+    "ast_hash": "e8670e31a12b9bb2c308d12af051d8af",
     "semantic_hash": ""
   },
   "scripts/framing-smoke.cjs": {
@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "scripts/optimization-smoke.cjs": {
-    "mtime": 1791697574.895794,
-    "seen": 1791784748.148411,
-    "ast_hash": "fd34248c428ca26464d4419c458b8f7a",
+    "mtime": 1791789134.7752812,
+    "seen": 1791789966.9593678,
+    "ast_hash": "629296b8d7e4fa4a77ef3f8b5d578e41",
     "semantic_hash": ""
   },
   "scripts/production-smoke.cjs": {
@@ -132,9 +132,9 @@
     "semantic_hash": ""
   },
   "scripts/reconnect-smoke.cjs": {
-    "mtime": 1791699434.294144,
-    "seen": 1791784748.148411,
-    "ast_hash": "ebd5a9e6c2bfe2f7690dca9a09fee0ba",
+    "mtime": 1791789436.1447005,
+    "seen": 1791789966.9593678,
+    "ast_hash": "1ebfcaa126129f835b79ad078df89051",
     "semantic_hash": ""
   },
   "scripts/restoration-smoke.cjs": {
@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "scripts/transitions-smoke.cjs": {
-    "mtime": 1791697526.7729683,
-    "seen": 1791784748.148411,
-    "ast_hash": "a2494afd3888148c171471bd115a4799",
+    "mtime": 1791789315.0845387,
+    "seen": 1791789966.9593678,
+    "ast_hash": "c3ba25457e56db437286a17bcc0e91f3",
     "semantic_hash": ""
   },
   "scripts/workspace-layout-smoke.cjs": {
@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1791784583.147596,
-    "seen": 1791785401.774623,
-    "ast_hash": "3880ccca5c67d56a4a9a672c51b709f0",
+    "mtime": 1791788573.3462698,
+    "seen": 1791789966.9593678,
+    "ast_hash": "ab1542caf8a8ffdcc6d4c370c0d97ec3",
     "semantic_hash": ""
   },
   "src/components/ClientInputPanel.tsx": {
@@ -192,9 +192,9 @@
     "semantic_hash": ""
   },
   "src/components/EntranceControls.tsx": {
-    "mtime": 1791783674.581938,
-    "seen": 1791784748.148411,
-    "ast_hash": "7394f45be5f211017d808782c495f3b7",
+    "mtime": 1791788573.6038406,
+    "seen": 1791789966.9593678,
+    "ast_hash": "ed1bf4e59e9d47f641022e3a458b0a41",
     "semantic_hash": ""
   },
   "src/components/ExportModal.tsx": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "src/components/MusicTimeline.tsx": {
-    "mtime": 1791787915.5918252,
-    "seen": 1791788147.6009152,
-    "ast_hash": "bbd37133917259d9de375ef3eea31d6e",
+    "mtime": 1791788572.9147048,
+    "seen": 1791789966.9593678,
+    "ast_hash": "b62b8eb6842b4a1fa05eca3bde55e97b",
     "semantic_hash": ""
   },
   "src/components/Navbar.tsx": {
@@ -240,9 +240,9 @@
     "semantic_hash": ""
   },
   "src/components/PhotoFramingControls.tsx": {
-    "mtime": 1791775068.4388847,
-    "seen": 1791784748.148411,
-    "ast_hash": "e01311431c6070723cc8b019fac0a721",
+    "mtime": 1791789134.748263,
+    "seen": 1791789966.9593678,
+    "ast_hash": "f041e2c99d6d0e350d565bc23d43eb11",
     "semantic_hash": ""
   },
   "src/components/PremiereInspectorModal.tsx": {
@@ -264,15 +264,15 @@
     "semantic_hash": ""
   },
   "src/components/TimelineView.tsx": {
-    "mtime": 1791766564.0322921,
-    "seen": 1791784748.148411,
-    "ast_hash": "8577eaeb8c1becae4b7d8252e465f43a",
+    "mtime": 1791788630.512657,
+    "seen": 1791789966.9593678,
+    "ast_hash": "ccc1c637a0efce2cecd168ec7abed42d",
     "semantic_hash": ""
   },
   "src/components/VideoPreviewPlayer.tsx": {
-    "mtime": 1791784577.0751956,
-    "seen": 1791785401.774623,
-    "ast_hash": "037add363d8d1f9b8a3a865c224a7eec",
+    "mtime": 1791788573.0882285,
+    "seen": 1791789966.9593678,
+    "ast_hash": "cf1830d977085e13e72d3fef215df8e8",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -288,9 +288,9 @@
     "semantic_hash": ""
   },
   "src/utils/audioSynthesizer.ts": {
-    "mtime": 1791775070.4007006,
-    "seen": 1791784748.148411,
-    "ast_hash": "efe7c27385183164aa5660de26bb1f1f",
+    "mtime": 1791788572.7486014,
+    "seen": 1791789966.9593678,
+    "ast_hash": "45417c519efa6c0ee1d5f46f7fb207d9",
     "semantic_hash": ""
   },
   "src/utils/beatDetection.ts": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "src/utils/canvasRenderer.ts": {
-    "mtime": 1791784576.890914,
-    "seen": 1791785401.774623,
-    "ast_hash": "21b865e479fbb4acfc84ba96d5be4289",
+    "mtime": 1791789134.7462733,
+    "seen": 1791789966.9593678,
+    "ast_hash": "2c83edb3c123df46e0797722744a72fe",
     "semantic_hash": ""
   },
   "src/utils/clipFrames.ts": {
@@ -354,15 +354,15 @@
     "semantic_hash": ""
   },
   "src/utils/importPhotos.ts": {
-    "mtime": 1791769441.3841386,
-    "seen": 1791784748.148411,
-    "ast_hash": "92dbd5c20bc3b86fc38a9face8a8243b",
+    "mtime": 1791789666.8738189,
+    "seen": 1791789966.9593678,
+    "ast_hash": "26aae859ce229edc01472a1b3cbe324a",
     "semantic_hash": ""
   },
   "src/utils/localFileLinks.ts": {
-    "mtime": 1791779239.3755836,
-    "seen": 1791784748.148411,
-    "ast_hash": "90bc7dc4762152a653380c6a6d70d2c5",
+    "mtime": 1791789134.7473018,
+    "seen": 1791789966.9593678,
+    "ast_hash": "74697999053f63316d4c833f05e05453",
     "semantic_hash": ""
   },
   "src/utils/musicTrim.ts": {
@@ -378,9 +378,9 @@
     "semantic_hash": ""
   },
   "src/utils/photoFraming.ts": {
-    "mtime": 1791766523.1458707,
-    "seen": 1791784748.148411,
-    "ast_hash": "53bbf81509c8cb922df0a427ea3b7eb5",
+    "mtime": 1791788573.8454027,
+    "seen": 1791789966.9593678,
+    "ast_hash": "e4bdaa7eed01cbcf0792795cc2ae031b",
     "semantic_hash": ""
   },
   "src/utils/photoParser.ts": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/utils/projectStorage.ts": {
-    "mtime": 1791778856.1330576,
-    "seen": 1791784748.148411,
-    "ast_hash": "3e07954eb7648f2f7ff9fc8e140d1357",
+    "mtime": 1791789521.270304,
+    "seen": 1791789966.9593678,
+    "ast_hash": "21ab7d5c1c7d2aa6b69a290493697cef",
     "semantic_hash": ""
   },
   "src/utils/reconnectPhotos.ts": {
@@ -621,6 +621,30 @@
     "mtime": 1791784644.7666793,
     "seen": 1791785401.774623,
     "ast_hash": "db163ecf61781e6dd6270d908d26b510",
+    "semantic_hash": ""
+  },
+  "electron/permissions.cjs": {
+    "mtime": 1791788629.7605505,
+    "seen": 1791789966.9593678,
+    "ast_hash": "28547293a9a215e7f789d781891c636c",
+    "semantic_hash": ""
+  },
+  "scripts/audit-smoke.cjs": {
+    "mtime": 1791789350.6459374,
+    "seen": 1791789966.9593678,
+    "ast_hash": "4bda0b275fa56f12b98b70c1a75c9bd6",
+    "semantic_hash": ""
+  },
+  "tests/audit.test.ts": {
+    "mtime": 1791789521.8698761,
+    "seen": 1791789966.9593678,
+    "ast_hash": "e5cfba1ed865dc7d658eb3cdcf2e1264",
+    "semantic_hash": ""
+  },
+  "AUDITORIA.md": {
+    "mtime": 1791790092.477239,
+    "seen": 1791790241.4900825,
+    "ast_hash": "247fc213fab82a11d1b1c103d1ab8488",
     "semantic_hash": ""
   }
 }

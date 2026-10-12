@@ -60,17 +60,27 @@ export default function App() {
   const preview = useRef<PreviewHandle>(null), importAbort = useRef<AbortController | null>(null);
   const urls = useRef(new Set<string>());
   const { config, rawText, slides, library } = project;
+  const latestProject = useRef(project); latestProject.current = project;
   const reconnect = library.filter(photo => !photo.previewUrl).length;
   const connectedCount = library.length - reconnect;
   const selectedCount = slides.reduce((sum, slide) => sum + slide.photos.length, 0);
   const totalDuration = sequenceDuration(slides, config);
   useEffect(() => {
+    setSaveStatus('Guardando…');
     const timer = window.setTimeout(() => {
       try { localStorage.setItem(STORAGE_KEY,serializeProject(project)); setSaveStatus('Guardado en este navegador'); }
       catch { setSaveStatus('No se pudo guardar automáticamente. Descargá el proyecto JSON.'); }
     },600);
     return () => window.clearTimeout(timer);
   }, [project]);
+  useEffect(() => {
+    const flush = () => {
+      try { localStorage.setItem(STORAGE_KEY, serializeProject(latestProject.current)); }
+      catch { /* The regular autosave reports storage failures while the page is open. */ }
+    };
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, []);
   useEffect(() => () => { importAbort.current?.abort(); urls.current.forEach(url => URL.revokeObjectURL(url)); audioEngine.stop(); }, []);
   const notify = (value: string) => setMessage(value);
   const changeConfig = (newConfig: SequenceConfig) => setProject(prev => updateProjectConfig(prev, newConfig));
@@ -285,6 +295,8 @@ export default function App() {
   };
   const clearMusic = () => {
     linkEpoch.current++; audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value + 1);
+    setProject(previous => ({ ...previous, config: { ...previous.config, musicFingerprint: undefined, musicTrim: undefined,
+      ...(previous.config.entrance ? { entrance: { ...previous.config.entrance, beatTimes: [] } } : {}) } }));
     if (!reconnect) setLinkPermissionNeeded(false);
     if (project.localLinkId) void rememberLocalLinks(project.localLinkId, [], null).catch(() => notify('No se pudo quitar el vínculo guardado de la música.'));
   };
@@ -334,7 +346,10 @@ export default function App() {
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onAuditionStart={pauseForAudition} onAuditionFrame={syncAudition} onMusicUpload={event => void uploadMusic(event)} onChoosePhotos={supportsLocalLinks() ? folder => void pickPhotos(folder) : undefined} onChooseMusic={supportsLocalLinks() ? () => void pickMusic() : undefined} musicName={musicName} musicRevision={musicRevision} onClearMusic={clearMusic} busy={busy || importing || purgingCache} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing || purgingCache}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
-              onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
+              onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => {
+                const photo = prev.slides[slideIndex]?.photos[photoIndex];
+                return photo ? setProjectPhotoMotion(prev, [photo.id], motion) : prev;
+              })} /></fieldset></Suspense>}
         </div>
         <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} onPhotoAutoRotate={autoRotatePhotos} onPhotoMotion={changePhotoMotion} onClipStart={(id, start) => setProject(previous => updateClipStart(previous, id, start))} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} framingToolsVisible={tab !== 'editor' || editorSection === 3} /></div>
       </div>

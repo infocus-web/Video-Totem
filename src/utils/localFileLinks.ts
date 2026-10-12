@@ -16,8 +16,9 @@ export const supportsLocalLinks = () => !!(window as PickerWindow).showOpenFileP
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('autoreel-local-links', 1);
+    let failed = false;
     request.onupgradeneeded = () => request.result.createObjectStore('projects');
-    request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
+    request.onsuccess = () => { if (failed) { request.result.close(); return; } request.result.onversionchange = () => request.result.close(); resolve(request.result); };
     request.onerror = () => reject(request.error);
     request.onblocked = () => reject(new Error('Cerrá otras pestañas de AutoReel para recordar los archivos.'));
   });

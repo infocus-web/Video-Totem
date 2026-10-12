@@ -13,6 +13,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import type { SequenceSlide, SequenceConfig, PhotoItem, TransitionType } from '../types';
+import { sequenceDuration } from '../utils/entrance';
 
 interface TimelineViewProps {
   slides: SequenceSlide[];
@@ -35,7 +36,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   config,
   onApplyGlobalTransition,
 }) => {
-  const totalDuration = slides.reduce((acc, s) => acc + s.duration, 0);
+  const totalDuration = sequenceDuration(slides, config);
   const totalPhotosCount = slides.reduce((acc, s) => acc + s.photos.length, 0);
 
   if (slides.length === 0) {

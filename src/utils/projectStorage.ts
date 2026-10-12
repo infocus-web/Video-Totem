@@ -55,8 +55,11 @@ export function decodeProject(raw: string): SavedProject {
     if (!object(value) || typeof value.id !== 'string' || typeof value.filename !== 'string' || !value.id || !value.filename) throw new Error('Foto inválida en el proyecto.');
     const relativePath = string(value.relativePath) || value.filename;
     if (/(^|[/\\])\.\.([/\\]|$)/.test(relativePath) || /^[/\\]|^[A-Za-z]:/.test(relativePath)) throw new Error('Ruta relativa de foto inválida.');
+    const duration = Number(value.mediaDuration), start = Number(value.clipStart);
+    const mediaDuration = Number.isFinite(duration) ? Math.max(0.01, Math.min(36000, duration || 1)) : 1;
+    const clipStart = Number.isFinite(start) ? Math.max(0, Math.min(mediaDuration - 0.001, start)) : 0;
     return { id: string(value.id), filename: value.filename, relativePath, fullLocalPath: string(value.fullLocalPath), previewUrl: '',
-      ...(value.mediaType === 'video' ? { mediaType: 'video' as const, mediaDuration: Math.max(0.01, Math.min(36000, Number(value.mediaDuration) || 1)), clipStart: Math.max(0, Math.min(Number(value.mediaDuration) || 1, Number(value.clipStart) || 0)) } : {}),
+      ...(value.mediaType === 'video' ? { mediaType: 'video' as const, mediaDuration, clipStart } : {}),
       ...(value.framing === undefined ? {} : { framing: normalizeFraming(value.framing) }),
       number: string(value.number), orientation: value.orientation === 'horizontal' ? 'horizontal' : value.orientation === 'vertical' ? 'vertical' : 'square',
       width: Math.max(1, Math.min(50000, Number(value.width) || 1080)), height: Math.max(1, Math.min(50000, Number(value.height) || 1920)),
@@ -70,8 +73,12 @@ export function decodeProject(raw: string): SavedProject {
     if (!object(value) || !Array.isArray(value.photos) || !value.photos.length || value.photos.length > 3) throw new Error('Escena inválida.');
     const photos = value.photos.map(photo => {
       const parsed = readPhoto(photo);
-      if (!byId.has(parsed.id)) throw new Error('La escena referencia una foto inexistente.');
-      return { ...byId.get(parsed.id)!, ...parsed };
+      const original = byId.get(parsed.id);
+      if (!original) throw new Error('La escena referencia una foto inexistente.');
+      const pathKey = (value: string) => value.replace(/\\/g, '/').normalize('NFC').toLowerCase();
+      if (pathKey(parsed.filename) !== pathKey(original.filename) || pathKey(parsed.relativePath!) !== pathKey(original.relativePath!) || parsed.mediaType !== original.mediaType)
+        throw new Error('La escena referencia un archivo diferente al de la biblioteca.');
+      return { ...original, ...parsed };
     });
     const layout = value.layout === 'split-3' ? 'split-3' : value.layout === 'split-2' ? 'split-2' : 'single';
     if ((layout === 'single' && photos.length !== 1) || (layout === 'split-2' && photos.length !== 2) || (layout === 'split-3' && photos.length !== 3)) throw new Error('El diseño no coincide con las fotos de la escena.');

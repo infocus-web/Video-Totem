@@ -15,6 +15,10 @@ let browser;
     return canvas.toDataURL('image/jpeg').split(',')[1];
   });
   const files = ['IMG_001.jpg', 'IMG_002.jpg'].map(name => ({ name, mimeType: 'image/jpeg', buffer: Buffer.from(base64, 'base64') }));
+  await page.addInitScript(() => {
+    const fixture = sessionStorage.getItem('audit-reconnect');
+    if (fixture) { localStorage.setItem('autoreel-project-v1', fixture); sessionStorage.removeItem('audit-reconnect'); }
+  });
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('autoreel-project-v1')));
   const save = async () => page.waitForTimeout(800);
   const importFolder = async () => {
@@ -56,7 +60,7 @@ let browser;
   await page.evaluate(before => {
     before.library.forEach((photo, i) => { photo.id = 'legacy-' + i; photo.relativePath = photo.filename; });
     before.slides.forEach(slide => slide.photos.forEach((photo, i) => { photo.id = 'legacy-' + i; photo.relativePath = photo.filename; }));
-    localStorage.setItem('autoreel-project-v1', JSON.stringify(before));
+    sessionStorage.setItem('audit-reconnect', JSON.stringify(before));
   }, before);
   await page.reload();
   await importFolder();
@@ -67,7 +71,7 @@ let browser;
   await page.evaluate(() => {
     const data = JSON.parse(localStorage.getItem('autoreel-project-v1'));
     data.library.push({ ...data.library[0], id: 'missing.jpg', filename: 'missing.jpg', relativePath: 'missing.jpg' });
-    localStorage.setItem('autoreel-project-v1', JSON.stringify(data));
+    sessionStorage.setItem('audit-reconnect', JSON.stringify(data));
   });
   await page.reload();
   await page.getByLabel('Elegir fotos', { exact: true }).setInputFiles(files);

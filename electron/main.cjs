@@ -1,9 +1,9 @@
 const { app, BrowserWindow, Menu, protocol, net, session, dialog, powerSaveBlocker } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { trusted, canCheck, canRequest } = require('./permissions.cjs');
 
 const origin = 'autoreel://studio';
-const trusted = value => { try { const url = new URL(value); return url.protocol === 'autoreel:' && url.hostname === 'studio'; } catch { return false; } };
 protocol.registerSchemesAsPrivileged([{ scheme: 'autoreel', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 app.setName('AutoReel Studio');
 app.setPath('userData', process.env.AUTOREEL_TEST_DATA || path.join(app.getPath('appData'), 'AutoReel Studio'));
@@ -43,9 +43,8 @@ if (single) app.whenReady().then(() => {
       return await net.fetch(pathToFileURL(target).toString());
     } catch { return new Response(null, { status: 404 }); }
   });
-  const allowed = new Set(['fileSystem', 'clipboard-read', 'clipboard-sanitized-write', 'fullscreen']);
-  session.defaultSession.setPermissionCheckHandler((contents, permission, requestingOrigin) => !!contents && trusted(contents.getURL()) && trusted(requestingOrigin) && allowed.has(permission));
-  session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => callback(trusted(contents.getURL()) && trusted(details.requestingUrl) && details.isMainFrame && allowed.has(permission)));
+  session.defaultSession.setPermissionCheckHandler(canCheck);
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => callback(canRequest(contents, permission, details)));
   session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
     // Solo recursos empaquetados y medios locales. El ejecutable no carga la web de Vercel.
     callback({ cancel: !/^(autoreel:|blob:|data:|file:)/.test(details.url) });

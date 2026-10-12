@@ -55,13 +55,14 @@ let activeBrowser;
   await xmlDownload.saveAs(path.resolve('artifacts/sequence.xml'));
   const xml=fs.readFileSync('artifacts/sequence.xml','utf8');
   assert.ok(xml.includes('file://localhost/D:/Fotos/Sesion/IMG_004.jpg'));
-  const inspection=await page.evaluate(async xml=>{
-    const {parsePremiereXml}=await import('/src/utils/premiereParser.ts');
-    const result=parsePremiereXml(xml);
-    let invalid=false;try{parsePremiereXml('<garbage/>');}catch{invalid=true;}
-    return {duration:result.totalDurationSeconds,clips:result.clipsCount,tracks:result.videoTracksCount,invalid};
-  },xml);
-  assert.equal(inspection.clips,5); assert.equal(inspection.tracks,2); assert.equal(inspection.invalid,true);
+  await page.getByRole('button',{name:'Cerrar ventana'}).click();
+  await page.getByRole('button',{name:'Inspector XML',exact:true}).click();
+  await page.getByLabel('Archivo XML de Premiere').setInputFiles({name:'sequence.xml',mimeType:'application/xml',buffer:Buffer.from(xml)});
+  await page.getByText(/2 pistas de video · 5 clips/).waitFor();
+  assert.equal(await page.getByRole('dialog').locator('tbody tr').count(),5);
+  await page.getByLabel('Archivo XML de Premiere').setInputFiles({name:'invalid.xml',mimeType:'application/xml',buffer:Buffer.from('<garbage/>')});
+  await page.getByRole('dialog').getByRole('alert').waitFor();
+  const inspection={clips:5,tracks:2,invalid:true};
   await page.getByRole('button',{name:'Cerrar ventana'}).click();
   await page.getByRole('button',{name:'Editor',exact:true}).click();
   await goToSection('Fotos del proyecto');
