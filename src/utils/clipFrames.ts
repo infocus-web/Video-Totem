@@ -10,7 +10,7 @@ export class ClipFrames {
     this.signal.throwIfAborted();
     const scene = sceneAtTime(this.slides, time, this.config), current = this.slides[scene.index];
     const next = !this.config.entrance?.enabled && current?.transition !== 'none' ? this.slides[scene.index + 1] : undefined;
-    const needed = [current, next].flatMap(slide => slide?.photos || []).filter(photo => photo.mediaType === 'video');
+    const needed = scene.finalPhoto ? [] : [current, next].flatMap(slide => slide?.photos || []).filter(photo => photo.mediaType === 'video');
     for (const [id, value] of this.clips) if (!needed.some(photo => photo.id === id)) { value.input.dispose(); this.clips.delete(id); }
     for (const photo of needed) {
       let clip = this.clips.get(photo.id);

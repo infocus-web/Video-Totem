@@ -55,7 +55,7 @@ Para probar localmente, cargá la canción, elegí un inicio y final reconocible
 3. En **Entrada**, activá el modo para pantalla gigante. Configura 1920 × 1080, sin giro de salida y 60 FPS. Mantiene tus escenas, orden y encuadres como fuentes; las repite en ciclo.
 4. Cargá la canción: por defecto el video empieza desde cero y dura todo el tema. Podés cambiarlo con los marcadores de recorte. **Segundos por foto** define la duración fija inicial (por ejemplo, 2 s). **Golpes desde (s)** elige cuándo empezar a seguir la música (por ejemplo, segundo 30). **Contador → Desde (s)** elige cuándo empezar a acelerar, con cuenta de 5 → 0 o 10 → 0. **Al final** ubica automáticamente el contador en los últimos 5/10 segundos. Ejemplo: una canción de 180 s, fotos cada 2 s hasta el segundo 30, golpes del 30 al 170, contador de 10 del 170 al 180. El MP4 dura 180 s.
 5. Tocá **Detectar**. El análisis local identifica ataques, priorizando el bombo. **Cada 1/2/4/8** cambia con esa cantidad de golpes; **Desfase** adelanta o retrasa los cortes. **Cortes** permite editar segundos absolutos, con punto decimal y separados por coma; tocá **Aplicar**.
-6. Durante el contador, las escenas aceleran progresivamente desde el ritmo anterior hasta una por fotograma. A 60 FPS, el mínimo visible es 1/60 s (16,7 ms). Si el cero coincide con el final del tema, aparece en el último cuadro, sin agregar silencio ni alargar el video. Si el contador termina antes, el cero se sostiene un segundo dentro de la canción y luego desaparece; las escenas siguen en ciclo a velocidad máxima hasta que termina la música.
+6. Durante el contador, las escenas aceleran progresivamente desde el ritmo anterior hasta una por fotograma. A 60 FPS, el mínimo visible es 1/60 s (16,7 ms). Si el cero coincide con el final del tema, aparece en el último cuadro, sin agregar silencio ni alargar el video. Si el contador termina antes, el cero se sostiene un segundo dentro de la canción y luego desaparece; se muestra la Foto final elegida hasta que termina la música, o las escenas siguen en ciclo a velocidad máxima si no elegís una foto fija.
 7. Exportá el MP4. Los cuadros, clips, contador y música usan el mismo cronograma. La codificación puede tardar más que la duración del video; no saltea cuadros para terminar antes. Entrada y clips requieren Chrome/Edge con codificación por cuadros, sin recurrir a una grabación que altere los tiempos.
 
 **Opacidad**, en Entrada, ajusta el contador de 0% (oculto) a 100% (visible), incluyendo el fondo oscuro que lo acompaña. Se ve al instante en la vista previa, se conserva en el MP4 y se guarda en el proyecto. No modifica los tiempos ni la aceleración. Los proyectos anteriores mantienen 100%.
@@ -100,3 +100,23 @@ Prueba reproducible de navegador: `scripts/entrance-clips-smoke.cjs` recibe como
 Archivos de este ajuste: `src/types/index.ts` y `src/utils/entrance.ts` guardan y calculan las tres etapas; `EntranceControls.tsx` las presenta; `App.tsx` actualiza la duración real al cargar/reconectar audio; `VideoPreviewPlayer.tsx`, `videoEncoder.ts` y `videoRecorder.ts` empiezan la música desde cero. `beatDetection.ts` analiza canciones largas sin desbordar argumentos. `FaqGuideModal.tsx`, README y este documento explican el flujo; `tests/entrance.test.ts` y `scripts/entrance-clips-smoke.cjs` verifican tiempos, MP4 y audio.
 
 Entrada admite canciones de más de cinco minutos, respetando el límite existente de 50 MB por audio. Exportaciones largas tardan más y generan archivos de mayor tamaño. Los proyectos anteriores de Entrada pasan a canción completa al reconectar el audio y reciben la duración inicial predeterminada; revisá el segundo de sincronización y el contador. Los montajes normales y clips mantienen su comportamiento. No se agregaron dependencias.
+
+
+## Foto fija después del contador
+
+En **Entrada → Contador → Foto final**, elegí una foto del montaje. Al llegar a cero se muestra sola, sin movimiento, hasta que termina el tramo de música. Conserva su giro, posición y zoom. El cero sigue visible brevemente, respetando la opacidad del contador. El menú incluye solo fotos, no clips, y muestra una miniatura de la elegida. **Sin foto fija** mantiene el ciclo anterior.
+
+El panel indica cuántos segundos quedará fija. Si usás **Al final**, apenas aparece en el último cuadro exportado: adelantá el contador para darle tiempo en pantalla. La canción y la duración total del video no se prolongan.
+
+La elección se guarda en JSON por identificador; reconectar los originales y reagrupar conserva la elección. Si quitás esa foto del montaje, elegí otra o desactivá la foto fija antes de reproducir/exportar. Los proyectos anteriores mantienen su comportamiento. El XML de Premiere continúa sin representar la etapa de Entrada. No se agregaron dependencias.
+
+Archivos modificados:
+- `src/types/index.ts` y `src/utils/entrance.ts`: configuración, normalización, etapa fija y validación.
+- `src/components/EntranceControls.tsx`, `ClientInputPanel.tsx` y `src/App.tsx`: selector, miniatura y fotos disponibles.
+- `src/utils/canvasRenderer.ts`: una sola foto sin movimiento; `clipFrames.ts` y `previewClips.ts`: detienen clips de la escena agrupada durante la foto fija.
+- `src/components/VideoPreviewPlayer.tsx`, `src/utils/videoEncoder.ts` y `videoRecorder.ts`: impiden exportar una foto final que fue quitada.
+- `src/components/FaqGuideModal.tsx`, este documento, `tests/entrance.test.ts` y `scripts/final-photo-smoke.cjs`: ayuda y verificación.
+
+Para probar localmente: `npm test`, `npm run build` y `npm run dev`. Cargá fotos y música, activá Entrada, ubicá el contador antes del final y elegí una foto. Probá la vista previa, la escucha musical, el guardado/reapertura y el MP4. Probá también una foto dentro de un grupo de tres y con movimiento: después del cero debe aparecer sola y quieta. En producción, repetí el flujo después del commit, push y deploy de Vercel; recargá la página. La nueva opción no aparece en el sitio público hasta desplegar estos cambios.
+
+Prueba automática: `node scripts/final-photo-smoke.cjs <ruta-a-playwright> <ruta-a-chrome> <URL-local>`. Requiere FFmpeg/FFprobe solo para verificar el MP4 de prueba; no son dependencias de la app.

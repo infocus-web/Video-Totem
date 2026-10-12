@@ -6,7 +6,7 @@ import { EntranceControls } from './EntranceControls';
 import { MusicTimeline } from './MusicTimeline';
 import { TextOverlayControls } from './TextOverlayControls';
 import { LocalFilePicker } from './LocalFilePicker';
-import type { HorizontalGroupMode, SequenceConfig } from '../types';
+import type { HorizontalGroupMode, SequenceConfig, SequenceSlide } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
 
@@ -15,7 +15,7 @@ interface Props {
   onFramingTargetChange: (target: HTMLDivElement | null) => void;
   rawText: string; onRawTextChange: (value: string) => void;
   config: SequenceConfig; onConfigChange: (config: SequenceConfig) => void;
-  libraryCount: number; selectedCount: number; sceneCount: number;
+  slides: SequenceSlide[]; libraryCount: number; selectedCount: number; sceneCount: number;
   onUploadPhotos: (event: ChangeEvent<HTMLInputElement>) => void;
   onApplySelection: () => void; onUseAll: () => void; onRegroup: () => void;
   onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string; musicRevision: number;
@@ -207,7 +207,7 @@ export function ClientInputPanel(props: Props) {
       </EditorPropertyRow>
     </EditorSection>
     <EditorSection activeSection={activeSection} number={9} title="Entrada de quince" detail="Fotos en ciclo, cambios al golpe de la canción y contador final.">
-      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onChooseMusic={props.onChooseMusic} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onAuditionFrame={props.onAuditionFrame} onEditPhotos={() => props.onSectionChange(3)} />
+      <EntranceControls slides={props.slides} config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onChooseMusic={props.onChooseMusic} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onAuditionFrame={props.onAuditionFrame} onEditPhotos={() => props.onSectionChange(3)} />
     </EditorSection>
     </fieldset>
     </div>

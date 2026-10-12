@@ -98,6 +98,7 @@ export interface EntranceConfig {
   countdownStart: number | null; // null places the countdown at the end of the song.
   countdown: 5 | 10;
   countdownOpacity: number;
+  finalPhotoId: string | null;
   beatTimes: number[];
   beatShift: number;
   everyBeats: number;

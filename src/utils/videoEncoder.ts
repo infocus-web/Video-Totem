@@ -11,7 +11,7 @@ import { prepareTextFonts } from './textOverlay';
 
 export async function encodeVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, bitrate: number, progress: (value: number) => void, phase: (message: string) => void) {
   const checkAbort = () => { if (signal.aborted) throw new DOMException('Exportación cancelada', 'AbortError'); };
-  checkAbort(); validateEntrance(config, audioEngine.getTrack()?.duration ?? null);
+  checkAbort(); validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides);
   const duration = sequenceDuration(slides, config);
   if (!Number.isFinite(duration) || duration <= 0 || (!config.entrance?.enabled && duration > 300)) throw new Error('La exportación admite montajes de hasta 5 minutos; Entrada usa el tramo de música seleccionado.');
   // Prioritize photo detail. The bitrate is also the fallback for encoders without quantizer control.

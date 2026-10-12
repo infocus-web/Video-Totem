@@ -1,7 +1,7 @@
 import type { EntranceConfig, SequenceConfig, SequenceSlide } from '../types/index.ts';
 import { musicRange } from './musicTrim.ts';
 
-export const DEFAULT_ENTRANCE: EntranceConfig = { enabled: false, musicStart: 0, musicEnd: 30, initialDuration: 2, beatStart: 25, countdownStart: null, countdown: 5, countdownOpacity: 1, beatTimes: [], beatShift: 0, everyBeats: 1 };
+export const DEFAULT_ENTRANCE: EntranceConfig = { enabled: false, musicStart: 0, musicEnd: 30, initialDuration: 2, beatStart: 25, countdownStart: null, countdown: 5, countdownOpacity: 1, finalPhotoId: null, beatTimes: [], beatShift: 0, everyBeats: 1 };
 
 export function normalizeEntrance(value: unknown): EntranceConfig {
   const data = value && typeof value === 'object' ? value as Record<string, unknown> : {};
@@ -9,6 +9,7 @@ export function normalizeEntrance(value: unknown): EntranceConfig {
   const musicEnd = bounded('musicEnd', 30, 0.01, 86400), countdown = data.countdown === 10 ? 10 : 5;
   return { enabled: data.enabled === true, musicStart: 0, musicEnd, countdown,
     countdownOpacity: bounded('countdownOpacity', 1, 0, 1),
+    finalPhotoId: typeof data.finalPhotoId === 'string' && data.finalPhotoId.length > 0 && data.finalPhotoId.length <= 20000 ? data.finalPhotoId : null,
     initialDuration: bounded('initialDuration', 2, 0.1, 60),
     beatStart: bounded('beatStart', Math.min(30, Math.max(0, musicEnd - countdown)), 0, musicEnd),
     countdownStart: data.countdownStart == null ? null : bounded('countdownStart', 0, 0, Math.max(0, musicEnd - countdown)),
@@ -75,6 +76,13 @@ export function entranceScene(slides: SequenceSlide[], config: SequenceConfig, t
   const range = musicRange(config, entry.musicEnd);
   const frame = Math.max(0, Math.floor(time * config.fps + 1e-7));
   const start = Math.round((countdownStart(entry, range.end) - range.start) * config.fps), end = start + entry.countdown * config.fps;
+  const finalFrame = Math.ceil(range.duration * config.fps - 1e-8) - 1;
+  // Include the final exported frame when the countdown ends exactly with the song.
+  if (entry.finalPhotoId && frame >= Math.min(end, finalFrame)) {
+    const index = slides.findIndex(slide => slide.photos.some(photo => photo.id === entry.finalPhotoId && photo.mediaType !== 'video'));
+    const finalPhoto = slides[index]?.photos.find(photo => photo.id === entry.finalPhotoId);
+    if (finalPhoto) return { index, progress: 0, elapsed: 0, finalPhoto, countdown: frame < end + config.fps ? 0 : null };
+  }
   const cuts = cutsFor(entry, config.fps, range.start, range.end);
   const lastInterval = cuts.length > 1 ? (cuts.at(-1)! - cuts.at(-2)!) / config.fps : entry.initialDuration;
   const ramp = countdownCuts(entry.countdown, config.fps, lastInterval);
@@ -82,9 +90,8 @@ export function entranceScene(slides: SequenceSlide[], config: SequenceConfig, t
   const step = frame < start ? upperBound(cuts, frame) - 1 : frame < end ? preceding + upperBound(ramp, frame - start) - 1 : preceding + ramp.length + frame - end;
   const sourceIndex = Math.max(0, step) % Math.max(1, slides.length);
   const startFrame = frame < start ? cuts[Math.max(0, step)] : frame < end ? start + ramp[upperBound(ramp, frame - start) - 1] : frame;
-  const finalFrame = Math.ceil(range.duration * config.fps - 1e-8) - 1;
   const nextFrame = frame < start ? cuts[upperBound(cuts,frame)] ?? start : frame < end ? start + (ramp[upperBound(ramp,frame-start)] ?? entry.countdown * config.fps) : frame + 1;
-  return { index: sourceIndex, progress: Math.max(0, Math.min(1, (frame - startFrame) / Math.max(1, nextFrame - startFrame))), elapsed: (frame - startFrame) / config.fps,
+  return { index: sourceIndex, progress: Math.max(0, Math.min(1, (frame - startFrame) / Math.max(1, nextFrame - startFrame))), elapsed: (frame - startFrame) / config.fps, finalPhoto: null,
     countdown: frame < start || frame >= end + config.fps ? null : frame >= end || frame >= finalFrame ? 0 : Math.ceil((end - frame) / config.fps) };
 }
 
@@ -95,9 +102,10 @@ export function entranceSceneStart(index: number, config: SequenceConfig) {
   return (cutsFor(entry, config.fps, range.start, range.end)[index] ?? 0) / config.fps;
 }
 
-export function validateEntrance(config: SequenceConfig, trackDuration: number | null) {
+export function validateEntrance(config: SequenceConfig, trackDuration: number | null, slides?: SequenceSlide[]) {
   const entry = config.entrance;
   if (!entry?.enabled) return;
+  if (entry.finalPhotoId && slides && !slides.some(slide => slide.photos.some(photo => photo.id === entry.finalPhotoId && photo.mediaType !== 'video'))) throw new Error('La foto final ya no está en el montaje. Elegí otra foto en Entrada o desactivá la foto fija.');
   if (trackDuration === null) throw new Error('Cargá o reconectá la canción de la entrada antes de reproducir o exportar.');
   if (config.musicTrack === 'none') throw new Error('Activá la música para la entrada.');
   if (config.width <= config.height || config.outputRotation) throw new Error('La entrada necesita el formato horizontal 16:9.');

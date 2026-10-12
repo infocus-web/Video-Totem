@@ -53,10 +53,10 @@ export function sceneAtTime(slides: SequenceSlide[], time: number, config?: Sequ
   let accumulated = 0;
   for (let index = 0; index < slides.length; index++) {
     if (time < accumulated + slides[index].duration || index === slides.length - 1)
-      return { index, progress: Math.max(0, Math.min(1, (time - accumulated) / slides[index].duration)), elapsed: Math.max(0, time - accumulated), countdown: null };
+      return { index, progress: Math.max(0, Math.min(1, (time - accumulated) / slides[index].duration)), elapsed: Math.max(0, time - accumulated), countdown: null, finalPhoto: null };
     accumulated += slides[index].duration;
   }
-  return { index: 0, progress: 0, elapsed: 0, countdown: null };
+  return { index: 0, progress: 0, elapsed: 0, countdown: null, finalPhoto: null };
 }
 
 export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number, editing = false) {
@@ -124,7 +124,10 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   const transitionWindow = Math.min(0.35, current.duration / 2);
   const transitionProgress = editing || config.entrance?.enabled ? 0 : Math.max(0, (scene.progress * current.duration - current.duration + transitionWindow) / transitionWindow);
   const next = slides[scene.index + 1];
-  drawScene(ctx, current, scene.progress, next && current.transition === 'pan' ? -width * transitionProgress : 0);
+  if (scene.finalPhoto) {
+    const image = images.get(scene.finalPhoto.id);
+    if (image) drawImage(ctx, image, { ...scene.finalPhoto, kenBurns: 'static' }, 0, 0, width, height, 0);
+  } else drawScene(ctx, current, scene.progress, next && current.transition === 'pan' ? -width * transitionProgress : 0);
   if (next && transitionProgress > 0) {
     if (current.transition === 'dissolve' || current.transition === 'fade') drawOverlay(next, transitionProgress);
     else if (current.transition === 'wipe') {

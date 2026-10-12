@@ -9,7 +9,7 @@ export class PreviewClips {
     const scene = sceneAtTime(slides, time, editing ? undefined : config), current = slides[scene.index];
     const next = !config.entrance?.enabled && !editing && current?.transition !== 'none' ? slides[scene.index + 1] : undefined;
     const active = new Set<string>();
-    for (const slide of [current, next]) for (const photo of slide?.photos || []) {
+    for (const slide of scene.finalPhoto ? [] : [current, next]) for (const photo of slide?.photos || []) {
       if (photo.mediaType !== 'video' || !photo.sourceUrl) continue;
       let video = this.videos.get(photo.id);
       if (!video) { video = document.createElement('video'); video.muted = true; video.playsInline = true; video.preload = 'auto'; video.src = photo.sourceUrl; this.videos.set(photo.id, video); }

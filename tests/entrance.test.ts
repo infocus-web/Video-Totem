@@ -58,6 +58,40 @@ test('tema completo admite más de cinco minutos y un último cuadro de duració
   assert.equal(legacy.musicStart,0); assert.equal(legacy.initialDuration,2); assert.equal(legacy.countdownStart,null);
 });
 
+test('foto final elegida queda fija desde cero, también dentro de escenas agrupadas y música recortada', () => {
+  for (const countdown of [5, 10] as const) for (const fps of [24, 30, 60]) {
+    const grouped: SequenceSlide[] = [{ ...slides[0], layout: 'split-3', photos }];
+    const modified = { ...config, fps, musicTrim: { start: 2, end: 25 }, entrance: { ...config.entrance!, countdown, countdownStart: 3, beatStart: 3, finalPhotoId: photos[1].id } };
+    const zero = 3 + countdown - 2;
+    assert.equal(entranceScene(grouped, modified, zero - 1 / fps).finalPhoto, null);
+    for (const time of [zero, zero + 0.5, zero + 2, 23 - 1 / fps]) {
+      const scene = entranceScene(grouped, modified, time);
+      assert.equal(scene.index, 0);
+      assert.equal(scene.finalPhoto?.id, photos[1].id);
+      assert.equal(scene.progress, 0); assert.equal(scene.elapsed, 0);
+      assert.equal(scene.countdown, time < zero + 1 ? 0 : null);
+    }
+    assert.equal(sequenceDuration(grouped, modified), 23);
+  }
+});
+
+test('foto final aparece en el último cuadro si el contador termina al final y no admite clips ni fotos ausentes', () => {
+  const modified = { ...config, entrance: { ...config.entrance!, finalPhotoId: photos[2].id } };
+  assert.equal(entranceScene(slides, modified, 25 - 1 / 60).finalPhoto?.id, photos[2].id);
+  assert.equal(entranceScene(slides, modified, 25 - 2 / 60).finalPhoto, null);
+  assert.doesNotThrow(() => validateEntrance(modified, 25, slides));
+  assert.throws(() => validateEntrance(modified, 25, slides.slice(0, 2)), /foto final/);
+  assert.throws(() => validateEntrance(modified, 25, [{ ...slides[2], photos: [{ ...photos[2], mediaType: 'video' }] }]), /foto final/);
+});
+
+test('JSON conserva la foto final por identificador y proyectos anteriores siguen sin foto fija', () => {
+  const project: SavedProject = { version: 1, rawText: '', library: photos, slides, config: { ...config, entrance: { ...config.entrance!, finalPhotoId: photos[1].id } } };
+  const restored = decodeProject(serializeProject(project));
+  assert.equal(restored.config.entrance?.finalPhotoId, photos[1].id);
+  assert.equal(normalizeEntrance({ finalPhotoId: {} }).finalPhotoId, null);
+  assert.equal(normalizeEntrance({}).finalPhotoId, null);
+});
+
 test('aceleración discreta muestra cada paso, alcanza una foto por cuadro y no intervalos subfotograma', () => {
   for (const fps of [24,30,60]) for (const seconds of [5,10]) for (const initial of [0.5,2,60]) {
     const frames = countdownCuts(seconds,fps,initial), intervals = frames.slice(1).map((frame,i)=>frame-frames[i]);

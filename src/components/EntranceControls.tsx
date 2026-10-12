@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Check, Music2, ScanLine, X } from 'lucide-react';
-import type { SequenceConfig } from '../types';
+import type { SequenceConfig, SequenceSlide } from '../types';
 import { audioEngine } from '../utils/audioSynthesizer';
 import { countdownStart, DEFAULT_ENTRANCE, normalizeEntrance } from '../utils/entrance';
 import { EditorPropertyRow } from './EditorPropertyRow';
@@ -9,8 +9,8 @@ import { MusicTimeline } from './MusicTimeline';
 import { musicRange, setMusicTrim } from '../utils/musicTrim';
 import { LocalFilePicker } from './LocalFilePicker';
 
-interface Props { config: SequenceConfig; onChange: (config: SequenceConfig) => void; musicName: string; musicRevision: number; onUpload: (event: ChangeEvent<HTMLInputElement>) => void; onChooseMusic?: () => void; onError: (message: string) => void; active: boolean; disabled: boolean; onAuditionStart: () => void; onAuditionFrame: (time: number, running: boolean) => void; onEditPhotos: () => void }
-export function EntranceControls({ config, onChange, musicName, musicRevision, onUpload, onChooseMusic, onError, active, disabled, onAuditionStart, onAuditionFrame, onEditPhotos }: Props) {
+interface Props { slides: SequenceSlide[]; config: SequenceConfig; onChange: (config: SequenceConfig) => void; musicName: string; musicRevision: number; onUpload: (event: ChangeEvent<HTMLInputElement>) => void; onChooseMusic?: () => void; onError: (message: string) => void; active: boolean; disabled: boolean; onAuditionStart: () => void; onAuditionFrame: (time: number, running: boolean) => void; onEditPhotos: () => void }
+export function EntranceControls({ slides, config, onChange, musicName, musicRevision, onUpload, onChooseMusic, onError, active, disabled, onAuditionStart, onAuditionFrame, onEditPhotos }: Props) {
   const entry = config.entrance || DEFAULT_ENTRANCE;
   const [analyzing, setAnalyzing] = useState(false), [notice, setNotice] = useState('');
   const [manual, setManual] = useState(() => entry.beatTimes.join(', '));
@@ -19,6 +19,9 @@ export function EntranceControls({ config, onChange, musicName, musicRevision, o
   const trackDuration = audioEngine.getTrack()?.duration;
   const range = musicRange(config, entry.musicEnd);
   const counterStart = countdownStart(entry, range.end);
+  const photos = [...new Map(slides.flatMap(slide => slide.photos).filter(photo => photo.mediaType !== 'video').map(photo => [photo.id, photo])).values()];
+  const finalPhoto = photos.find(photo => photo.id === entry.finalPhotoId);
+  const holdSeconds = Math.max(0, range.end - counterStart - entry.countdown);
   useEffect(() => { setManual((config.entrance?.beatTimes || []).join(', ')); }, [config.entrance?.beatTimes]);
   useEffect(() => { worker.current?.terminate(); worker.current = null; setAnalyzing(false); setNotice(''); }, [musicRevision]);
   useEffect(() => () => worker.current?.terminate(), []);
@@ -63,6 +66,15 @@ export function EntranceControls({ config, onChange, musicName, musicRevision, o
       <EditorPropertyRow label="Momento"><input aria-label="Momento del contador" className="property-range accent-pink-500" type="range" min={range.start} max={Math.max(range.start, range.end - entry.countdown)} step="0.01" value={counterStart} disabled={!trackDuration || disabled} onChange={event => placeCounter(Number(event.target.value))} /></EditorPropertyRow>
       <div className="property-note countdown-timing" role="status">Empieza: {counterStart.toFixed(2)}s · Llega a 0: {(counterStart + entry.countdown).toFixed(2)}s de canción · En el video: {(counterStart - range.start).toFixed(2)}s</div>
       <EditorPropertyRow label="Opacidad" help="Transparencia del contador y su fondo. No cambia el ritmo de las fotos."><input aria-label="Opacidad del contador" type="range" min="0" max="100" step="1" value={Math.round((entry.countdownOpacity ?? 1) * 100)} onChange={event => update({ countdownOpacity: Number(event.target.value) / 100 })} className="property-range accent-indigo-500" /><span className="property-value">{Math.round((entry.countdownOpacity ?? 1) * 100)}%</span></EditorPropertyRow>
+      <EditorPropertyRow label="Foto final" help="Queda sola y sin movimiento desde el cero hasta el final de la música; conserva su encuadre y giro.">
+        <select aria-label="Foto fija después del contador" className="studio-input min-w-0 flex-1" value={entry.finalPhotoId ?? ''} disabled={disabled || !photos.length} onChange={event => update({ finalPhotoId: event.target.value || null })}>
+          <option value="">Sin foto fija · seguir el ciclo</option>
+          {entry.finalPhotoId && !finalPhoto && <option value={entry.finalPhotoId}>Foto fuera del montaje · elegí otra</option>}
+          {photos.map(photo => <option key={photo.id} value={photo.id}>{photo.filename}</option>)}
+        </select>
+        {finalPhoto?.previewUrl && <img src={finalPhoto.previewUrl} alt={'Foto final: ' + finalPhoto.filename} className="h-12 w-20 rounded object-contain bg-black" />}
+      </EditorPropertyRow>
+      {entry.finalPhotoId && <p className="property-note countdown-timing" role="status">{!finalPhoto ? 'La foto elegida ya no está en el montaje. Elegí otra o desactivá la foto fija.' : holdSeconds > 0 ? 'Foto fija durante ' + holdSeconds.toFixed(2) + 's después del cero.' : 'Adelantá el contador para dejar unos segundos de foto fija antes del final.'}</p>}
       </section>
       <EditorPropertyRow label="Fotos"><button type="button" className="property-choice" onClick={onEditPhotos}>Giro, encuadre y movimientos</button></EditorPropertyRow>
       <EditorPropertyRow label="Inicio" help="Desde el inicio del recorte hasta los golpes, cada foto dura este tiempo. Los segundos indican posiciones en la canción original."><div className="property-inline-fields">
@@ -79,6 +91,6 @@ export function EntranceControls({ config, onChange, musicName, musicRevision, o
     </fieldset>
     {notice && <p role="status" className="text-xs text-indigo-200 p-2">{notice}</p>}
     {analyzing && <div className="flex items-center gap-2 p-2"><progress aria-label="Detección de golpes" /><EditorToolButton label="Cancelar detección" caption="Cancelar" onClick={() => { worker.current?.terminate(); worker.current = null; setAnalyzing(false); setNotice('Detección cancelada.'); }}><X aria-hidden="true" /></EditorToolButton></div>}
-    <p className="property-note p-2">Duración fija → golpes → aceleración hasta una foto por cuadro. Se usa el tramo seleccionado. Los tiempos de golpes y contador corresponden a la canción original. Si el contador termina antes, las fotos siguen a velocidad máxima hasta el final.</p>
+    <p className="property-note p-2">Duración fija → golpes → aceleración hasta una foto por cuadro. Se usa el tramo seleccionado. Los tiempos de golpes y contador corresponden a la canción original. Después del cero se muestra la foto final elegida, o continúa el ciclo si no elegís una.</p>
   </>;
 }

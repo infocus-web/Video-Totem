@@ -145,7 +145,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
     try {
       if (playing.current) { playing.current = false; setDisplayTime(time.current); audioEngine.stop(); }
-      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null); await audioEngine.resume(); playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
+      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); await audioEngine.resume(); playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
       setPlaying(playing.current);
     } catch (error) { onError(error instanceof Error ? error.message : 'No se pudo iniciar el audio.'); }
   };
@@ -246,7 +246,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   const record = async (chooseLocation = false) => {
     if (!ready || !total || disabled || abort.current) { onError('Conectá las fotos y esperá a que termine la carga.'); return; }
-    try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null); } catch (error) { onError(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
+    try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); } catch (error) { onError(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
     playing.current = false; setPlaying(false); audioEngine.stop();
     abort.current = new AbortController(); onBusy(true); setProgress(0); setPendingVideo(null); setSaveMessage('');
     try {

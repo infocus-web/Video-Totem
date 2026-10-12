@@ -30,7 +30,7 @@ function nativeRecordingFormat(preference?: 'webm') {
 }
 
 export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
-  validateEntrance(config, audioEngine.getTrack()?.duration ?? null);
+  validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides);
   const range = musicRange(config, audioEngine.getTrack()?.duration ?? 0);
   audioEngine.setTrackRange(range.start, !config.entrance?.enabled, range.end || null);
   if (supportsFrameEncoding()) {

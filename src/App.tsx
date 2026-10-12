@@ -320,7 +320,7 @@ export default function App() {
       <div className="editor-workspace">
         <div className="editor-column min-w-0">
           {tab === 'editor' ? <ClientInputPanel activeSection={editorSection} onSectionChange={setEditorSection} rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
-            libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
+            slides={slides} libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
             onAuditionStart={pauseForAudition} onAuditionFrame={syncAudition} onMusicUpload={event => void uploadMusic(event)} onChoosePhotos={supportsLocalLinks() ? folder => void pickPhotos(folder) : undefined} onChooseMusic={supportsLocalLinks() ? () => void pickMusic() : undefined} musicName={musicName} musicRevision={musicRevision} onClearMusic={clearMusic} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
