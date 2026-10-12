@@ -168,9 +168,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1791783729.17384,
-    "seen": 1791784748.148411,
-    "ast_hash": "b3ba30ebf3e538c81791ba3d29fa2ec1",
+    "mtime": 1791784583.147596,
+    "seen": 1791785401.774623,
+    "ast_hash": "3880ccca5c67d56a4a9a672c51b709f0",
     "semantic_hash": ""
   },
   "src/components/ClientInputPanel.tsx": {
@@ -222,15 +222,15 @@
     "semantic_hash": ""
   },
   "src/components/MusicTimeline.tsx": {
-    "mtime": 1791780742.0268068,
-    "seen": 1791784748.148411,
-    "ast_hash": "5f49e89ee61003ec3630efc56ea67f0b",
+    "mtime": 1791784576.7088778,
+    "seen": 1791785401.774623,
+    "ast_hash": "e5f3b67b067e28a577dbd9f5ff594d76",
     "semantic_hash": ""
   },
   "src/components/Navbar.tsx": {
-    "mtime": 1791711542.9297917,
-    "seen": 1791784748.148411,
-    "ast_hash": "9185ab4d813085b61a61e6ae739071fb",
+    "mtime": 1791784577.339439,
+    "seen": 1791785401.774623,
+    "ast_hash": "84e37516f941fe6dc78e300c0574ecac",
     "semantic_hash": ""
   },
   "src/components/NewProjectModal.tsx": {
@@ -270,9 +270,9 @@
     "semantic_hash": ""
   },
   "src/components/VideoPreviewPlayer.tsx": {
-    "mtime": 1791783693.9356778,
-    "seen": 1791784748.148411,
-    "ast_hash": "f2e4e37b9face189776575964b257eb8",
+    "mtime": 1791784577.0751956,
+    "seen": 1791785401.774623,
+    "ast_hash": "037add363d8d1f9b8a3a865c224a7eec",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "src/utils/canvasRenderer.ts": {
-    "mtime": 1791783635.651399,
-    "seen": 1791784748.148411,
-    "ast_hash": "efa774d464bbd6dd27b4571fe32d8264",
+    "mtime": 1791784576.890914,
+    "seen": 1791785401.774623,
+    "ast_hash": "21b865e479fbb4acfc84ba96d5be4289",
     "semantic_hash": ""
   },
   "src/utils/clipFrames.ts": {
@@ -552,9 +552,9 @@
     "semantic_hash": ""
   },
   "OPTIMIZACIONES.md": {
-    "mtime": 1791698424.2212946,
-    "seen": 1791784748.148411,
-    "ast_hash": "ad3ecacab30ebf8696c6ea1bd0482567",
+    "mtime": 1791784824.732209,
+    "seen": 1791785401.774623,
+    "ast_hash": "a35db2adaf692ca6627611b2adc92209",
     "semantic_hash": ""
   },
   "PANEL-DE-EDICION.md": {
@@ -615,6 +615,12 @@
     "mtime": 1791689664.0,
     "seen": 1791784748.148411,
     "ast_hash": "2a3a5a7eb93ae16cda34ab12e2f423e8",
+    "semantic_hash": ""
+  },
+  "scripts/cache-purge-smoke.cjs": {
+    "mtime": 1791784644.7666793,
+    "seen": 1791785401.774623,
+    "ast_hash": "db163ecf61781e6dd6270d908d26b510",
     "semantic_hash": ""
   }
 }

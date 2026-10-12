@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "scripts/audition-preview-smoke.cjs": {
-    "mtime": 1791780742.1953309,
-    "seen": 1791784748.148411,
-    "ast_hash": "7af8991575fc31c32a32733ca584496c",
+    "mtime": 1791787915.7276232,
+    "seen": 1791788147.6009152,
+    "ast_hash": "034143e180dbbf128ee72f59c026cd31",
     "semantic_hash": ""
   },
   "scripts/browser-smoke.cjs": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "src/components/MusicTimeline.tsx": {
-    "mtime": 1791784576.7088778,
-    "seen": 1791785401.774623,
-    "ast_hash": "e5f3b67b067e28a577dbd9f5ff594d76",
+    "mtime": 1791787915.5918252,
+    "seen": 1791788147.6009152,
+    "ast_hash": "bbd37133917259d9de375ef3eea31d6e",
     "semantic_hash": ""
   },
   "src/components/Navbar.tsx": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "ENTRADA-Y-CLIPS.md": {
-    "mtime": 1791783974.7940238,
-    "seen": 1791784748.148411,
-    "ast_hash": "8d7fa3da5aae12206af3b961094db94b",
+    "mtime": 1791787937.9374256,
+    "seen": 1791788147.6009152,
+    "ast_hash": "9213ed1f8b81711fccde5748cb49956b",
     "semantic_hash": ""
   },
   "EXPORTACION-ESTABLE.md": {

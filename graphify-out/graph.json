@@ -98,6 +98,30 @@
       "source_location": "L4"
     },
     {
+      "id": "scripts_audition_preview_smoke_audiobuffersourcenode_start",
+      "label": ".start()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 10,
+      "community_name": ".start",
+      "file_type": "code",
+      "norm_label": ".start()",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L20"
+    },
+    {
+      "id": "scripts_audition_preview_smoke_canvasrenderingcontext2d_filltext",
+      "label": ".fillText()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 11,
+      "community_name": ".fillText",
+      "file_type": "code",
+      "norm_label": ".filltext()",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L21"
+    },
+    {
       "id": "src_utils_canvasrenderer_clearrenderercache",
       "label": "clearRendererCache()",
       "_callable": true,
@@ -264,6 +288,18 @@
       "norm_label": "navbar()",
       "source_file": "src/components/Navbar.tsx",
       "source_location": "L11"
+    },
+    {
+      "id": "scripts_audition_preview_smoke_tone",
+      "label": "tone()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cache-purge-smoke.cjs",
+      "file_type": "code",
+      "norm_label": "tone()",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L4"
     },
     {
       "id": "scripts_cache_purge_smoke_tone",
@@ -435,6 +471,39 @@
       "source_location": "L28"
     },
     {
+      "id": "scripts_audition_preview_smoke",
+      "label": "audition-preview-smoke.cjs",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cache-purge-smoke.cjs",
+      "file_type": "code",
+      "norm_label": "audition-preview-smoke.cjs",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "scripts_audition_preview_smoke_assert",
+      "label": "assert",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cache-purge-smoke.cjs",
+      "file_type": "code",
+      "norm_label": "assert",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L2"
+    },
+    {
+      "id": "scripts_audition_preview_smoke_chromium",
+      "label": "{ chromium }",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cache-purge-smoke.cjs",
+      "file_type": "code",
+      "norm_label": "{ chromium }",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L1"
+    },
+    {
       "id": "scripts_cache_purge_smoke",
       "label": "cache-purge-smoke.cjs",
       "_origin": "ast",
@@ -560,6 +629,150 @@
       "norm_label": "purgar cache de vista previa",
       "source_file": "OPTIMIZACIONES.md",
       "source_location": "L48"
+    },
+    {
+      "id": "entrada_y_clips",
+      "label": "ENTRADA-Y-CLIPS.md",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "entrada-y-clips.md",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "entrada_y_clips_ajuste_canci\u00f3n_completa_y_tres_etapas",
+      "label": "Ajuste: canci\u00f3n completa y tres etapas",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "ajuste: cancion completa y tres etapas",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L98"
+    },
+    {
+      "id": "entrada_y_clips_cambios_de_c\u00f3digo",
+      "label": "Cambios de c\u00f3digo",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "cambios de codigo",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L69"
+    },
+    {
+      "id": "entrada_y_clips_correcci\u00f3n_de_pausa_autom\u00e1tica_del_cursor_musical",
+      "label": "Correcci\u00f3n de pausa autom\u00e1tica del cursor musical",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "correccion de pausa automatica del cursor musical",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L124"
+    },
+    {
+      "id": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "label": "Entrada de quince y clips locales",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "entrada de quince y clips locales",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "entrada_y_clips_foto_fija_despu\u00e9s_del_contador",
+      "label": "Foto fija despu\u00e9s del contador",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "foto fija despues del contador",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L105"
+    },
+    {
+      "id": "entrada_y_clips_herramientas_compartidas_para_entrada",
+      "label": "Herramientas compartidas para Entrada",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "herramientas compartidas para entrada",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L37"
+    },
+    {
+      "id": "entrada_y_clips_prueba_musical_con_vista_previa_sincronizada",
+      "label": "Prueba musical con vista previa sincronizada",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "prueba musical con vista previa sincronizada",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L5"
+    },
+    {
+      "id": "entrada_y_clips_reconexi\u00f3n_autom\u00e1tica_de_originales",
+      "label": "Reconexi\u00f3n autom\u00e1tica de originales",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "reconexion automatica de originales",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "entrada_y_clips_recortar_m\u00fasica_y_escuchar_el_corte",
+      "label": "Recortar m\u00fasica y escuchar el corte",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "recortar musica y escuchar el corte",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L29"
+    },
+    {
+      "id": "entrada_y_clips_uso",
+      "label": "Uso",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "uso",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L3"
+    },
+    {
+      "id": "entrada_y_clips_verificaci\u00f3n_local_y_producci\u00f3n",
+      "label": "Verificaci\u00f3n local y producci\u00f3n",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "Entrada de quince y clips locales",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "verificacion local y produccion",
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L82"
     },
     {
       "id": "src_components_clientinputpanel",
@@ -1893,6 +2106,18 @@
       "weight": 1.0
     },
     {
+      "source": "scripts_audition_preview_smoke",
+      "target": "scripts_audition_preview_smoke_tone",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
       "source": "scripts_cache_purge_smoke",
       "target": "scripts_cache_purge_smoke_tone",
       "relation": "contains",
@@ -3122,6 +3347,18 @@
       "weight": 1.0
     },
     {
+      "source": "scripts_audition_preview_smoke",
+      "target": "ref_node_assert",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
       "source": "scripts_cache_purge_smoke",
       "target": "ref_node_assert",
       "relation": "imports_from",
@@ -3824,6 +4061,127 @@
       "weight": 1.0
     },
     {
+      "source": "entrada_y_clips",
+      "target": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "target": "entrada_y_clips_foto_fija_despu\u00e9s_del_contador",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L105",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "target": "entrada_y_clips_uso",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "target": "entrada_y_clips_cambios_de_c\u00f3digo",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "target": "entrada_y_clips_verificaci\u00f3n_local_y_producci\u00f3n",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_entrada_de_quince_y_clips_locales",
+      "target": "entrada_y_clips_ajuste_canci\u00f3n_completa_y_tres_etapas",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_foto_fija_despu\u00e9s_del_contador",
+      "target": "entrada_y_clips_correcci\u00f3n_de_pausa_autom\u00e1tica_del_cursor_musical",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L124",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_uso",
+      "target": "entrada_y_clips_reconexi\u00f3n_autom\u00e1tica_de_originales",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_uso",
+      "target": "entrada_y_clips_recortar_m\u00fasica_y_escuchar_el_corte",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_uso",
+      "target": "entrada_y_clips_herramientas_compartidas_para_entrada",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "entrada_y_clips_uso",
+      "target": "entrada_y_clips_prueba_musical_con_vista_previa_sincronizada",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "ENTRADA-Y-CLIPS.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
       "source": "optimizaciones",
       "target": "optimizaciones_optimizaci\u00f3n_de_autoreel_studio",
       "relation": "contains",
@@ -3876,6 +4234,28 @@
       "confidence_score": 1.0,
       "source_file": "OPTIMIZACIONES.md",
       "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_audition_preview_smoke",
+      "target": "scripts_audition_preview_smoke_chromium",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "scripts_audition_preview_smoke",
+      "target": "scripts_audition_preview_smoke_assert",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "scripts/audition-preview-smoke.cjs",
+      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -4233,5 +4613,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "f8f505a71319a496ee88c208d8e4f66dcb9c9228"
+  "built_at_commit": "0586e05f3ac2638aae4cab7a20ef6283f01eb4f0"
 }

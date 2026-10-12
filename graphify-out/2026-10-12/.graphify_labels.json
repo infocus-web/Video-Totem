@@ -1,3 +1,11 @@
 {
-  "0": "CLAUDE.md"
+  "0": "CLAUDE.md",
+  "1": "App.tsx",
+  "2": "VideoPreviewPlayer.tsx",
+  "3": "canvasRenderer.ts",
+  "4": "MusicTimeline.tsx",
+  "5": "App",
+  "6": "cache-purge-smoke.cjs",
+  "7": "Optimización de AutoReel Studio",
+  "8": ".decode"
 }
