@@ -1,7 +1,7 @@
 # Graph Report - Video Totem  (2026-10-12)
 
 ## Corpus Check
-- 104 files · ~76,229 words
+- 104 files · ~76,422 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 3, .woff2 1, .tflite 1)
 

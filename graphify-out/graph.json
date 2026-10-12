@@ -5691,7 +5691,7 @@
       "node_kind": "heading",
       "norm_label": "probar localmente y publicar",
       "source_file": "AUDITORIA.md",
-      "source_location": "L50"
+      "source_location": "L51"
     },
     {
       "id": "auditoria_seguridad_y_l\u00edmites",
@@ -5703,7 +5703,7 @@
       "node_kind": "heading",
       "norm_label": "seguridad y limites",
       "source_file": "AUDITORIA.md",
-      "source_location": "L39"
+      "source_location": "L40"
     },
     {
       "id": "auditoria_validaci\u00f3n",
@@ -19246,7 +19246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AUDITORIA.md",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -19268,7 +19268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AUDITORIA.md",
-      "source_location": "L50",
+      "source_location": "L51",
       "weight": 1.0
     },
     {
@@ -24794,5 +24794,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "25d28d56e531c7bf0dc6670e402105c87cdaed7d"
+  "built_at_commit": "2f878fb8d853554bed2bffa97d49a13ab1887b90"
 }

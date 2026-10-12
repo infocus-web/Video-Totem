@@ -1,7 +1,7 @@
 # Graph Report - Video Totem  (2026-10-12)
 
 ## Corpus Check
-- 104 files · ~76,422 words
+- 104 files · ~76,454 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 3, .woff2 1, .tflite 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `25d28d56`
+- Built from commit: `2f878fb8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -283,7 +283,7 @@ Cohesion: 0.67
 Nodes (3): Archivos, Nuevo proyecto, Pestañas de herramientas
 
 ## Knowledge Gaps
-- **261 isolated node(s):** `{ app, BrowserWindow, Menu, protocol, net, session, dialog, powerSaveBlocker }`, `path`, `{ pathToFileURL }`, `{ trusted, canCheck, canRequest }`, `allowed` (+256 more)
+- **261 isolated node(s):** `Correcciones`, `Validación`, `Seguridad y límites`, `Probar localmente y publicar`, `{ app, BrowserWindow, Menu, protocol, net, session, dialog, powerSaveBlocker }` (+256 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 317 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -292,7 +292,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `ClientInputPanel.tsx` to `App.tsx`, `VideoPreviewPlayer.tsx`, `index.ts`, `PremiereInspectorModal.tsx`, `package.json`?**
   _High betweenness centrality (0.046) - this node is a cross-community bridge._
-- **What connects `{ app, BrowserWindow, Menu, protocol, net, session, dialog, powerSaveBlocker }`, `path`, `{ pathToFileURL }` to the rest of the system?**
+- **What connects `Correcciones`, `Validación`, `Seguridad y límites` to the rest of the system?**
   _261 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `App.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07828967178560675 - nodes in this community are weakly interconnected._
