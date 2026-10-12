@@ -4,6 +4,7 @@ import { sequenceDuration, validateEntrance } from './entrance';
 import { videoOutput } from './videoOutput';
 import { prepareTextFonts } from './textOverlay';
 import { audioEngine } from './audioSynthesizer';
+import { musicRange } from './musicTrim';
 import { RecordingImages } from './recordingImages';
 import { createRecordingSource, supportsBackgroundRecording } from './recordingSource';
 import { supportsFrameEncoding } from './frameEncodingSupport';
@@ -30,7 +31,8 @@ function nativeRecordingFormat(preference?: 'webm') {
 
 export async function recordVideo(slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, signal: AbortSignal, progress: (value: number) => void, onPhase: (message: string) => void = () => {}) {
   validateEntrance(config, audioEngine.getTrack()?.duration ?? null);
-  audioEngine.setTrackRange(0, !config.entrance?.enabled);
+  const range = musicRange(config, audioEngine.getTrack()?.duration ?? 0);
+  audioEngine.setTrackRange(range.start, !config.entrance?.enabled, range.end || null);
   if (supportsFrameEncoding()) {
     const { encodeVideo } = await import('./videoEncoder');
     const result = await encodeVideo(slides, config, images, signal, recordingBitrate(config), progress, onPhase);

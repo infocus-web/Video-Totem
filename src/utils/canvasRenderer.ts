@@ -142,7 +142,8 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   }
   drawTextOverlay(ctx, config, width, height);
   if (scene.countdown !== null && !editing) {
-    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.fillRect(0, 0, width, height);
+    ctx.save(); ctx.globalAlpha = config.entrance?.countdownOpacity ?? 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.fillRect(0, 0, width, height);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
     ctx.font = '900 ' + Math.round(height * 0.52) + 'px Arial'; ctx.shadowColor = '#000'; ctx.shadowBlur = height * 0.025;
     ctx.fillText(String(scene.countdown), width / 2, height / 2); ctx.restore();

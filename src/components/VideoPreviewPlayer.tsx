@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import type { FilePreparationProgress, PhotoFraming, SequenceConfig, SequenceSlide } from '../types';
+import type { FilePreparationProgress, PhotoFraming, PhotoItem, SequenceConfig, SequenceSlide } from '../types';
 import { PreparationProgress } from './PreparationProgress';
 import { PhotoFramingControls } from './PhotoFramingControls';
 import { EditorPropertyRow } from './EditorPropertyRow';
@@ -10,6 +10,7 @@ import { sequenceDuration, validateEntrance, entranceSceneStart } from '../utils
 import { normalizeFraming, photoGeometry, photoSlots } from '../utils/photoFraming';
 import { recordVideo, recordingFormat } from '../utils/videoRecorder';
 import { audioEngine } from '../utils/audioSynthesizer';
+import { musicRange } from '../utils/musicTrim';
 import { downloadBlob } from '../utils/download';
 import { saveVideoAs } from '../utils/saveVideo';
 import { supportsBackgroundExport } from '../utils/videoRecorder';
@@ -19,10 +20,10 @@ import type { QuarterTurn } from '../utils/faceOrientation';
 import { PreviewClips } from '../utils/previewClips';
 import { Check, Move, Pause, Play, PlusCircle, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
-export interface PreviewHandle { record: (chooseLocation?: boolean) => void }
-interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; onPhotoAutoRotate: (rotations: Record<string, QuarterTurn>) => void; onClipStart: (id: string, start: number) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
+export interface PreviewHandle { record: (chooseLocation?: boolean) => void; pause: () => void }
+interface Props { slides: SequenceSlide[]; config: SequenceConfig; busy: boolean; importing: boolean; onBusy: (value: boolean) => void; onReadyChange: (value: boolean) => void; onError: (message: string) => void; onPhotoFramingChange: (scene: number, photo: number, framing: PhotoFraming) => void; onPhotoRotate: (ids: string[], direction: -90 | 90) => void; onPhotoAutoRotate: (rotations: Record<string, QuarterTurn>) => void; onClipStart: (id: string, start: number) => void; onPhotoMotion: (ids: string[], motion: PhotoItem['kenBurns']) => void; musicRevision: number; libraryCount: number; framingControlsTarget: HTMLElement | null; framingToolsVisible: boolean }
 interface FramingDrag { pointer: number; scene: number; photo: number; sceneId: string; photoId: string; x: number; y: number; horizontalSpace: number; verticalSpace: number; framing: PhotoFraming }
-export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, onPhotoAutoRotate, onClipStart, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
+export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function VideoPreviewPlayer({ slides, config, busy, importing, onBusy, onReadyChange, onError, onPhotoFramingChange, onPhotoRotate, onPhotoAutoRotate, onClipStart, onPhotoMotion, musicRevision, libraryCount, framingControlsTarget, framingToolsVisible }, ref) {
   const output = videoOutput(config);
   const canvas = useRef<HTMLCanvasElement>(null);
   const media = useRef<HTMLDivElement>(null);
@@ -93,10 +94,11 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   };
   useEffect(() => { if (!isPlaying) clips.current?.stop(); }, [isPlaying]);
   useEffect(() => {
-    audioEngine.setTrackRange(0, !config.entrance?.enabled);
+    const range = musicRange(config, audioEngine.getTrack()?.duration ?? 0);
+    audioEngine.setTrackRange(range.start, !config.entrance?.enabled, range.end || null);
     audioEngine.setStyle(config.musicTrack);
     if (playing.current) audioEngine.play(time.current);
-  }, [config.musicTrack, musicRevision, config.entrance?.enabled]);
+  }, [config.musicTrack, musicRevision, config.entrance?.enabled, config.musicTrim?.start, config.musicTrim?.end]);
   useEffect(() => { audioEngine.setVolume(muted ? 0 : config.musicVolume); }, [config.musicVolume, muted]);
   useEffect(() => {
     if (!framingMode) time.current = Math.min(time.current, total);
@@ -263,12 +265,13 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     } catch (error) { setSaveMessage(error instanceof Error ? error.message + ' El video sigue listo para reintentar o descargar.' : 'No se pudo guardar. El video sigue listo para reintentar.'); }
     finally { setSavingVideo(false); onBusy(false); }
   };
-  useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); } }));
+  useImperativeHandle(ref, () => ({ record: chooseLocation => { void record(chooseLocation); }, pause: () => { playing.current = false; setPlaying(false); resumeAfterFraming.current = false; audioEngine.stop(); clips.current?.stop(); } }));
   const framingControls = <><fieldset disabled={disabled || !ready || !slides.length} className="space-y-3">
     <EditorPropertyRow label="Vista previa"><EditorToolButton label={framingMode ? 'Listo, volver a la vista previa' : 'Encuadrar foto'} caption={framingMode ? 'Listo' : 'Arrastrar'} hint={framingMode ? 'Terminar la edición y retomar la vista previa. Los controles siguen visibles.' : 'Pausar esta escena para arrastrar la foto. Los controles ya están disponibles abajo.'} aria-pressed={framingMode} onClick={toggleFraming}>{framingMode ? <Check aria-hidden="true" /> : <Move aria-hidden="true" />}</EditorToolButton></EditorPropertyRow>
     <PhotoFramingControls slides={slides} sceneIndex={scene.index} photoIndex={photoIndex} onPhotoChange={index => selectFramingPhoto(scene.index, index)} cover={config.photoFit === 'cover'}
       onSceneChange={selectFramingPhoto} onNavigatePhoto={selectFramingPhoto}
       onChange={framing => { beginFraming(); onPhotoFramingChange(scene.index, photoIndex, framing); }}
+      onMotion={(ids, motion) => { beginFraming(); onPhotoMotion(ids, motion); }}
       onRotate={(ids, direction) => { beginFraming(); onPhotoRotate(ids, direction); }} onSmartRotate={ids => void smartRotate(ids)} onClipStart={(id, start) => { beginFraming(); onClipStart(id, start); }} />
   </fieldset></>;
   const rotationStatus = rotationMessage && <div role="status" className="mt-3 text-xs text-indigo-200">{rotationMessage}{rotationProgress && <>
@@ -323,7 +326,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       <button type="button" disabled={disabled} onClick={() => { downloadBlob(pendingVideo.blob, pendingVideo.filename); setPendingVideo(null); setSaveMessage('Se inició la descarga con la configuración de tu navegador.'); }} className="quick-button">Descargar sin elegir ubicación</button>
     </div></div>}
     {saveMessage && <p role="status" className="text-xs text-emerald-200">{saveMessage}</p>}
-    <p className="preview-export-note text-xs text-neutral-500">{config.entrance?.enabled ? 'Entrada: canción completa.' : 'Exportación local, hasta 5 minutos.'} En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
+    <p className="preview-export-note text-xs text-neutral-500">{config.entrance?.enabled ? 'Entrada: duración del tramo de música.' : 'Exportación local, hasta 5 minutos.'} En Chrome/Edge compatibles se genera cuadro por cuadro, sin saltear imágenes. {format?.extension === 'webm' ? 'Tu navegador ofrece WebM; para MP4 probá Chrome o Edge actualizado.' : 'El video incluye los textos, fondos, movimientos y audio del editor.'}</p>
     </div>
   </section></>;
 });

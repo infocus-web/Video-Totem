@@ -1,5 +1,6 @@
 import { musicStepDuration, scheduleMusicStep } from './syntheticMusic';
 import recordingClockUrl from './recordingClock.worklet.ts?worker&url';
+import { musicTime } from './musicTrim';
 
 class BackgroundAudioEngine {
   private ctx: AudioContext | null = null;
@@ -10,9 +11,13 @@ class BackgroundAudioEngine {
   private buffer: AudioBuffer | null = null;
   private style = 'chill';
   private trackOffset = 0;
+  private trackEnd: number | null = null;
+  private auditionSource: AudioBufferSourceNode | null = null;
+  private auditionGain: GainNode | null = null;
+  private auditionEnded: ((finished: boolean) => void) | null = null;
   private loopTrack = true;
   public getTrack() { return this.buffer; }
-  public setTrackRange(offset = 0, loop = true) { this.trackOffset = Math.max(0, offset); this.loopTrack = loop; }
+  public setTrackRange(offset = 0, loop = true, end: number | null = null) { this.trackOffset = Math.max(0, offset); this.loopTrack = loop; this.trackEnd = end; }
   private nextTime = 0;
   private step = 0;
   private nodes = new Set<AudioScheduledSourceNode>();
@@ -40,7 +45,7 @@ class BackgroundAudioEngine {
     return fingerprint;
   }
   public clearTrack() { this.stop(); this.buffer = null; }
-  public createAudioRenderer(style: string, volume: number, offset = 0, loop = true) {
+  public createAudioRenderer(style: string, volume: number, offset = 0, loop = true, end: number | null = null) {
     const track = this.buffer, sampleRate = 48000;
     return async (start: number, duration: number) => {
       // A short lead-in preserves note tails at chunk boundaries without keeping a five-minute buffer.
@@ -50,8 +55,11 @@ class BackgroundAudioEngine {
       gain.gain.value = Math.max(0, Math.min(1, volume)); gain.connect(ctx.destination);
       if (style !== 'none' && track) {
         const source = ctx.createBufferSource(); source.buffer = track; source.loop = loop;
+        const trackEnd = Math.min(end ?? track.duration, track.duration);
+        source.loopStart = offset; source.loopEnd = trackEnd;
         source.connect(gain);
-        if (loop || base + offset < track.duration) source.start(0, loop ? (base + offset) % track.duration : base + offset);
+        const position = musicTime(base, offset, trackEnd, loop);
+        if (loop || position < trackEnd) source.start(0, position, loop ? undefined : trackEnd - position);
       } else if (style !== 'none') {
         const stepDuration = musicStepDuration(style);
         for (let step = Math.max(0, Math.ceil(base / stepDuration) - 1); (step + 1) * stepDuration < start + duration; step++) {
@@ -71,6 +79,27 @@ class BackgroundAudioEngine {
     this.init(); this.gain!.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), this.ctx!.currentTime);
   }
   public getCaptureStream() { this.init(); return this.destination!.stream; }
+  public stopAudition() {
+    const source = this.auditionSource;
+    this.auditionSource = null;
+    if (source) { source.stop(); source.disconnect(); }
+    this.auditionGain?.disconnect(); this.auditionGain = null;
+    const ended = this.auditionEnded; this.auditionEnded = null; ended?.(false);
+  }
+  public auditionTrack(start: number, end: number, volume: number, onEnded: (finished: boolean) => void) {
+    this.stopAudition();
+    const ctx = this.init(), track = this.buffer;
+    if (!track) throw new Error('Cargá o reconectá la canción.');
+    const position = Math.max(0, Math.min(start, track.duration)), finish = Math.min(end, track.duration);
+    if (finish <= position) { onEnded(true); return () => position; }
+    const source = ctx.createBufferSource(), gain = ctx.createGain();
+    source.buffer = track; gain.gain.value = Math.max(0, Math.min(1, volume));
+    source.connect(gain); gain.connect(ctx.destination);
+    this.auditionSource = source; this.auditionGain = gain; this.auditionEnded = onEnded;
+    source.onended = () => { if (this.auditionSource !== source) return; source.disconnect(); gain.disconnect(); this.auditionSource = null; this.auditionGain = null; this.auditionEnded = null; onEnded(true); };
+    const began = ctx.currentTime; source.start(0, position, finish - position);
+    return () => Math.min(finish, position + ctx.currentTime - began);
+  }
   public startCaptureClock() {
     // Keep audio capture producing samples between notes and when music is off.
     const silence = this.init().createConstantSource();
@@ -95,9 +124,11 @@ class BackgroundAudioEngine {
     if (monitor) this.gain!.connect(ctx.destination);
     if (this.buffer) {
       this.source = ctx.createBufferSource(); this.source.buffer = this.buffer; this.source.loop = this.loopTrack;
+      const end = Math.min(this.trackEnd ?? this.buffer.duration, this.buffer.duration);
+      this.source.loopStart = this.trackOffset; this.source.loopEnd = end;
       this.source.connect(this.gain!);
-      const trackTime = offset + this.trackOffset;
-      if (this.loopTrack || trackTime < this.buffer.duration) this.source.start(0, this.loopTrack ? trackTime % this.buffer.duration : trackTime);
+      const trackTime = musicTime(offset, this.trackOffset, end, this.loopTrack);
+      if (this.loopTrack || trackTime < end) this.source.start(0, trackTime, this.loopTrack ? undefined : end - trackTime);
       return;
     }
     const stepDuration = musicStepDuration(this.style);
@@ -114,6 +145,7 @@ class BackgroundAudioEngine {
   }
   public pause() { this.stop(); }
   public stop() {
+    this.stopAudition();
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.schedule = null;

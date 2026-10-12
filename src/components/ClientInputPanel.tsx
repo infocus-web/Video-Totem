@@ -3,6 +3,7 @@ import { Camera, Check, Copy, Crop, ExternalLink, FileCode2, FolderOpen, Heart, 
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorTool, EditorToolButton } from './EditorTool';
 import { EntranceControls } from './EntranceControls';
+import { MusicTimeline } from './MusicTimeline';
 import { TextOverlayControls } from './TextOverlayControls';
 import type { HorizontalGroupMode, SequenceConfig } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
@@ -18,6 +19,7 @@ interface Props {
   onApplySelection: () => void; onUseAll: () => void; onRegroup: () => void;
   onMusicUpload: (event: ChangeEvent<HTMLInputElement>) => void; musicName: string; musicRevision: number;
   onClearMusic: () => void; onError: (message: string) => void; busy: boolean;
+  onAuditionStart: () => void;
 }
 const modes: { value: HorizontalGroupMode; title: string; detail: string; slots: number; caption: string }[] = [
   { value: 'auto-split-2', title: '2 en 1 (Arriba y Abajo)', detail: 'Apilá dos fotos horizontales en pares, dividiendo la pantalla al 50%.', slots: 2, caption: '2 en 1' },
@@ -193,6 +195,7 @@ export function ClientInputPanel(props: Props) {
       <EditorPropertyRow label="Audio" help="El archivo cargado reemplaza la música sintética. Usá música con permiso de uso."><EditorTool label="Cargar música"><label className="editor-icon-button"><Music2 aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Cargar</span><input aria-label="Cargar música" type="file" accept="audio/*" onChange={props.onMusicUpload} className="sr-only" /></label></EditorTool>
         {props.musicName && <><span className="property-note break-all">{props.musicName}</span><EditorToolButton label="Quitar música cargada" caption="Quitar" onClick={props.onClearMusic}><Trash2 aria-hidden="true" /></EditorToolButton></>}</EditorPropertyRow>
       <EditorPropertyRow label="Volumen"><input aria-label="Volumen" type="range" min="0" max="1" step="0.05" value={config.musicVolume} onChange={e => change('musicVolume', Number(e.target.value))} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(config.musicVolume * 100)}%</span></EditorPropertyRow>
+      {activeSection === 7 && <MusicTimeline config={config} onChange={onConfigChange} musicRevision={props.musicRevision} active disabled={props.busy} onAuditionStart={props.onAuditionStart} onError={props.onError} />}
     </EditorSection>
     <EditorSection activeSection={activeSection} number={8} title="Premiere y Google Drive" detail="Opcional: vincular los originales en el proyecto XML.">
       <EditorPropertyRow label="Ruta local" help="Solo para el XML de Premiere. Copiá la ruta del Explorador; no hace falta para grabar el video.">
@@ -204,7 +207,7 @@ export function ClientInputPanel(props: Props) {
       </EditorPropertyRow>
     </EditorSection>
     <EditorSection activeSection={activeSection} number={9} title="Entrada de quince" detail="Fotos en ciclo, cambios al golpe de la canción y contador final.">
-      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onError={props.onError} />
+      <EntranceControls config={config} onChange={onConfigChange} musicName={props.musicName} musicRevision={props.musicRevision} onUpload={props.onMusicUpload} onError={props.onError} active={activeSection === 9} disabled={props.busy} onAuditionStart={props.onAuditionStart} onEditPhotos={() => props.onSectionChange(3)} />
     </EditorSection>
     </fieldset>
     </div>

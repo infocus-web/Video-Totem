@@ -9,10 +9,10 @@ import { FolderOpen, Plus, Save } from 'lucide-react';
 import { ClientInputPanel } from './components/ClientInputPanel';
 import { VideoPreviewPlayer, type PreviewHandle } from './components/VideoPreviewPlayer';
 import { PreparationProgress } from './components/PreparationProgress';
-import type { PhotoFraming, SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress } from './types';
+import type { PhotoFraming, SequenceSlide, SequenceConfig, ViewTab, ParsedPremiereProject, FilePreparationProgress, PhotoItem } from './types';
 import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } from './utils/photoParser';
 import { DEFAULT_CONFIG, clampDuration } from './utils/config';
-import { rotateProjectPhotos, setProjectPhotoRotations, updateClipStart, updatePhotoFraming, updateProjectConfig } from './utils/projectConfig';
+import { rotateProjectPhotos, setProjectPhotoMotion, setProjectPhotoRotations, updateClipStart, updatePhotoFraming, updateProjectConfig } from './utils/projectConfig';
 import type { QuarterTurn } from './utils/faceOrientation';
 import { importPhotos } from './utils/importPhotos';
 import { reconnectPhotoFiles, selectPhotoFiles } from './utils/photoFiles';
@@ -20,6 +20,7 @@ import { reconnectPhotos } from './utils/reconnectPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
 import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from './utils/projectStorage';
 import { sequenceDuration } from './utils/entrance';
+import { setMusicTrim } from './utils/musicTrim';
 import { downloadBlob } from './utils/download';
 
 const TimelineView = lazy(() => import('./components/TimelineView').then(module => ({ default: module.TimelineView })));
@@ -73,6 +74,8 @@ export default function App() {
   }, []);
   const rotatePhotos = useCallback((ids: string[], direction: -90 | 90) => setProject(previous => rotateProjectPhotos(previous, ids, direction)), []);
   const autoRotatePhotos = useCallback((rotations: Record<string, QuarterTurn>) => setProject(previous => setProjectPhotoRotations(previous, rotations)), []);
+  const changePhotoMotion = useCallback((ids: string[], motion: PhotoItem['kenBurns']) => setProject(previous => setProjectPhotoMotion(previous, ids, motion)), []);
+  const pauseForAudition = useCallback(() => preview.current?.pause(), []);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const fromFolder = event.currentTarget.hasAttribute('webkitdirectory');
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
@@ -187,11 +190,10 @@ export default function App() {
     setImporting(true); setImportProgress(null);
     try {
       const fingerprint = await audioEngine.loadTrack(file);
-      changeConfig({ ...config, musicFingerprint: fingerprint, musicTrack: config.musicTrack === 'none' ? 'chill' : config.musicTrack,
-        ...(config.entrance ? { entrance: { ...config.entrance, musicStart: 0, musicEnd: audioEngine.getTrack()!.duration,
-          countdownStart: config.entrance.countdownStart === null ? null : Math.min(config.entrance.countdownStart, Math.max(0, audioEngine.getTrack()!.duration - config.entrance.countdown)),
-          beatStart: Math.min(config.entrance.beatStart, Math.max(0, audioEngine.getTrack()!.duration - config.entrance.countdown), config.entrance.countdownStart ?? Infinity),
-          beatTimes: fingerprint === config.musicFingerprint ? config.entrance.beatTimes : [] } } : {}) });
+      const sameTrack = fingerprint === config.musicFingerprint;
+      const loadedConfig = { ...config, musicFingerprint: fingerprint, musicTrack: config.musicTrack === 'none' ? 'chill' : config.musicTrack,
+        ...(config.entrance ? { entrance: { ...config.entrance, beatTimes: sameTrack ? config.entrance.beatTimes : [] } } : {}) };
+      changeConfig(setMusicTrim(loadedConfig, sameTrack ? config.musicTrim : undefined, audioEngine.getTrack()!.duration));
       setMusicName(file.name); setMusicRevision(value => value + 1);
     }
     catch (error) { notify(error instanceof Error ? error.message : 'Audio no compatible.'); }
@@ -230,11 +232,11 @@ export default function App() {
           {tab === 'editor' ? <ClientInputPanel activeSection={editorSection} onSectionChange={setEditorSection} rawText={rawText} onRawTextChange={text => setProject(prev => ({ ...prev,rawText:text }))} config={config} onConfigChange={changeConfig}
             libraryCount={connectedCount} selectedCount={selectedCount} sceneCount={slides.length} onError={notify} onFramingTargetChange={setFramingControlsTarget}
             onUploadPhotos={event => void upload(event)} onApplySelection={applySelection} onUseAll={useAll} onRegroup={regroup}
-            onMusicUpload={event => void uploadMusic(event)} musicName={musicName} musicRevision={musicRevision} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
+            onAuditionStart={pauseForAudition} onMusicUpload={event => void uploadMusic(event)} musicName={musicName} musicRevision={musicRevision} onClearMusic={() => { audioEngine.clearTrack(); setMusicName(''); setMusicRevision(value => value+1); }} busy={busy || importing} />
             : <Suspense fallback={<p role="status" className="panel">Abriendo línea de tiempo…</p>}><fieldset className="timeline-tools" disabled={busy || importing}><TimelineView slides={slides} onUpdateSlide={updateSlide} onMoveSlide={moveSlide} onRemoveSlide={index => setProject(prev => ({ ...prev,slides:prev.slides.filter((_,i) => i !== index) }))}
               onTogglePhotoOrientation={toggleOrientation} config={config} onApplyGlobalTransition={transition => setProject(prev => ({ ...prev, config: { ...prev.config, defaultTransition: transition }, slides: prev.slides.map(slide => ({ ...slide, transition })) }))} onUpdatePhoto={(slideIndex,photoIndex,motion) => setProject(prev => ({ ...prev, slides: prev.slides.map((slide,i) => i === slideIndex ? { ...slide, photos: slide.photos.map((photo,j) => j === photoIndex ? { ...photo,kenBurns:motion } : photo) } : slide) }))} /></fieldset></Suspense>}
         </div>
-        <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} onPhotoAutoRotate={autoRotatePhotos} onClipStart={(id, start) => setProject(previous => updateClipStart(previous, id, start))} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} framingToolsVisible={tab !== 'editor' || editorSection === 3} /></div>
+        <div className="preview-column min-w-0"><VideoPreviewPlayer key={previewSession} ref={preview} slides={slides} config={config} busy={busy} importing={importing} onBusy={setBusy} onReadyChange={setPreviewReady} onError={notify} onPhotoFramingChange={changePhotoFraming} onPhotoRotate={rotatePhotos} onPhotoAutoRotate={autoRotatePhotos} onPhotoMotion={changePhotoMotion} onClipStart={(id, start) => setProject(previous => updateClipStart(previous, id, start))} musicRevision={musicRevision} libraryCount={connectedCount} framingControlsTarget={framingControlsTarget} framingToolsVisible={tab !== 'editor' || editorSection === 3} /></div>
       </div>
     </main>
     <footer className="app-footer text-xs text-neutral-500">AutoReel Studio · Fotos locales, escenas editables y exportación para Premiere · Sin cuentas ni claves API.</footer>

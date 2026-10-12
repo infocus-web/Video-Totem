@@ -1,9 +1,15 @@
-import type { PhotoFraming, SequenceConfig } from '../types';
+import type { PhotoFraming, PhotoItem, SequenceConfig } from '../types';
 import type { SavedProject } from './projectStorage';
 import { clampDuration, localPath } from './config.ts';
 import { buildSlidesFromPhotos } from './photoParser.ts';
 import { normalizeFraming } from './photoFraming.ts';
 import type { QuarterTurn } from './faceOrientation.ts';
+
+export function setProjectPhotoMotion(project: SavedProject, ids: string[], motion: PhotoItem['kenBurns']): SavedProject {
+  const selected = new Set(ids);
+  const update = (photo: PhotoItem) => selected.has(photo.id) ? { ...photo, kenBurns: motion } : photo;
+  return { ...project, library: project.library.map(update), slides: project.slides.map(slide => ({ ...slide, photos: slide.photos.map(update) })) };
+}
 
 export function updateClipStart(project: SavedProject, id: string, start: number): SavedProject {
   const update = (photo: SavedProject['library'][number]) => photo.id === id && photo.mediaType === 'video' ? { ...photo,

@@ -58,6 +58,7 @@ export interface OverlayTextStyle {
 
 export interface SequenceConfig {
   entrance?: EntranceConfig;
+  musicTrim?: MusicTrim;
   name: string;
   aspectRatio: '9:16' | '1:1' | '16:9' | '4:5';
   width: number;
@@ -86,6 +87,8 @@ export interface SequenceConfig {
   filenameExtension: string;
 }
 
+export interface MusicTrim { start: number; end: number | null }
+
 export interface EntranceConfig {
   enabled: boolean;
   musicStart: number; // Legacy JSON field; full-song playback always starts at zero.
@@ -94,6 +97,7 @@ export interface EntranceConfig {
   beatStart: number;
   countdownStart: number | null; // null places the countdown at the end of the song.
   countdown: 5 | 10;
+  countdownOpacity: number;
   beatTimes: number[];
   beatShift: number;
   everyBeats: number;

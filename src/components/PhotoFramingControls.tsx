@@ -1,9 +1,9 @@
-import type { PhotoFraming, SequenceSlide } from '../types';
+import type { PhotoFraming, PhotoItem, SequenceSlide } from '../types';
 import { useState } from 'react';
 import { normalizeFraming } from '../utils/photoFraming';
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorToolButton } from './EditorTool';
-import { ChevronLeft, ChevronRight, RotateCcw, RotateCw, ScanFace, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Minus, RotateCcw, RotateCw, ScanFace, Undo2, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface Props {
   slides: SequenceSlide[]; sceneIndex: number; photoIndex: number;
@@ -13,9 +13,10 @@ interface Props {
   onRotate: (ids: string[], direction: -90 | 90) => void;
   onSmartRotate: (ids: string[]) => void;
   onClipStart: (id: string, start: number) => void;
+  onMotion: (ids: string[], motion: PhotoItem['kenBurns']) => void;
 }
 
-export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneChange, onPhotoChange, onNavigatePhoto, onChange, onRotate, onSmartRotate, onClipStart, cover }: Props) {
+export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneChange, onPhotoChange, onNavigatePhoto, onChange, onRotate, onSmartRotate, onClipStart, onMotion, cover }: Props) {
   const [rotationScope, setRotationScope] = useState('current');
   const [marked, setMarked] = useState<string[]>([]);
   const photos = [...new Map(slides.flatMap(slide => slide.photos).map(item => [item.id, item])).values()];
@@ -51,7 +52,7 @@ export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneCh
       <span className="property-value">{Math.round(framing[axis] * 100)}%</span>
     </EditorPropertyRow>)}
     <EditorPropertyRow label="Zoom"><input aria-label="Zoom de la foto" type="range" min="1" max="3" step="0.05" value={framing.zoom} onChange={event => onChange({ ...framing, zoom: Number(event.target.value) })} className="property-range accent-indigo-500" /><span className="property-value">{Math.round(framing.zoom * 100)}%</span></EditorPropertyRow>
-    <EditorPropertyRow label="Aplicar a"><select aria-label="Aplicar giro a" className="studio-input" value={rotationScope} onChange={event => setRotationScope(event.target.value)}>
+    <EditorPropertyRow label="Aplicar a" help="Alcance para el giro y el movimiento."><select aria-label="Aplicar giro a" className="studio-input" value={rotationScope} onChange={event => setRotationScope(event.target.value)}>
       <option value="current">Esta foto</option><option value="selected">Fotos que marque</option><option value="all">Todas las fotos del montaje</option>
     </select></EditorPropertyRow>
     {rotationScope === 'selected' && <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-neutral-700 p-2" role="group" aria-label="Seleccionar fotos para girar">
@@ -64,6 +65,9 @@ export function PhotoFramingControls({ slides, sceneIndex, photoIndex, onSceneCh
       <EditorToolButton disabled={!rotationIds.length || photo.mediaType === 'video'} label="Giro inteligente" caption="Auto" hint="Giro inteligente: enderezar rostros. Las fotos dudosas se conservan. Se analiza en tu navegador." onClick={() => onSmartRotate(rotationIds)}><ScanFace aria-hidden="true" /></EditorToolButton>
       <span className="property-value">{framing.rotation || 0}°</span>
     </div></EditorPropertyRow>
+    <EditorPropertyRow label="Movimiento"><div className="property-buttons" role="group" aria-label="Movimiento de las fotos">{([
+      ['static','Fija',Minus], ['zoom-in','Acercar',ZoomIn], ['zoom-out','Alejar',ZoomOut], ['pan-up','Subir',ArrowUp], ['pan-down','Bajar',ArrowDown],
+    ] as const).map(([motion, caption, Icon]) => <EditorToolButton key={motion} label={'Movimiento: ' + caption} caption={caption} aria-pressed={photo.kenBurns === motion} disabled={!rotationIds.length} onClick={() => onMotion(rotationIds,motion)}><Icon aria-hidden="true" /></EditorToolButton>)}</div></EditorPropertyRow>
     <EditorPropertyRow label="Restablecer"><EditorToolButton label="Restablecer encuadre" caption="Restablecer" hint="Restablecer: centrar, volver al 100% y quitar el giro individual." onClick={() => onChange({ x: 0.5, y: 0.5, zoom: 1, rotation: 0 })}><Undo2 aria-hidden="true" /></EditorToolButton></EditorPropertyRow>
   </div>;
 }
