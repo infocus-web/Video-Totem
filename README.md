@@ -57,6 +57,10 @@ Documentación oficial: https://vercel.com/docs/frameworks/frontend/vite
 
 ## Panel de edición
 
+Las escenas compartidas se adaptan al formato: dos o tres fotos verticales lado a lado en horizontal, y fotos horizontales apiladas en vertical. Tótem conserva la composición vertical antes de girar el video. La distribución coincide en vista previa, MP4 y posiciones del XML de Premiere.
+
+Para cargar solo las fotos solicitadas, pegá primero los números o nombres y elegí **Carpeta**. Se filtran antes de preparar las imágenes; un montaje vacío se arma automáticamente con esa selección. Con la lista vacía se carga la carpeta completa. **Fotos** mantiene la elección manual. [Flujo y pruebas](PANEL-DE-EDICION.md#cargar-solamente-la-selección).
+
 En **Textos** podés elegir entre ocho tipografías y ajustar por separado el tamaño y la ubicación del título, subtítulo y marca de agua. Los botones ofrecen nueve posiciones y los deslizadores permiten afinar el encuadre. Se guardan en el proyecto y se aplican a la vista previa y al video exportado. [Uso, archivos y pruebas](PANEL-DE-EDICION.md#diseño-de-textos).
 
 La cabecera compacta reúne Nuevo, Guardar, Abrir y el estado del guardado. En escritorio, el espacio de trabajo ocupa la altura disponible: dos tercios del ancho para edición y un tercio para la vista previa ampliada. Cada panel se desplaza de forma independiente. Los avisos ocupan una línea compacta. En celulares, la cabecera usa dos filas y los paneles se distribuyen verticalmente. [Archivos y pruebas del panel](PANEL-DE-EDICION.md).

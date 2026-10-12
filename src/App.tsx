@@ -14,6 +14,7 @@ import { parseClientSelectionText, resolveSelection, buildSlidesFromPhotos } fro
 import { DEFAULT_CONFIG, clampDuration } from './utils/config';
 import { rotateProjectPhotos, updatePhotoFraming, updateProjectConfig } from './utils/projectConfig';
 import { importPhotos } from './utils/importPhotos';
+import { reconnectPhotoFiles, selectPhotoFiles } from './utils/photoFiles';
 import { reconnectPhotos } from './utils/reconnectPhotos';
 import { audioEngine } from './utils/audioSynthesizer';
 import { decodeProject, serializeProject, STORAGE_KEY, type SavedProject } from './utils/projectStorage';
@@ -70,10 +71,23 @@ export default function App() {
   }, []);
   const rotatePhotos = useCallback((ids: string[], direction: -90 | 90) => setProject(previous => rotateProjectPhotos(previous, ids, direction)), []);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const fromFolder = event.currentTarget.hasAttribute('webkitdirectory');
     const files = Array.from(event.target.files || []); event.target.value = ''; if (!files.length || importing || busy) return;
     setImporting(true); setImportProgress(null); setMessage(''); importAbort.current = new AbortController();
     try {
-      const imported = await importPhotos(files,config,importAbort.current.signal,setImportProgress);
+      const requested = fromFolder && rawText.trim() && !reconnect ? parseClientSelectionText(rawText, {
+        localBasePath: config.localBasePath, prefix: config.filenamePrefix, padding: config.filenamePadding,
+        extension: config.filenameExtension, defaultDuration: config.defaultDuration,
+      }) : null;
+      if (requested && !requested.length) throw new Error('La selección no contiene números ni nombres de fotos. Corregila o limpiá la lista para cargar la carpeta completa.');
+      const filtered = requested ? selectPhotoFiles(files, requested) : null;
+      if (filtered && (filtered.missing.length || filtered.ambiguous.length)) throw new Error([
+        filtered.missing.length ? 'No están en la carpeta: ' + filtered.missing.join(', ') : '',
+        filtered.ambiguous.length ? 'Hay nombres o números repetidos: ' + filtered.ambiguous.join(', ') + '. Usá el nombre completo o elegí la subcarpeta correspondiente' : '',
+      ].filter(Boolean).join('. ') + '. No se cargó ninguna imagen; el montaje anterior se conserva.');
+      const candidates = filtered ? filtered.files : fromFolder && reconnect ? reconnectPhotoFiles(files, library) : files;
+      if (!candidates.length) throw new Error('Esta carpeta no contiene las fotos del proyecto. Elegí su carpeta original.');
+      const imported = await importPhotos(candidates,config,importAbort.current.signal,setImportProgress);
       const result = reconnectPhotos(library, imported, config.localBasePath);
       const merged = new Map(result.library.map(photo => [photo.id, photo]));
       const previousPhotos = new Map(library.map(photo => [photo.id, photo]));
@@ -85,16 +99,19 @@ export default function App() {
         urls.current.add(photo.previewUrl);
         if (photo.sourceUrl) urls.current.add(photo.sourceUrl);
       });
-      const createMontage = !slides.length && !rawText.trim();
+      const createMontage = !slides.length && (!rawText.trim() || !!requested);
+      const montagePhotos = requested ? resolveSelection(requested, result.connected).resolved : [...merged.values()].filter(photo => photo.previewUrl);
       setProject(prev => ({ ...prev, library: [...merged.values()], slides: createMontage
-        ? buildSlidesFromPhotos([...merged.values()].filter(photo => photo.previewUrl), config.horizontalGrouping, config.defaultDuration)
+        ? buildSlidesFromPhotos(montagePhotos, config.horizontalGrouping, config.defaultDuration, config)
         : prev.slides.map(slide => ({ ...slide, photos: slide.photos.map(photo => ({
           ...photo, ...merged.get(photo.id), orientation: photo.orientation, kenBurns: photo.kenBurns })) })) }));
       const pending = result.library.filter(photo => !photo.previewUrl);
       const pendingNotice = pending.length ? ' Quedan ' + pending.length + ' sin conectar: ' + pending.slice(0, 3).map(photo => photo.relativePath || photo.filename).join(', ') + '. Elegí la carpeta original si hay nombres repetidos.' : '';
       setMessage(result.reconnected
         ? `Se reconectaron ${result.reconnected} fotos. Se conservó la edición.${pendingNotice}`
-        : imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.') + pendingNotice);
+        : filtered
+          ? `Se cargaron ${imported.length} de ${filtered.total} fotos de la carpeta. ` + (createMontage ? 'Selección aplicada; el montaje está listo.' : 'Aplicá la selección para actualizar el montaje.') + pendingNotice
+          : imported.length + (createMontage ? ' fotos conectadas. El montaje ya está listo: tocá Reproducir.' : ' fotos conectadas. Aplicá la selección o usá todas.') + pendingNotice);
     } catch (error) { notify(error instanceof Error ? error.message : 'No se pudieron cargar las fotos.'); }
     finally { setImporting(false); setImportProgress(null); importAbort.current = null; }
   };
@@ -107,17 +124,17 @@ export default function App() {
         selection.missing.length ? 'Fotos faltantes o sin conectar: ' + selection.missing.join(', ') : '',
         selection.ambiguous.length ? 'Nombres ambiguos (hay más de un archivo): ' + selection.ambiguous.join(', ') : ''
       ].filter(Boolean).join('. ') + '. El montaje anterior se conserva.');
-      setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(selection.resolved.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
+      setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(selection.resolved.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration,config) }));
       notify(selection.resolved.length + ' fotos seleccionadas.');
     } catch (error) { notify(error instanceof Error ? error.message : 'Selección inválida.'); }
   };
   const useAll = () => {
     const connected = library.filter(photo => photo.previewUrl);
     if (!connected.length) { notify('Conectá las fotos con Subir fotos locales o Elegir carpeta antes de usarlas.'); return; }
-    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(connected.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration) }));
+    setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(connected.map(photo => ({ ...photo, duration: config.defaultDuration, transition: config.defaultTransition })),config.horizontalGrouping,config.defaultDuration,config) }));
     notify(`Se agregaron ${connected.length} fotos conectadas al montaje.${reconnect ? ' Las ' + reconnect + ' fotos sin conectar siguen guardadas en la biblioteca.' : ''}`);
   };
-  const regroup = () => setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(prev.slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))),config.horizontalGrouping,config.defaultDuration) }));
+  const regroup = () => setProject(prev => ({ ...prev, slides: buildSlidesFromPhotos(prev.slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))),config.horizontalGrouping,config.defaultDuration,config) }));
   const updateSlide = (index: number, update: Partial<SequenceSlide>) => {
     if (update.layout) {
       const desired = update.layout === 'split-3' ? 3 : update.layout === 'split-2' ? 2 : 1;

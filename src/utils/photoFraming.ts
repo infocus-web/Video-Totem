@@ -10,6 +10,10 @@ export function normalizeFraming(value: unknown): PhotoFraming {
 }
 
 export function photoSlots(count: number, width: number, height: number, gap: number) {
+  if (width > height) {
+    const slotWidth = (width - gap * (count - 1)) / count;
+    return Array.from({ length: count }, (_, index) => ({ x: index * (slotWidth + gap), y: 0, width: slotWidth, height }));
+  }
   const slotHeight = (height - gap * (count - 1)) / count;
   return Array.from({ length: count }, (_, index) => ({ x: 0, y: index * (slotHeight + gap), width, height: slotHeight }));
 }

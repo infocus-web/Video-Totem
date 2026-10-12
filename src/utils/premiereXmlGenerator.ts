@@ -1,4 +1,5 @@
 import type { SequenceSlide, SequenceConfig } from '../types';
+import { photoSlots } from './photoFraming.ts';
 
 export function escapeXml(value: string) {
   return value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
@@ -20,13 +21,15 @@ export function generatePremiereXml(slides: SequenceSlide[], config: SequenceCon
     if (!slide.photos.length || slide.photos.length > 3 || !Number.isFinite(slide.duration) || slide.duration <= 0) throw new Error('Escena inválida.');
     const duration = Math.max(1,Math.round(slide.duration * fps)), start = currentFrame, end = start + duration;
     const count = slide.photos.length;
+    const slots = photoSlots(count, config.width, config.height, config.splitGapSize);
     slide.photos.forEach((photo,index) => {
       id++;
       const width = photo.width || config.width, height = photo.height || config.height;
-      const slotHeight = (config.height - config.splitGapSize * (count - 1)) / count;
-      const scale = Math.min(config.width / width, slotHeight / height) * 100;
-      const center = ((index + 0.5) * (slotHeight + config.splitGapSize) - config.splitGapSize / 2 - config.height / 2) / config.height;
-      tracks[index].push('<clipitem id="clip-' + id + '"><name>' + escapeXml(photo.filename) + '</name><duration>' + duration + '</duration><rate><timebase>' + fps + '</timebase><ntsc>FALSE</ntsc></rate><start>' + start + '</start><end>' + end + '</end><in>0</in><out>' + duration + '</out><file id="file-' + id + '"><name>' + escapeXml(photo.filename) + '</name><pathurl>' + escapeXml(fileUrl(photo.fullLocalPath)) + '</pathurl><rate><timebase>' + fps + '</timebase><ntsc>FALSE</ntsc></rate><duration>' + duration + '</duration><media><video><samplecharacteristics><width>' + width + '</width><height>' + height + '</height><pixelaspectratio>square</pixelaspectratio></samplecharacteristics></video></media></file><filter><effect><name>Basic Motion</name><effectid>basic</effectid><effectcategory>motion</effectcategory><effecttype>motion</effecttype><mediatype>video</mediatype><parameter><parameterid>scale</parameterid><name>Scale</name><value>' + scale.toFixed(4) + '</value></parameter><parameter><parameterid>center</parameterid><name>Center</name><value><horiz>0</horiz><vert>' + center.toFixed(6) + '</vert></value></parameter></effect></filter></clipitem>');
+      const slot = slots[index];
+      const scale = Math.min(slot.width / width, slot.height / height) * 100;
+      const centerX = (slot.x + slot.width / 2 - config.width / 2) / config.width;
+      const centerY = (slot.y + slot.height / 2 - config.height / 2) / config.height;
+      tracks[index].push('<clipitem id="clip-' + id + '"><name>' + escapeXml(photo.filename) + '</name><duration>' + duration + '</duration><rate><timebase>' + fps + '</timebase><ntsc>FALSE</ntsc></rate><start>' + start + '</start><end>' + end + '</end><in>0</in><out>' + duration + '</out><file id="file-' + id + '"><name>' + escapeXml(photo.filename) + '</name><pathurl>' + escapeXml(fileUrl(photo.fullLocalPath)) + '</pathurl><rate><timebase>' + fps + '</timebase><ntsc>FALSE</ntsc></rate><duration>' + duration + '</duration><media><video><samplecharacteristics><width>' + width + '</width><height>' + height + '</height><pixelaspectratio>square</pixelaspectratio></samplecharacteristics></video></media></file><filter><effect><name>Basic Motion</name><effectid>basic</effectid><effectcategory>motion</effectcategory><effecttype>motion</effecttype><mediatype>video</mediatype><parameter><parameterid>scale</parameterid><name>Scale</name><value>' + scale.toFixed(4) + '</value></parameter><parameter><parameterid>center</parameterid><name>Center</name><value><horiz>' + centerX.toFixed(6) + '</horiz><vert>' + centerY.toFixed(6) + '</vert></value></parameter></effect></filter></clipitem>');
     });
     currentFrame = end;
   }

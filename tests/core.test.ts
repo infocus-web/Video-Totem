@@ -10,6 +10,86 @@ import { reconnectPhotos } from '../src/utils/reconnectPhotos.ts';
 import { normalizeFraming, photoGeometry, photoSlots } from '../src/utils/photoFraming.ts';
 import { videoOutput } from '../src/utils/videoOutput.ts';
 import { normalizeTextStyle, textStyle, textFont, textPlacement } from '../src/utils/textOverlay.ts';
+import { photoFileInfo, reconnectPhotoFiles, selectPhotoFiles } from '../src/utils/photoFiles.ts';
+
+test('escenas horizontales dividen dos o tres fotos en columnas y respetan la separación', () => {
+  for (const count of [1, 2, 3]) {
+    const slots = photoSlots(count, 1920, 1080, 12);
+    const slotWidth = (1920 - 12 * (count - 1)) / count;
+    assert.deepEqual(slots, Array.from({ length: count }, (_, index) => ({ x: index * (slotWidth + 12), y: 0, width: slotWidth, height: 1080 })));
+    assert.equal(slots.at(-1)!.x + slots.at(-1)!.width, 1920);
+  }
+  assert.deepEqual(photoSlots(3, 1080, 1920, 12), [
+    { x: 0, y: 0, width: 1080, height: 632 }, { x: 0, y: 644, width: 1080, height: 632 }, { x: 0, y: 1288, width: 1080, height: 632 },
+  ]);
+});
+
+test('agrupación horizontal reúne verticales, mantiene orden y deja horizontales individuales', () => {
+  const photos = [photo('1.jpg', 'vertical'), photo('2.jpg', 'vertical'), photo('3.jpg', 'vertical'), photo('4.jpg'), photo('5.jpg', 'vertical'), photo('6.jpg', 'vertical')];
+  const frame = { width: 1920, height: 1080 };
+  for (const mode of ['auto-split-3', 'auto-adaptive'] as const) {
+    const slides = buildSlidesFromPhotos(photos, mode, 1.5, frame);
+    assert.deepEqual(slides.map(slide => slide.photos.length), [3, 1, 2]);
+    assert.deepEqual(slides.flatMap(slide => slide.photos.map(p => p.id)), photos.map(p => p.id));
+  }
+  assert.deepEqual(buildSlidesFromPhotos(photos, 'auto-split-2', 1.5, frame).map(slide => slide.photos.length), [2, 1, 1, 2]);
+  assert.deepEqual(buildSlidesFromPhotos(photos, 'single', 1.5, frame).map(slide => slide.photos.length), [1, 1, 1, 1, 1, 1]);
+});
+
+test('cambiar formato conserva escenas y encuadres; reagrupar toma la orientación de edición', () => {
+  const original = editedProject();
+  const horizontal = updateProjectConfig(original, { ...original.config, width: 1920, height: 1080, aspectRatio: '16:9' });
+  assert.equal(horizontal.slides, original.slides); assert.equal(horizontal.library, original.library);
+  const library = [photo('1.jpg', 'vertical'), photo('2.jpg', 'vertical'), photo('3.jpg', 'vertical')];
+  const project: SavedProject = { ...horizontal, library, slides: buildSlidesFromPhotos(library, 'single', 1.5, horizontal.config), config: { ...horizontal.config, horizontalGrouping: 'single' } };
+  const grouped = updateProjectConfig(project, { ...project.config, horizontalGrouping: 'auto-split-3' });
+  assert.equal(grouped.slides[0].photos.length, 3);
+  const totem = { ...DEFAULT_CONFIG, outputRotation: 90 as const };
+  assert.deepEqual(buildSlidesFromPhotos(library, 'auto-split-3', 1.5, totem).map(slide => slide.photos.length), [1, 1, 1]);
+});
+
+test('XML horizontal posiciona las tres pistas de izquierda a derecha', () => {
+  const config = { ...DEFAULT_CONFIG, width: 1920, height: 1080, aspectRatio: '16:9' as const, splitGapSize: 0 };
+  const photos = [1, 2, 3].map(n => ({ ...photo(n + '.jpg', 'vertical'), width: 1080, height: 1920 }));
+  const slides = buildSlidesFromPhotos(photos, 'auto-split-3', 1.5, config);
+  const xml = generatePremiereXml(slides, config);
+  assert.equal((xml.match(/<track>/g) || []).length, 3);
+  assert.deepEqual([...xml.matchAll(/<horiz>([^<]+)<\/horiz><vert>([^<]+)<\/vert>/g)].map(match => [Number(match[1]), Number(match[2])]), [[-0.333333, 0], [0, 0], [0.333333, 0]]);
+});
+
+test('filtra una carpeta grande por nombres antes de importar y conserva el orden de la lista', () => {
+  const files = Array.from({ length: 5000 }, (_, index) => ({ name: `UMMA-${index + 1}.jpg`, webkitRelativePath: `Sesion/UMMA-${index + 1}.jpg` }));
+  const selected = selectPhotoFiles(files, parseClientSelectionText('474, 13, 29', options));
+  assert.equal(selected.total, 5000);
+  assert.deepEqual(selected.files.map(file => file.name), ['UMMA-474.jpg', 'UMMA-13.jpg', 'UMMA-29.jpg']);
+  assert.deepEqual(selected.missing, []); assert.deepEqual(selected.ambiguous, []);
+  assert.equal(photoFileInfo(selected.files[0]).relativePath, 'UMMA-474.jpg');
+});
+
+test('la selección distingue 461, 461b y 474b, incluidos ceros y mayúsculas', () => {
+  const files = ['UMMA-461.jpg', 'UMMA-461b.jpg', 'UMMA-474B.jpg'].map(name => ({ name, webkitRelativePath: '' }));
+  const selected = selectPhotoFiles(files, parseClientSelectionText('461b, 461, 0474B, 461b', options));
+  assert.deepEqual(selected.files.map(file => file.name), ['UMMA-461b.jpg', 'UMMA-461.jpg', 'UMMA-474B.jpg']);
+  assert.deepEqual(selected.missing, []);
+  const imported = files.map(file => ({ ...photo(file.name), ...photoFileInfo(file) }));
+  assert.deepEqual(resolveSelection(parseClientSelectionText('461b, 461, 474b', options), imported).resolved.map(p => p.filename), ['UMMA-461b.jpg', 'UMMA-461.jpg', 'UMMA-474B.jpg']);
+});
+
+test('selección de carpeta informa faltantes y ambigüedades sin elegir arbitrariamente', () => {
+  const files = ['a/UMMA-13.jpg', 'b/UMMA-13.jpg', 'UMMA-29.jpg'].map(path => ({ name: path.split('/').at(-1)!, webkitRelativePath: 'Sesion/' + path }));
+  const selected = selectPhotoFiles(files, parseClientSelectionText('13, 29, 999', options));
+  assert.deepEqual(selected.files.map(file => file.name), ['UMMA-29.jpg']);
+  assert.deepEqual(selected.ambiguous, ['IMG_013.jpg']); assert.deepEqual(selected.missing, ['IMG_999.jpg']);
+  assert.deepEqual(selectPhotoFiles(files, parseClientSelectionText('otro.jpg', options)).missing, ['otro.jpg']);
+});
+
+test('reconectar filtra archivos ajenos y conserva duplicados para detectar ambigüedad', () => {
+  const files = ['Sesion/a/1.jpg', 'Sesion/b/1.jpg', 'Sesion/2.jpg', 'Sesion/999.jpg', 'Sesion/notas.txt'].map(path => ({ name: path.split('/').at(-1)!, webkitRelativePath: path }));
+  const candidates = reconnectPhotoFiles(files, [{ ...photo('1.jpg'), previewUrl: '' }, { ...photo('2.jpg'), previewUrl: '' }]);
+  assert.deepEqual(candidates.map(file => file.webkitRelativePath), ['Sesion/a/1.jpg', 'Sesion/b/1.jpg', 'Sesion/2.jpg']);
+  const result = reconnectPhotos([{ ...photo('1.jpg'), previewUrl: '' }], candidates.map(file => ({ ...photo(file.name), ...photoFileInfo(file) })), '');
+  assert.equal(result.reconnected, 0);
+});
 
 test('textos conservan fuentes, tamaño y ubicación independientes sin modificar las fotos', () => {
   const original = editedProject();

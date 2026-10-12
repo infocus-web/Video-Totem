@@ -38,7 +38,7 @@ export function updateProjectConfig(project: SavedProject, next: SequenceConfig)
     duration: durationChanged ? config.defaultDuration : slide.duration,
     photos: pathChanged ? slide.photos.map(updatePath) : slide.photos })) : project.slides;
   if (config.horizontalGrouping !== project.config.horizontalGrouping) {
-    slides = buildSlidesFromPhotos(slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))), config.horizontalGrouping, config.defaultDuration);
+    slides = buildSlidesFromPhotos(slides.flatMap(slide => slide.photos.map(photo => ({ ...photo, duration: slide.duration, transition: slide.transition }))), config.horizontalGrouping, config.defaultDuration, config);
   }
   return { ...project, config, library, slides };
 }

@@ -38,11 +38,11 @@ const shortcuts = [
 ];
 const tabs = shortcuts.map((shortcut, index) => ({ ...shortcut, section: index + 1 }));
 
-function LayoutGlyph({ slots }: { slots: number }) {
+function LayoutGlyph({ slots, horizontal = false }: { slots: number; horizontal?: boolean }) {
   if (!slots) return <Sparkles aria-hidden="true" />;
   return <svg aria-hidden="true" className="layout-glyph" viewBox="0 0 22 30" fill="none">
     <rect x="1" y="1" width="20" height="28" rx="3" stroke="currentColor" />
-    {Array.from({ length: slots }, (_, index) => <rect key={index} x="4" y={4 + index * (22 / slots)} width="14" height={22 / slots - 2} rx="1" fill="currentColor" opacity="0.8" />)}
+    {Array.from({ length: slots }, (_, index) => <rect key={index} x={horizontal ? 4 + index * (14 / slots) : 4} y={horizontal ? 4 : 4 + index * (22 / slots)} width={horizontal ? 14 / slots - 1 : 14} height={horizontal ? 22 : 22 / slots - 2} rx="1" fill="currentColor" opacity="0.8" />)}
   </svg>;
 }
 
@@ -69,6 +69,11 @@ export function ClientInputPanel(props: Props) {
     event.currentTarget.closest('[role="tablist"]')?.querySelector<HTMLButtonElement>('#editor-tab-' + tabs[next].section)?.focus();
   };
   const output = videoOutput(config);
+  const horizontal = config.width > config.height;
+  const frameModes = horizontal ? modes.map(mode => ({ ...mode,
+    title: mode.slots === 2 ? '2 en 1 (Lado a lado)' : mode.slots === 3 ? '3 en 1 (Lado a lado)' : mode.title,
+    detail: mode.slots === 2 ? 'Dos fotos verticales una al lado de la otra.' : mode.slots === 3 ? 'Tres fotos verticales en columnas para completar el cuadro horizontal.' : mode.slots === 0 ? 'Agrupá fotos verticales consecutivas en dos o tres columnas.' : mode.detail,
+  })) : modes;
   const change = <K extends keyof SequenceConfig>(key: K, value: SequenceConfig[K]) => onConfigChange({ ...config, [key]: value });
   const drive = parseGoogleDriveLink(config.driveLink);
   const paste = async () => {
@@ -93,14 +98,14 @@ export function ClientInputPanel(props: Props) {
     <div ref={tools} className="editor-tools focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400" role="region" aria-label="Controles de edición" tabIndex={0}>
     <fieldset disabled={busy} className="editor-section-grid min-w-0 text-sm disabled:opacity-60">
     <EditorSection activeSection={activeSection} number={1} title="Fotos del proyecto" detail="Cargar fotos y aplicar la selección del cliente.">
-      <EditorPropertyRow label="Archivos" help="Las fotos se procesan en tu navegador, sin subirse a un servidor.">
+      <EditorPropertyRow label="Archivos" help="Pegá la selección antes de elegir Carpeta: solo se preparan esas fotos. Fotos permite elegir archivos manualmente.">
         <EditorTool label="Subir fotos locales"><label className="editor-icon-button"><PlusCircle aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Fotos</span>
           <input aria-label="Elegir fotos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
-        <EditorTool label="Elegir carpeta"><label className="editor-icon-button"><FolderOpen aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Carpeta</span>
+        <EditorTool label={props.rawText.trim() ? 'Elegir carpeta: cargar solo las fotos de la lista. Al reabrir un proyecto, reconecta sus fotos conservando la edición.' : 'Elegir carpeta: sin una selección, carga todas las fotos compatibles.'}><label className="editor-icon-button"><FolderOpen aria-hidden="true" /><span aria-hidden="true" className="editor-tile-caption">Carpeta</span>
           <input aria-label="Elegir carpeta" type="file" multiple {...{ webkitdirectory: '', directory: '' }} onChange={props.onUploadPhotos} className="sr-only" /></label></EditorTool>
         <span className="property-note">{props.libraryCount} fotos conectadas</span>
       </EditorPropertyRow>
-      <EditorPropertyRow label="Selección" help="Pegá números, rangos o nombres. Podés ampliar la caja desde su esquina inferior.">
+      <EditorPropertyRow label="Selección" help="Pegá números, rangos o nombres y elegí Carpeta para cargar solo esas imágenes.">
         <textarea aria-label="Selección del cliente" value={props.rawText} onChange={e => props.onRawTextChange(e.target.value)} rows={1} maxLength={20000}
           placeholder="004, 012, 025-028, DSC_1020.jpg" className="studio-input selection-input font-mono" />
         <EditorToolButton label="Pegar mensaje de WhatsApp" caption="Pegar" onClick={() => void paste()}><Copy aria-hidden="true" /></EditorToolButton>
@@ -153,9 +158,9 @@ export function ClientInputPanel(props: Props) {
       <div ref={props.onFramingTargetChange} />
     </EditorSection>
     <EditorSection activeSection={activeSection} number={4} title="Composición de escenas" detail="Una, dos o tres fotos por escena y separación.">
-      <EditorPropertyRow label="Agrupación" help="Redistribuye las escenas conservando el orden y los movimientos.">
-        <div className="property-buttons" role="group" aria-label="Agrupar fotos horizontales">
-          {modes.map(mode => <EditorToolButton key={mode.value} label={mode.title} caption={mode.caption} hint={mode.title + ': ' + mode.detail} aria-pressed={config.horizontalGrouping === mode.value} onClick={() => change('horizontalGrouping', mode.value)} className="layout-choice"><LayoutGlyph slots={mode.slots} /></EditorToolButton>)}
+      <EditorPropertyRow label="Agrupación" help="En horizontal, fotos verticales en columnas; en vertical, fotos horizontales en filas. Conserva el orden y los movimientos.">
+        <div className="property-buttons" role="group" aria-label={horizontal ? 'Agrupar fotos verticales' : 'Agrupar fotos horizontales'}>
+          {frameModes.map(mode => <EditorToolButton key={mode.value} label={mode.title} caption={mode.caption} hint={mode.title + ': ' + mode.detail} aria-pressed={config.horizontalGrouping === mode.value} onClick={() => change('horizontalGrouping', mode.value)} className="layout-choice"><LayoutGlyph slots={mode.slots} horizontal={horizontal} /></EditorToolButton>)}
         </div>
       </EditorPropertyRow>
       <EditorPropertyRow label="Separación" help="Elegí 0px para quitar la línea entre las fotos.">

@@ -153,11 +153,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               </div>
 
               {/* Thumbnails: Stacked or Single */}
-              <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black border border-neutral-800 p-1 flex flex-col justify-between gap-1">
+              <div className={'relative rounded-xl overflow-hidden bg-black border border-neutral-800 p-1 flex justify-between gap-1 ' + (config.width > config.height ? 'flex-row' : 'flex-col')} style={{ aspectRatio: config.width / config.height }}>
                 {slide.photos.map((photo, pIdx) => (
                   <div
                     key={photo.id}
-                    className="relative w-full rounded-lg overflow-hidden bg-neutral-900 group/item flex-1"
+                    className="relative w-full min-w-0 min-h-0 rounded-lg overflow-hidden bg-neutral-900 group/item flex-1"
                   >
                     {photo.previewUrl ? <img
                       src={photo.previewUrl}
@@ -257,8 +257,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     className="w-full bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-[11px] text-neutral-200"
                   >
                     <option value="single">1 Foto (Pantalla completa)</option>
-                    <option value="split-2">2 en 1 (Arriba y abajo)</option>
-                    <option value="split-3">3 en 1 (Completa el cuadro)</option>
+                    <option value="split-2">{config.width > config.height ? '2 en 1 (Lado a lado)' : '2 en 1 (Arriba y abajo)'}</option>
+                    <option value="split-3">{config.width > config.height ? '3 en 1 (Lado a lado)' : '3 en 1 (Completa el cuadro)'}</option>
                   </select>
                 </div>
               </div>

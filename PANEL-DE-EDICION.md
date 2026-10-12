@@ -16,7 +16,23 @@ Archivos: `src/components/TextOverlayControls.tsx` agrega los controles; `Client
 
 Para probar localmente: ejecutá `npm test`, `npm run build` y `npm run preview`. Cargá fotos y ajustá los tres textos, guardá/abrí el proyecto y exportá un video corto. En producción, repetí después de Commit → Push y del despliegue de Vercel; reconectá las fotos cuando abras un JSON.
 
+## Cargar solamente la selección
+
+En Fotos, pegá primero la lista de números, rangos o nombres y elegí Carpeta. La app busca por nombre o número antes de decodificar: prepara únicamente las coincidencias. El aviso indica cuántas fotos se cargaron respecto de las fotos compatibles de la carpeta. Si el montaje está vacío, la selección se aplica automáticamente respetando el orden de la lista. En un montaje existente, Aplicar actualiza las escenas cuando lo decidas. Podés usar códigos con sufijo como `461b` y nombres completos como `UMMA-474b.jpg`.
+
+Un archivo faltante o ambiguo cancela la operación antes de preparar imágenes y conserva el montaje anterior. Con la selección vacía, Carpeta carga todas las fotos compatibles; Fotos conserva la selección manual de archivos. Al reabrir un proyecto, elegir Carpeta reconecta sus archivos guardados conservando la edición e ignora nombres ajenos al proyecto. Chrome puede seguir mostrando la cantidad total de archivos de la carpeta en su autorización: ese diálogo permite leer sus nombres y no indica cuántas imágenes se procesan. Las fotos siguen siendo locales.
+
+Archivos: `src/utils/photoFiles.ts` filtra por metadatos; `photoParser.ts` comparte coincidencias, detecta ambigüedades y admite sufijos; `importPhotos.ts` reutiliza los identificadores. `src/App.tsx` filtra antes de importar y arma el montaje inicial. `ClientInputPanel.tsx` y `FaqGuideModal.tsx` describen el flujo. `tests/core.test.ts` cubre carpetas grandes, sufijos, duplicados y reconexión; `scripts/folder-selection-smoke.cjs` verifica en Chrome que se abran únicamente los originales elegidos, incluso con archivos corruptos fuera de la selección.
+
+Para probar: ejecutá `npm test` y `npm run build`; en la app local pegá una lista corta y elegí una carpeta con muchas fotos. Revisá el contador y el orden del montaje. Repetí con un número inexistente y comprobá que se conserve el trabajo. En Vercel, repetí después de Commit → Push y del despliegue.
+
 ## Espacio de trabajo
+
+En formato horizontal, las escenas de dos o tres fotos se muestran en columnas, de izquierda a derecha; en vertical y Tótem se mantienen las filas. La agrupación automática reúne fotos verticales para el cuadro horizontal y horizontales para el vertical. Cambiar el formato conserva las escenas y sus ajustes; Reagrupar vuelve a distribuirlas según el formato actual. La vista previa, selección para encuadrar, MP4, miniaturas de la línea de tiempo y posiciones del XML de Premiere usan esta distribución.
+
+Archivos de esta corrección: `src/utils/photoFraming.ts` distribuye los espacios; `photoParser.ts`, `projectConfig.ts` y `src/App.tsx` adaptan la agrupación. `premiereXmlGenerator.ts` posiciona las pistas en ambos ejes. `ClientInputPanel.tsx` y `TimelineView.tsx` muestran los controles y miniaturas según el formato; `VideoPreviewPlayer.tsx` resalta la columna que se edita. `tests/core.test.ts` y `scripts/horizontal-scenes-smoke.cjs` verifican geometría, agrupación, encuadre, MP4 y conservación del Tótem.
+
+Para probar: recargá la app local, elegí Horizontal 16:9 y Escenas → 3 en 1. Cargá tres fotos verticales y comprobá que compartan una escena lado a lado. Ajustá la foto del centro y exportá un video corto. En producción, repetí después de Commit → Push y del despliegue. Los proyectos horizontales existentes con escenas compartidas adoptan las columnas al abrirlos, conservando orden, zoom, giro y posición.
 
 Nuevo, Guardar y Abrir están en la cabecera junto al estado del guardado. Los avisos usan una línea compacta. En escritorio, el editor ocupa dos tercios del ancho y la vista previa el tercio restante; ambos aprovechan la altura disponible. La imagen crece con el espacio del panel, sin el límite anterior de tamaño. Cada panel se desplaza por separado, manteniendo visibles la cabecera, los accesos y la foto. En celulares se conserva la distribución vertical y la cabecera usa dos filas.
 

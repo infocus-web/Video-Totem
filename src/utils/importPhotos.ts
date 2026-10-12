@@ -1,5 +1,6 @@
 import type { FilePreparationProgress, PhotoItem, SequenceConfig } from '../types';
 import { localPath } from './config';
+import { photoFileInfo } from './photoFiles';
 export async function importPhotos(files: File[], config: SequenceConfig, signal: AbortSignal, onProgress?: (progress: FilePreparationProgress) => void): Promise<PhotoItem[]> {
   const candidates = files.filter(file => /\.(jpe?g|png|webp|avif)$/i.test(file.name));
   if (!candidates.length) throw new Error('No hay fotos compatibles. Convertí RAW o HEIC a JPG antes de cargarlas.');
@@ -31,9 +32,9 @@ export async function importPhotos(files: File[], config: SequenceConfig, signal
           const blob = await new Promise<Blob>((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('No se pudo preparar ' + file.name)), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.94));
           if (signal.aborted) throw new DOMException('Cancelado','AbortError');
           const previewUrl = URL.createObjectURL(blob); created.push(previewUrl);
-          const relativePath = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1).join('/') : file.name;
-          result[position] = { id: relativePath.toLowerCase(), filename: file.name, relativePath, fullLocalPath: localPath(config.localBasePath,relativePath),
-            previewUrl, sourceUrl: original, width, height, number: file.name.replace(/\.[^.]+$/,'').match(/\d+$/)?.[0] ?? file.name,
+          const info = photoFileInfo(file);
+          result[position] = { ...info, fullLocalPath: localPath(config.localBasePath,info.relativePath),
+            previewUrl, sourceUrl: original, width, height,
             orientation: width > height ? 'horizontal' : width < height ? 'vertical' : 'square',
             duration: config.defaultDuration, transition: config.defaultTransition, kenBurns: 'zoom-in' };
           onProgress?.({ completed: ++completed, total: candidates.length });
