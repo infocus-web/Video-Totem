@@ -3,10 +3,11 @@ import { Camera, Check, Copy, Crop, ExternalLink, FileCode2, FolderOpen, Heart, 
 import { EditorPropertyRow } from './EditorPropertyRow';
 import { EditorTool, EditorToolButton } from './EditorTool';
 import { EntranceControls } from './EntranceControls';
+import { LIGHT_STYLES, DEFAULT_LIGHT_OPACITY } from '../utils/lightEffect';
 import { MusicTimeline } from './MusicTimeline';
 import { TextOverlayControls } from './TextOverlayControls';
 import { LocalFilePicker } from './LocalFilePicker';
-import type { HorizontalGroupMode, SequenceConfig, SequenceSlide } from '../types';
+import type { HorizontalGroupMode, LightEffectStyle, SequenceConfig, SequenceSlide } from '../types';
 import { parseGoogleDriveLink } from '../utils/photoParser';
 import { videoOutput } from '../utils/videoOutput';
 
@@ -181,6 +182,15 @@ export function ClientInputPanel(props: Props) {
         <input id="scene-duration" aria-label="Duración de las escenas" type="range" min="0.4" max={Math.max(5, config.defaultDuration)} step="0.1" value={config.defaultDuration} onChange={e => change('defaultDuration', Number(e.target.value))} className="property-range accent-amber-500" />
         <output htmlFor="scene-duration" className="property-value text-amber-400" title={Math.round(config.defaultDuration * config.fps) + ' cuadros'}>{config.defaultDuration.toFixed(1)}s</output>
       </EditorPropertyRow>
+      <EditorPropertyRow label="Luces" help="Bokeh y destellos suaves encima de las fotos durante todo el video. Se incluyen en el video exportado, no en el XML.">
+        <select aria-label="Efecto de luces" value={config.lightEffect?.style ?? 'none'} onChange={e => change('lightEffect', { style: e.target.value as LightEffectStyle, opacity: config.lightEffect?.opacity ?? DEFAULT_LIGHT_OPACITY })} className="studio-input">
+          {LIGHT_STYLES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+      </EditorPropertyRow>
+      {config.lightEffect && config.lightEffect.style !== 'none' && <EditorPropertyRow label="Intensidad">
+        <input id="light-opacity" aria-label="Intensidad de las luces" type="range" min="0.05" max="0.6" step="0.01" value={config.lightEffect.opacity} onChange={e => change('lightEffect', { ...config.lightEffect!, opacity: Number(e.target.value) })} className="property-range accent-amber-500" />
+        <output htmlFor="light-opacity" className="property-value text-amber-400">{Math.round(config.lightEffect.opacity * 100)}%</output>
+      </EditorPropertyRow>}
     </EditorSection>
     <EditorSection activeSection={activeSection} number={6} title="Textos y marca" detail="Título, subtítulo y firma del fotógrafo.">
       <EditorPropertyRow label="Título"><input aria-label="Título" maxLength={120} value={config.eventTitle} onChange={e => change('eventTitle', e.target.value)} placeholder="Ej: Boda Valentina & Mateo" className="studio-input" /></EditorPropertyRow>

@@ -56,7 +56,11 @@ export interface OverlayTextStyle {
   align: 'left' | 'center' | 'right';
 }
 
+export type LightEffectStyle = 'none' | 'bokeh' | 'flares' | 'both';
+export interface LightEffect { style: LightEffectStyle; opacity: number }
+
 export interface SequenceConfig {
+  lightEffect?: LightEffect;
   entrance?: EntranceConfig;
   musicTrim?: MusicTrim;
   name: string;

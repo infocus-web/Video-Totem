@@ -3,6 +3,7 @@ import { DEFAULT_CONFIG, clampDuration } from './config.ts';
 import { normalizeFraming } from './photoFraming.ts';
 import { normalizeTextStyle, overlayFont, TEXT_LAYERS } from './textOverlay.ts';
 import { normalizeEntrance } from './entrance.ts';
+import { normalizeLightEffect } from './lightEffect.ts';
 import { normalizeMusicTrim } from './musicTrim.ts';
 
 export interface SavedProject { version: 1; localLinkId?: string; rawText: string; config: SequenceConfig; library: PhotoItem[]; slides: SequenceSlide[] }
@@ -31,6 +32,7 @@ export function decodeProject(raw: string): SavedProject {
   if (![24, 25, 30, 50, 60].includes(fps)) throw new Error('FPS no compatibles. Usá 24, 25, 30, 50 o 60.');
   config.fps = fps;
   if (data.config.entrance !== undefined) config.entrance = normalizeEntrance(data.config.entrance);
+  const lightEffect = normalizeLightEffect(data.config.lightEffect); if (lightEffect) config.lightEffect = lightEffect;
   if (data.config.musicTrim !== undefined) config.musicTrim = normalizeMusicTrim(data.config.musicTrim);
   config.aspectRatio = config.width === config.height ? '1:1' : config.width > config.height ? '16:9' : config.height / config.width === 1.25 ? '4:5' : '9:16';
   if (config.width < config.height && (data.config.outputRotation === 90 || data.config.outputRotation === 270)) config.outputRotation = data.config.outputRotation;
