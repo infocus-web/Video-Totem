@@ -135,3 +135,12 @@ test('clips repiten desde su inicio, guardan recorte y se reconectan sin guardar
   const connected=reconnectPhotos(restored.library,[clip],'');assert.equal(connected.connected[0].clipStart,2);
   assert.equal(updateClipStart(project,clip.id,10).library[0].clipStart,3.999);
 });
+
+test('el cero se reemplaza por un destello que arranca justo al terminar el contador', () => {
+  const modified = { ...config, entrance: { ...config.entrance!, countdownStart: 10 } };
+  assert.equal(entranceScene(slides,modified,14.99).flashTime,null);
+  assert.equal(entranceScene(slides,modified,15).flashTime,0);
+  assert.ok(Math.abs(entranceScene(slides,modified,15.25).flashTime! - 0.25) < 1e-9);
+  assert.equal(entranceScene(slides,modified,16).flashTime,null);
+  assert.equal(entranceScene(slides,modified,3).flashTime,null);
+});
