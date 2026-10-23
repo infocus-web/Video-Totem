@@ -46,6 +46,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
   const previewPlaying = isPlaying || auditioning;
   const [ready, setReady] = useState(false), [progress, setProgress] = useState(0), [muted, setMuted] = useState(false);
   const [imageError, setImageError] = useState('');
+  // Play/export problems are shown next to the player, where the person clicked.
+  const [playerError, setPlayerError] = useState('');
+  const fail = (text: string) => { setPlayerError(text); onError(text); };
   const [recordPhase, setRecordPhase] = useState('Grabando video');
   const [preparationProgress, setPreparationProgress] = useState<FilePreparationProgress | null>(null);
   const [framingMode, setFramingMode] = useState(false), [selectedPhoto, setSelectedPhoto] = useState(0);
@@ -153,9 +156,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     setFramingMode(false); drag.current = null; resumeAfterFraming.current = false;
     try {
       if (playing.current) { playing.current = false; setDisplayTime(time.current); audioEngine.stop(); }
-      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); await audioEngine.resume(); if (time.current >= total) time.current = 0; playing.current = true; audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
+      else { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); await audioEngine.resume(); if (time.current >= total) time.current = 0; playing.current = true; setPlayerError(''); audioEngine.setVolume(muted ? 0 : config.musicVolume); audioEngine.play(time.current); }
       setPlaying(playing.current);
-    } catch (error) { onError(error instanceof Error ? error.message : 'No se pudo iniciar el audio.'); }
+    } catch (error) { fail(error instanceof Error ? error.message : 'No se pudo iniciar el audio.'); }
   };
   const beginFraming = (index = scene.index) => {
     if (framingMode || disabled || !ready || !slides[index]) return;
@@ -253,8 +256,9 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
     }
   };
   const record = async (chooseLocation = false) => {
-    if (!ready || !total || disabled || abort.current) { onError('Conectá las fotos y esperá a que termine la carga.'); return; }
-    try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); } catch (error) { onError(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
+    if (!ready || !total || disabled || abort.current) { fail('Conectá las fotos y esperá a que termine la carga.'); return; }
+    try { validateEntrance(config, audioEngine.getTrack()?.duration ?? null, slides); } catch (error) { fail(error instanceof Error ? error.message : 'Revisá la entrada.'); return; }
+    setPlayerError('');
     playing.current = false; setPlaying(false); audioEngine.stop();
     abort.current = new AbortController(); onBusy(true); setProgress(0); setSaveMessage('');
     try {
@@ -264,7 +268,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
       else { downloadBlob(result.blob, filename); setPendingVideo(null); }
       if (result.extension !== format?.extension) onError('Chrome no pudo completar el MP4. Se generó un video WebM verificado.' + (chooseLocation ? ' Elegí dónde guardarlo.' : ' Se inició su descarga.'));
     } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) onError(error instanceof Error ? error.message : 'No se pudo grabar el video.');
+      if (!(error instanceof DOMException && error.name === 'AbortError')) fail(error instanceof Error ? error.message : 'No se pudo grabar el video.');
     } finally { abort.current = null; onBusy(false); setProgress(0); }
   };
   const savePendingVideo = async () => {
@@ -368,6 +372,7 @@ export const VideoPreviewPlayer = forwardRef<PreviewHandle, Props>(function Vide
         <span className="text-[11px] text-neutral-400">Descargá desde Exportar</span>
       </div>
     </div>
+    {playerError && !busy && <div role="alert" className="mx-auto flex max-w-[350px] items-start gap-2 rounded-xl border border-amber-600 bg-amber-950/40 p-3 text-sm text-amber-200"><p className="flex-1">{playerError}</p><button type="button" aria-label="Cerrar aviso" onClick={() => setPlayerError('')}>✕</button></div>}
     {busy && !savingVideo && <div role="status" className="space-y-2"><p className="text-sm">{recordPhase} · {progress}% · {supportsBackgroundExport(recordingFormat()?.extension) ? 'Podés cambiar de pestaña; dejá la app abierta.' : 'Dejá esta pestaña visible. Al volver, la grabación continúa.'}</p><progress aria-label="Avance de exportación" value={progress} max={100} className="w-full" /><button className="control" onClick={() => abort.current?.abort()}>Cancelar grabación</button></div>}
     {pendingVideo && <div className="space-y-3 rounded-xl border border-emerald-700 bg-emerald-950/20 p-3"><p role="status" className="text-sm text-emerald-200">Video listo: {pendingVideo.filename}</p><p className="text-xs text-neutral-400">Elegí la carpeta y el nombre. Guardalo antes de recargar o cerrar la página.</p><div className="flex flex-wrap gap-2">
       <button type="button" disabled={disabled} onClick={() => void savePendingVideo()} className="control">Elegir ubicación y guardar video</button>
