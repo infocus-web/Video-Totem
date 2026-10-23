@@ -70,10 +70,10 @@ export function sceneAtTime(slides: SequenceSlide[], time: number, config?: Sequ
   let accumulated = 0;
   for (let index = 0; index < slides.length; index++) {
     if (time < accumulated + slides[index].duration || index === slides.length - 1)
-      return { index, progress: Math.max(0, Math.min(1, (time - accumulated) / slides[index].duration)), elapsed: Math.max(0, time - accumulated), countdown: null, finalPhoto: null };
+      return { index, progress: Math.max(0, Math.min(1, (time - accumulated) / slides[index].duration)), elapsed: Math.max(0, time - accumulated), countdown: null, finalPhoto: null, flashTime: null };
     accumulated += slides[index].duration;
   }
-  return { index: 0, progress: 0, elapsed: 0, countdown: null, finalPhoto: null };
+  return { index: 0, progress: 0, elapsed: 0, countdown: null, finalPhoto: null, flashTime: null };
 }
 
 export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number, editing = false) {
@@ -161,7 +161,8 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
     }
   }
   drawTextOverlay(ctx, config, width, height);
-  if (scene.countdown !== null && !editing) {
+  if (scene.flashTime !== null && !editing) drawZeroFlash(ctx, width, height, scene.flashTime);
+  else if (scene.countdown !== null && scene.countdown > 0 && !editing) {
     ctx.save(); ctx.globalAlpha = config.entrance?.countdownOpacity ?? 1;
     ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.fillRect(0, 0, width, height);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
@@ -170,3 +171,18 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   }
 }
 
+
+// Instead of showing 0: a quick burst of light that grows from the center and fades out.
+const FLASH_GROW = 0.12, FLASH_TOTAL = 0.5;
+export function drawZeroFlash(ctx: CanvasRenderingContext2D, width: number, height: number, seconds: number) {
+  if (seconds < 0 || seconds >= FLASH_TOTAL) return;
+  const grow = Math.min(1, seconds / FLASH_GROW), easedGrow = 1 - Math.pow(1 - grow, 3);
+  const fade = seconds <= FLASH_GROW ? 1 : 1 - (seconds - FLASH_GROW) / (FLASH_TOTAL - FLASH_GROW);
+  const alpha = Math.max(0, Math.min(1, fade * fade));
+  const reach = Math.hypot(width, height) / 2 * (0.15 + easedGrow * 1.1);
+  const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, reach);
+  gradient.addColorStop(0, 'rgba(255,255,255,' + alpha + ')');
+  gradient.addColorStop(0.45, 'rgba(255,250,235,' + alpha * 0.9 + ')');
+  gradient.addColorStop(1, 'rgba(255,245,220,0)');
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height); ctx.restore();
+}

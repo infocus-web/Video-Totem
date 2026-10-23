@@ -71,6 +71,11 @@ export function countdownCuts(seconds: number, fps: number, initialDuration = 0.
   rampCache.set(key, cuts); return cuts;
 }
 
+// Seconds since the countdown reached zero; drives the light flash that replaces the 0.
+function zeroTime(frame: number, end: number, fps: number) {
+  return frame >= end && frame < end + fps ? (frame - end) / fps : null;
+}
+
 export function entranceScene(slides: SequenceSlide[], config: SequenceConfig, time: number) {
   const entry = config.entrance!;
   const range = musicRange(config, entry.musicEnd);
@@ -81,7 +86,7 @@ export function entranceScene(slides: SequenceSlide[], config: SequenceConfig, t
   if (entry.finalPhotoId && frame >= Math.min(end, finalFrame)) {
     const index = slides.findIndex(slide => slide.photos.some(photo => photo.id === entry.finalPhotoId && photo.mediaType !== 'video'));
     const finalPhoto = slides[index]?.photos.find(photo => photo.id === entry.finalPhotoId);
-    if (finalPhoto) return { index, progress: 0, elapsed: 0, finalPhoto, countdown: frame < end + config.fps ? 0 : null };
+    if (finalPhoto) return { index, progress: 0, elapsed: 0, finalPhoto, countdown: frame < end + config.fps ? 0 : null, flashTime: zeroTime(frame, end, config.fps) };
   }
   const cuts = cutsFor(entry, config.fps, range.start, range.end);
   const lastInterval = cuts.length > 1 ? (cuts.at(-1)! - cuts.at(-2)!) / config.fps : entry.initialDuration;
@@ -92,7 +97,8 @@ export function entranceScene(slides: SequenceSlide[], config: SequenceConfig, t
   const startFrame = frame < start ? cuts[Math.max(0, step)] : frame < end ? start + ramp[upperBound(ramp, frame - start) - 1] : frame;
   const nextFrame = frame < start ? cuts[upperBound(cuts,frame)] ?? start : frame < end ? start + (ramp[upperBound(ramp,frame-start)] ?? entry.countdown * config.fps) : frame + 1;
   return { index: sourceIndex, progress: Math.max(0, Math.min(1, (frame - startFrame) / Math.max(1, nextFrame - startFrame))), elapsed: (frame - startFrame) / config.fps, finalPhoto: null,
-    countdown: frame < start || frame >= end + config.fps ? null : frame >= end || frame >= finalFrame ? 0 : Math.ceil((end - frame) / config.fps) };
+    countdown: frame < start || frame >= end + config.fps ? null : frame >= end || frame >= finalFrame ? 0 : Math.ceil((end - frame) / config.fps),
+    flashTime: frame < start ? null : zeroTime(frame, end, config.fps) };
 }
 
 export function entranceSceneStart(index: number, config: SequenceConfig) {
