@@ -3,6 +3,7 @@ import { normalizeFraming, photoGeometry, photoSlots } from './photoFraming.ts';
 import { videoOutput } from './videoOutput.ts';
 import { drawTextOverlay } from './textOverlay.ts';
 import { entranceScene } from './entrance.ts';
+import { drawLightEffect } from './lightEffect.ts';
 export type DrawableImage = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement;
 export type ImageMap = Map<string, DrawableImage>;
 export const imageWidth = (image: DrawableImage) => image instanceof HTMLVideoElement ? image.videoWidth : image instanceof HTMLImageElement ? image.naturalWidth : image.width;
@@ -160,6 +161,7 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
       ctx.fillStyle = 'rgba(255,255,255,' + Math.sin(transitionProgress * Math.PI) + ')'; ctx.fillRect(0, 0, width, height);
     }
   }
+  if (!editing) drawLightEffect(ctx, width, height, time, config.lightEffect);
   drawTextOverlay(ctx, config, width, height);
   if (scene.flashTime !== null && !editing) drawZeroFlash(ctx, width, height, scene.flashTime);
   else if (scene.countdown !== null && scene.countdown > 0 && !editing) {
