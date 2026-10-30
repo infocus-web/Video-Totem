@@ -4,24 +4,43 @@ import { videoOutput } from './videoOutput.ts';
 import { drawTextOverlay } from './textOverlay.ts';
 import { entranceScene } from './entrance.ts';
 import { drawLightEffect } from './lightEffect.ts';
-export type DrawableImage = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement;
+export type DrawableImage = HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap | OffscreenCanvas;
 export type ImageMap = Map<string, DrawableImage>;
-export const imageWidth = (image: DrawableImage) => image instanceof HTMLVideoElement ? image.videoWidth : image instanceof HTMLImageElement ? image.naturalWidth : image.width;
-export const imageHeight = (image: DrawableImage) => image instanceof HTMLVideoElement ? image.videoHeight : image instanceof HTMLImageElement ? image.naturalHeight : image.height;
+// The export worker draws on OffscreenCanvas with ImageBitmaps; DOM element classes do not exist there.
+export type RenderCanvas = HTMLCanvasElement | OffscreenCanvas;
+const isVideo = (image: DrawableImage): image is HTMLVideoElement => typeof HTMLVideoElement !== 'undefined' && image instanceof HTMLVideoElement;
+const isImage = (image: DrawableImage): image is HTMLImageElement => typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement;
+export const imageWidth = (image: DrawableImage) => isVideo(image) ? image.videoWidth : isImage(image) ? image.naturalWidth : image.width;
+export const imageHeight = (image: DrawableImage) => isVideo(image) ? image.videoHeight : isImage(image) ? image.naturalHeight : image.height;
+export const createRenderCanvas = (width = 0, height = 0): RenderCanvas => {
+  if (typeof document === 'undefined') return new OffscreenCanvas(width, height);
+  const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; return canvas;
+};
+// OffscreenCanvasRenderingContext2D implements every drawing call used here.
+export const context2d = (canvas: RenderCanvas) => canvas.getContext('2d') as CanvasRenderingContext2D | null;
 export const imageSource = (image: DrawableImage | undefined) => image && 'src' in image ? image.src : '';
 
-export function drawVideoFrame(canvas: HTMLCanvasElement, composition: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number) {
+export function drawVideoFrame(canvas: RenderCanvas, composition: RenderCanvas, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number) {
   drawFrame(composition, slides, config, images, time);
   if (canvas === composition) return;
-  const ctx = canvas.getContext('2d');
+  const ctx = context2d(canvas);
   if (!ctx) throw new Error('Tu navegador no ofrece Canvas 2D.');
   const { rotation } = videoOutput(config);
   ctx.resetTransform(); ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(rotation * Math.PI / 180);
   ctx.drawImage(composition, -composition.width / 2, -composition.height / 2); ctx.restore();
 }
-const transitionBuffers = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-export function clearRendererCache(canvas: HTMLCanvasElement | null) {
+const transitionBuffers = new WeakMap<RenderCanvas, RenderCanvas>();
+// Creating a canvas inside a worker waits on the page, so exports create the transition buffer up front.
+export function transitionBuffer(canvas: RenderCanvas, width = canvas.width, height = canvas.height) {
+  let buffer = transitionBuffers.get(canvas);
+  if (!buffer) { buffer = createRenderCanvas(); transitionBuffers.set(canvas, buffer); }
+  if (buffer.width !== width || buffer.height !== height) { buffer.width = width; buffer.height = height; }
+  const context = context2d(buffer);
+  if (!context) throw new Error('No se pudo dibujar la transición.');
+  return { buffer, context };
+}
+export function clearRendererCache(canvas: RenderCanvas | null) {
   if (!canvas) return;
   const buffer = transitionBuffers.get(canvas);
   if (buffer) { buffer.width = buffer.height = 0; transitionBuffers.delete(canvas); }
@@ -77,8 +96,8 @@ export function sceneAtTime(slides: SequenceSlide[], time: number, config?: Sequ
   return { index: 0, progress: 0, elapsed: 0, countdown: null, finalPhoto: null, flashTime: null };
 }
 
-export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number, editing = false) {
-  const ctx = canvas.getContext('2d');
+export function drawFrame(canvas: RenderCanvas, slides: SequenceSlide[], config: SequenceConfig, images: ImageMap, time: number, editing = false) {
+  const ctx = context2d(canvas);
   if (!ctx) throw new Error('Tu navegador no ofrece Canvas 2D.');
   const width = canvas.width, height = canvas.height;
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
@@ -130,11 +149,7 @@ export function drawFrame(canvas: HTMLCanvasElement, slides: SequenceSlide[], co
   };
   const drawOverlay = (slide: SequenceSlide, opacity: number, zoom = 1) => {
     // Blend a complete scene once: layered backgrounds otherwise darken the previous photo twice.
-    let buffer = transitionBuffers.get(canvas);
-    if (!buffer) { buffer = document.createElement('canvas'); transitionBuffers.set(canvas, buffer); }
-    if (buffer.width !== width || buffer.height !== height) { buffer.width = width; buffer.height = height; }
-    const bufferContext = buffer.getContext('2d');
-    if (!bufferContext) throw new Error('No se pudo dibujar la transición.');
+    const { buffer, context: bufferContext } = transitionBuffer(canvas, width, height);
     bufferContext.clearRect(0, 0, width, height);
     drawScene(bufferContext, slide, 0, 0, zoom);
     ctx.save(); ctx.globalAlpha = opacity; ctx.drawImage(buffer, 0, 0); ctx.restore();

@@ -8,6 +8,14 @@ El nuevo camino MP4 usa WebCodecs y Mediabunny para generar cada cuadro con su t
 
 La compresión prioriza detalle con cuantizador 18 si el codificador lo admite; el bitrate alternativo es aproximadamente 24,9 Mbps a Full HD/30 FPS. Los archivos pueden ser más grandes. El límite sigue siendo cinco minutos; original chico o zoom excesivo limitan el detalle. Otros navegadores conservan la grabación compatible en tiempo real. [API de codificación utilizada](https://mediabunny.dev/guide/media-sources).
 
+## Exportación con la pestaña oculta
+
+El MP4 se congelaba al cambiar de pestaña: Chrome frena la página oculta y la exportación decodificaba fotos y dibujaba cada cuadro en ella. Ahora `src/utils/videoEncoder.worker.ts` decodifica los originales con `createImageBitmap`, dibuja en `OffscreenCanvas` y codifica en un proceso aparte, que sigue andando aunque la pestaña quede oculta. La página solo prepara cada tramo de cinco segundos de audio, porque la canción vive en su `AudioContext`, y muestra el avance.
+
+Un lienzo recibe su memoria en el primer trazo y ese paso espera a la página. Por eso el proceso traza una vez sobre todos sus lienzos (salida, composición girada y fundido de transición) al empezar, mientras la página todavía está al frente. Los clips de video todavía crean sus lienzos al aparecer; con la pestaña oculta pueden esperar un instante a la página, una vez por clip.
+
+Verificado en Chrome bloqueando la página ocho segundos durante la exportación: el proceso siguió al mismo ritmo y el MP4 salió con todos los cuadros, audio y textos. Cancelar cierra el proceso y una nueva exportación funciona.
+
 Restablecer encuadre ahora centra la foto, devuelve el zoom al 100% y quita su giro individual. No modifica otras fotos ni el giro de salida Tótem TV. La vista previa se adapta a la altura disponible; los controles tienen desplazamiento propio y el panel se mantiene visible en escritorio.
 
 ## Archivos modificados

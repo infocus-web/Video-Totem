@@ -13,7 +13,7 @@ export class RecordingImages {
     const photos = [...new Map(this.slides.slice(scene, scene + 2).flatMap(slide => slide.photos).map(photo => [photo.id, photo])).values()];
     const needed = new Set(photos.map(photo => photo.id));
     for (const [id, image] of this.images) if (!needed.has(id)) {
-      if (image !== this.previews.get(id)) image.removeAttribute('src');
+      if (image !== this.previews.get(id) && 'removeAttribute' in image) image.removeAttribute('src');
       this.images.delete(id);
     }
     let index = 0;
@@ -43,7 +43,7 @@ export class RecordingImages {
     this.prepared = scene;
   }
   clear() {
-    for (const [id, image] of this.images) if (image !== this.previews.get(id)) image.removeAttribute('src');
+    for (const [id, image] of this.images) if (image !== this.previews.get(id) && 'removeAttribute' in image) image.removeAttribute('src');
     this.images.clear(); this.prepared = -1;
   }
 }

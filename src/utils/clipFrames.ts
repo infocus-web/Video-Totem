@@ -1,10 +1,10 @@
 import { BlobSource, CanvasSink, Input, MP4, QTFF, WEBM } from 'mediabunny';
 import type { SequenceConfig, SequenceSlide } from '../types';
-import { sceneAtTime, type ImageMap } from './canvasRenderer';
+import { context2d, createRenderCanvas, sceneAtTime, type ImageMap, type RenderCanvas } from './canvasRenderer';
 import { clipTime } from './clipMedia';
 
 export class ClipFrames {
-  private clips = new Map<string, { input: Input; sink: CanvasSink; canvas: HTMLCanvasElement }>();
+  private clips = new Map<string, { input: Input; sink: CanvasSink; canvas: RenderCanvas }>();
   constructor(private slides: SequenceSlide[], private config: SequenceConfig, private signal: AbortSignal) {}
   async prepare(images: ImageMap, time: number) {
     this.signal.throwIfAborted();
@@ -21,7 +21,7 @@ export class ClipFrames {
         try {
           const track = await input.getPrimaryVideoTrack();
           if (!track || !await track.canDecode()) throw new Error('No se puede decodificar ' + photo.filename + '. Convertí el clip a MP4 H.264.');
-          clip = { input, sink: new CanvasSink(track, { poolSize: 2 }), canvas: document.createElement('canvas') }; this.clips.set(photo.id, clip);
+          clip = { input, sink: new CanvasSink(track, { poolSize: 2 }), canvas: createRenderCanvas() }; this.clips.set(photo.id, clip);
         } catch (error) { input.dispose(); throw error; }
       }
       const elapsed = current?.photos.some(item => item.id === photo.id) ? scene.elapsed : 0;
@@ -29,7 +29,7 @@ export class ClipFrames {
       this.signal.throwIfAborted();
       if (!frame) throw new Error('No se pudo obtener un cuadro de ' + photo.filename);
       clip.canvas.width = frame.canvas.width; clip.canvas.height = frame.canvas.height;
-      clip.canvas.getContext('2d')!.drawImage(frame.canvas, 0, 0); images.set(photo.id, clip.canvas);
+      context2d(clip.canvas)!.drawImage(frame.canvas, 0, 0); images.set(photo.id, clip.canvas);
     }
   }
   clear() { this.clips.forEach(clip => clip.input.dispose()); this.clips.clear(); }
