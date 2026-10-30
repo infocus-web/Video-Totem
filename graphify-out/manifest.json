@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "scripts/encoding-smoke.cjs": {
-    "mtime": 1791789847.2357645,
-    "seen": 1791789966.9593678,
-    "ast_hash": "9e270b46a7ea2f048fd89597c3da24c1",
+    "mtime": 1793373251.0224636,
+    "seen": 1793373262.2688954,
+    "ast_hash": "e8e2cb503de17c306c518d26bd6dfa5c",
     "semantic_hash": ""
   },
   "scripts/entrance-clips-smoke.cjs": {
@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "scripts/export-smoke.cjs": {
-    "mtime": 1791789619.1467645,
-    "seen": 1791789966.9593678,
-    "ast_hash": "0f0f2d685c4395734596c95fd329d400",
+    "mtime": 1793373250.7178974,
+    "seen": 1793373262.2688954,
+    "ast_hash": "2684bcf20e2a9c47ffd412e1a7d26edf",
     "semantic_hash": ""
   },
   "scripts/final-photo-smoke.cjs": {
@@ -174,9 +174,9 @@
     "semantic_hash": ""
   },
   "src/components/ClientInputPanel.tsx": {
-    "mtime": 1791783674.5939507,
-    "seen": 1791784748.148411,
-    "ast_hash": "d15691b2f6bcfa7304e2669890352eaa",
+    "mtime": 1792875822.4618447,
+    "seen": 1793373262.2688954,
+    "ast_hash": "8b10e36068dcc3efc0f335ecec05233f",
     "semantic_hash": ""
   },
   "src/components/EditorPropertyRow.tsx": {
@@ -270,9 +270,9 @@
     "semantic_hash": ""
   },
   "src/components/VideoPreviewPlayer.tsx": {
-    "mtime": 1791788573.0882285,
-    "seen": 1791789966.9593678,
-    "ast_hash": "cf1830d977085e13e72d3fef215df8e8",
+    "mtime": 1792875822.471382,
+    "seen": 1793373262.2688954,
+    "ast_hash": "b71e1a1c6f218e5c5583214944e98b1f",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -282,9 +282,9 @@
     "semantic_hash": ""
   },
   "src/types/index.ts": {
-    "mtime": 1791783635.2016633,
-    "seen": 1791784748.148411,
-    "ast_hash": "2baa25932551ec7e275a18216efd5aec",
+    "mtime": 1792875822.4799042,
+    "seen": 1793373262.2688954,
+    "ast_hash": "5092abb82ca5d9d901a51053ac63e7cd",
     "semantic_hash": ""
   },
   "src/utils/audioSynthesizer.ts": {
@@ -306,15 +306,15 @@
     "semantic_hash": ""
   },
   "src/utils/canvasRenderer.ts": {
-    "mtime": 1791789134.7462733,
-    "seen": 1791789966.9593678,
-    "ast_hash": "2c83edb3c123df46e0797722744a72fe",
+    "mtime": 1793373249.4792957,
+    "seen": 1793373262.2688954,
+    "ast_hash": "89678bbfb3c5a4279f73fa0a560447fb",
     "semantic_hash": ""
   },
   "src/utils/clipFrames.ts": {
-    "mtime": 1791783635.8170538,
-    "seen": 1791784748.148411,
-    "ast_hash": "111b987f5e45a45d76634e0c33409b26",
+    "mtime": 1793373249.813893,
+    "seen": 1793373262.2688954,
+    "ast_hash": "ff7572ae4b4b2df6f034a63fd54f4a5a",
     "semantic_hash": ""
   },
   "src/utils/clipMedia.ts": {
@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "src/utils/entrance.ts": {
-    "mtime": 1791783692.6229136,
-    "seen": 1791784748.148411,
-    "ast_hash": "4b64b806df98a846914d6ac1107fa8a4",
+    "mtime": 1792875822.496911,
+    "seen": 1793373262.2688954,
+    "ast_hash": "1eda578567a73d9a282d51313343bf85",
     "semantic_hash": ""
   },
   "src/utils/faceOrientation.ts": {
@@ -348,9 +348,9 @@
     "semantic_hash": ""
   },
   "src/utils/frameEncodingSupport.ts": {
-    "mtime": 1791705347.1574726,
-    "seen": 1791784748.148411,
-    "ast_hash": "66b4e2a5c759747c8b63b22b619d8672",
+    "mtime": 1793373250.4199636,
+    "seen": 1793373262.2688954,
+    "ast_hash": "a884047518fdce3769129c0463cee8b8",
     "semantic_hash": ""
   },
   "src/utils/importPhotos.ts": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/utils/projectStorage.ts": {
-    "mtime": 1791789521.270304,
-    "seen": 1791789966.9593678,
-    "ast_hash": "21ab7d5c1c7d2aa6b69a290493697cef",
+    "mtime": 1792875822.5149784,
+    "seen": 1793373262.2688954,
+    "ast_hash": "50774187ac94d5cb6fca854bb467dc78",
     "semantic_hash": ""
   },
   "src/utils/reconnectPhotos.ts": {
@@ -438,9 +438,9 @@
     "semantic_hash": ""
   },
   "src/utils/recordingImages.ts": {
-    "mtime": 1791769441.6478808,
-    "seen": 1791784748.148411,
-    "ast_hash": "b3c732e6f217a42a1be26ebfcf04498f",
+    "mtime": 1793373250.1110182,
+    "seen": 1793373262.2688954,
+    "ast_hash": "1b998d50e725cc27470fb2ddeda4c4b1",
     "semantic_hash": ""
   },
   "src/utils/recordingSource.ts": {
@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "src/utils/videoEncoder.ts": {
-    "mtime": 1791783693.9186542,
-    "seen": 1791784748.148411,
-    "ast_hash": "fe7568366d5f316b5ba5b6d45812aaac",
+    "mtime": 1793373249.189659,
+    "seen": 1793373262.2688954,
+    "ast_hash": "01483b57faf02617f6696dfef6e06c3d",
     "semantic_hash": ""
   },
   "src/utils/videoOutput.ts": {
@@ -498,9 +498,9 @@
     "semantic_hash": ""
   },
   "tests/entrance.test.ts": {
-    "mtime": 1791783729.4021313,
-    "seen": 1791784748.148411,
-    "ast_hash": "e6ce7a4de45b01f38c09b9dd70f56b37",
+    "mtime": 1792875822.5235274,
+    "seen": 1793373262.2688954,
+    "ast_hash": "6e7af5a08cfcbee0f285a7f85b4996f8",
     "semantic_hash": ""
   },
   "tests/music-trim.test.ts": {
@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "EXPORTACION-ESTABLE.md": {
-    "mtime": 1791709259.4773676,
-    "seen": 1791784748.148411,
-    "ast_hash": "1116db49e8d04381ef1f147d161b31df",
+    "mtime": 1793373251.3370233,
+    "seen": 1793373262.2688954,
+    "ast_hash": "63cac7407d410a0e21627d52002bab44",
     "semantic_hash": ""
   },
   "OPTIMIZACIONES.md": {
@@ -645,6 +645,18 @@
     "mtime": 1791790297.2432485,
     "seen": 1791790363.3633142,
     "ast_hash": "1c179780817f4753e8b30a9cdcf113c2",
+    "semantic_hash": ""
+  },
+  "src/utils/lightEffect.ts": {
+    "mtime": 1792875822.506445,
+    "seen": 1793373262.2688954,
+    "ast_hash": "f32e76ef4d524efcc79eaf341920f9e0",
+    "semantic_hash": ""
+  },
+  "src/utils/videoEncoder.worker.ts": {
+    "mtime": 1793373248.885991,
+    "seen": 1793373262.2688954,
+    "ast_hash": "dd2d7c40a780f8ab96816bd99338e139",
     "semantic_hash": ""
   }
 }

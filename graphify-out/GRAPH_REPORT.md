@@ -1,27 +1,27 @@
-# Graph Report - Video Totem  (2026-10-12)
+# Graph Report - Video Totem  (2026-10-30)
 
 ## Corpus Check
-- 104 files · ~76,454 words
+- 106 files · ~78,929 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 3, .woff2 1, .tflite 1)
 
 ## Summary
-- 645 nodes · 1480 edges · 69 communities (46 shown, 23 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 15 edges (avg confidence: 0.85)
+- 668 nodes · 1544 edges · 61 communities (43 shown, 18 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 10 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2f878fb8`
+- Built from commit: `f3821702`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - CLAUDE.md
 - App.tsx
-- ClientInputPanel.tsx
 - VideoPreviewPlayer.tsx
+- videoRecorder.ts
+- SequenceConfig
 - index.ts
-- PremiereInspectorModal.tsx
 - ref_node_child_process
 - Optimización de AutoReel Studio
 - Entrada de quince y clips locales
@@ -34,10 +34,9 @@
 - main.cjs
 - ref_node_fs
 - Panel de edición y navegación de fotos
-- devDependencies
+- src/utils/canvasRenderer.ts
 - ref_node_path
 - export-smoke.cjs
-- scripts
 - encoding-smoke.cjs
 - desktop-smoke.cjs
 - export-fallback-smoke.cjs
@@ -46,7 +45,6 @@
 - Encuadre, giro y exportación
 - Auditoría de AutoReel Studio — 12 de octubre de 2026
 - Exportación estable, encuadre y controles
-- dependencies
 - entrance-clips-smoke.cjs
 - final-photo-smoke.cjs
 - music-trim-smoke.cjs
@@ -55,7 +53,6 @@
 - audit-smoke.cjs
 - RecordingClock
 - Corrección de la carga de fotos
-- vite.config.ts
 - horizontal-scenes-smoke.cjs
 - production-smoke.cjs
 - progress-smoke.cjs
@@ -65,58 +62,56 @@
 - text-overlay-smoke.cjs
 - TestImage
 - Archivos
-- react-dom
-- engines
 - models/README.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `App()` - 40 edges
-2. `SequenceConfig` - 34 edges
-3. `VideoPreviewPlayer` - 31 edges
-4. `SequenceSlide` - 30 edges
+2. `SequenceConfig` - 35 edges
+3. `SequenceSlide` - 32 edges
+4. `VideoPreviewPlayer` - 31 edges
 5. `PhotoItem` - 23 edges
 6. `BackgroundAudioEngine` - 19 edges
 7. `musicRange()` - 19 edges
 8. `AutoReel Studio` - 18 edges
-9. `react` - 17 edges
-10. `decodeProject()` - 16 edges
+9. `encode()` - 17 edges
+10. `react` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `photo()` --calls--> `localPath()`  [EXTRACTED]
   tests/core.test.ts → src/utils/config.ts
 - `editedProject()` --calls--> `buildSlidesFromPhotos()`  [EXTRACTED]
   tests/core.test.ts → src/utils/photoParser.ts
-- `App()` --calls--> `ClientInputPanel()`  [EXTRACTED]
-  src/App.tsx → src/components/ClientInputPanel.tsx
-- `App()` --calls--> `NewProjectModal()`  [EXTRACTED]
-  src/App.tsx → src/components/NewProjectModal.tsx
-- `App()` --calls--> `PreparationProgress()`  [EXTRACTED]
-  src/App.tsx → src/components/PreparationProgress.tsx
+- `RecordingImages` --references--> `ImageMap`  [EXTRACTED]
+  src/utils/recordingImages.ts → src/utils/canvasRenderer.ts
+- `VideoPreviewPlayer` --calls--> `imageWidth()`  [EXTRACTED]
+  src/components/VideoPreviewPlayer.tsx → src/utils/canvasRenderer.ts
+- `VideoPreviewPlayer` --calls--> `imageHeight()`  [EXTRACTED]
+  src/components/VideoPreviewPlayer.tsx → src/utils/canvasRenderer.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (69 total, 23 thin omitted)
+## Communities (61 total, 18 thin omitted)
 
 ### Community 1 - "App.tsx"
 Cohesion: 0.08
-Nodes (64): App(), DeferredDialog(), ExportModal, FaqGuideModal, initialProject(), PremiereInspectorModal, TimelineView, Navbar() (+56 more)
+Nodes (60): App(), DeferredDialog(), ExportModal, FaqGuideModal, initialProject(), PremiereInspectorModal, TimelineView, Navbar() (+52 more)
 
-### Community 2 - "ClientInputPanel.tsx"
-Cohesion: 0.10
-Nodes (41): lucide-react, react, ClientInputPanel(), EditorSection(), LayoutGlyph(), modes, presetCaptions, presetIcons (+33 more)
+### Community 2 - "VideoPreviewPlayer.tsx"
+Cohesion: 0.12
+Nodes (36): lucide-react, react, react-dom, EditorPropertyRow(), ButtonProps, EditorToolButton(), PhotoFramingControls(), Props (+28 more)
 
-### Community 3 - "VideoPreviewPlayer.tsx"
+### Community 3 - "videoRecorder.ts"
+Cohesion: 0.13
+Nodes (24): ExportModal(), downloadBlob(), supportsFrameEncoding(), escapeXml(), fileUrl(), generatePremiereXml(), RecordingImages, createRecordingSource() (+16 more)
+
+### Community 4 - "SequenceConfig"
 Cohesion: 0.08
-Nodes (45): ExportModal(), PreparationProgress(), PreviewHandle, VideoPreviewPlayer, FilePreparationProgress, clearRendererCache(), DrawableImage, drawFrame() (+37 more)
+Nodes (48): ClientInputPanel(), EditorSection(), LayoutGlyph(), modes, presetCaptions, presetIcons, presets, Props (+40 more)
 
-### Community 4 - "index.ts"
-Cohesion: 0.11
-Nodes (36): Props, Props, Props, Props, TimelineView(), TimelineViewProps, FramingDrag, Props (+28 more)
-
-### Community 5 - "PremiereInspectorModal.tsx"
-Cohesion: 0.32
-Nodes (7): FaqGuideModal(), Modal(), NewProjectModal(), PremiereInspectorModal(), ParsedPremiereProject, parsePremiereFile(), parsePremiereXml()
+### Community 5 - "index.ts"
+Cohesion: 0.17
+Nodes (13): FaqGuideModal(), Modal(), Props, NewProjectModal(), PremiereInspectorModal(), EntranceConfig, MusicTrim, ParsedPremiereProject (+5 more)
 
 ### Community 6 - "ref_node_child_process"
 Cohesion: 0.17
@@ -131,16 +126,16 @@ Cohesion: 0.18
 Nodes (11): Ajuste: canción completa y tres etapas, Cambios de código, Corrección de pausa automática del cursor musical, Entrada de quince y clips locales, Foto fija después del contador, Herramientas compartidas para Entrada, Prueba musical con vista previa sincronizada, Reconexión automática de originales (+3 more)
 
 ### Community 12 - "BackgroundAudioEngine"
-Cohesion: 0.17
-Nodes (3): BackgroundAudioEngine, musicStepDuration(), scheduleMusicStep()
+Cohesion: 0.16
+Nodes (4): BackgroundAudioEngine, musicTime(), musicStepDuration(), scheduleMusicStep()
 
 ### Community 13 - "AutoReel Studio"
 Cohesion: 0.11
 Nodes (18): App de Windows (.exe), AutoReel Studio, Desplegar en Vercel, Ejecutar localmente, Entrada de quince y clips, Estructura y cambios, Exportación de video, Flujo de uso (+10 more)
 
 ### Community 14 - "package.json"
-Cohesion: 0.12
-Nodes (15): author, description, main, name, private, type, version, electron-builder (+7 more)
+Cohesion: 0.04
+Nodes (46): author, dependencies, lucide-react, mediabunny, @mediapipe/tasks-vision, react, react-dom, description (+38 more)
 
 ### Community 15 - "smartRotation.ts"
 Cohesion: 0.21
@@ -166,9 +161,9 @@ Nodes (9): assert, { chromium }, fs, assert, { chromium }, fs, assert, { chromiu
 Cohesion: 0.17
 Nodes (12): Alcance, Cargar solamente la selección, Controles visuales, Diseño de textos, Distribución en dos columnas, Encuadre desplegado y giro inteligente, Entrada y clips, Espacio de trabajo (+4 more)
 
-### Community 21 - "devDependencies"
-Cohesion: 0.18
-Nodes (11): devDependencies, electron, electron-builder, tailwindcss, @tailwindcss/vite, @types/node, @types/react, @types/react-dom (+3 more)
+### Community 21 - "src/utils/canvasRenderer.ts"
+Cohesion: 0.10
+Nodes (30): SequenceSlide, clearRendererCache(), context2d(), createRenderCanvas(), DrawableImage, drawFrame(), drawVideoFrame(), drawZeroFlash() (+22 more)
 
 ### Community 22 - "ref_node_path"
 Cohesion: 0.18
@@ -177,10 +172,6 @@ Nodes (8): assert, { chromium }, fs, path, assert, { chromium }, fs, path
 ### Community 23 - "export-smoke.cjs"
 Cohesion: 0.20
 Nodes (6): assert, { chromium }, fs, os, path, { spawn }
-
-### Community 24 - "scripts"
-Cohesion: 0.22
-Nodes (9): scripts, build, desktop, desktop:exe, desktop:pack, dev, lint, preview (+1 more)
 
 ### Community 25 - "encoding-smoke.cjs"
 Cohesion: 0.22
@@ -211,12 +202,8 @@ Cohesion: 0.33
 Nodes (5): Auditoría de AutoReel Studio — 12 de octubre de 2026, Correcciones, Probar localmente y publicar, Seguridad y límites, Validación
 
 ### Community 32 - "Exportación estable, encuadre y controles"
-Cohesion: 0.33
-Nodes (5): Archivos modificados, Exportación estable, encuadre y controles, Probar localmente, Problema y corrección, Verificar en producción
-
-### Community 33 - "dependencies"
-Cohesion: 0.33
-Nodes (6): dependencies, lucide-react, mediabunny, @mediapipe/tasks-vision, react, react-dom
+Cohesion: 0.29
+Nodes (6): Archivos modificados, Exportación con la pestaña oculta, Exportación estable, encuadre y controles, Probar localmente, Problema y corrección, Verificar en producción
 
 ### Community 34 - "entrance-clips-smoke.cjs"
 Cohesion: 0.33
@@ -245,10 +232,6 @@ Nodes (3): assert, { chromium }, fs
 ### Community 42 - "Corrección de la carga de fotos"
 Cohesion: 0.50
 Nodes (3): Corrección de la carga de fotos, Verificación en Vercel, Verificación local
-
-### Community 43 - "vite.config.ts"
-Cohesion: 0.50
-Nodes (3): @tailwindcss/vite, vite, @vitejs/plugin-react
 
 ### Community 44 - "horizontal-scenes-smoke.cjs"
 Cohesion: 0.50
@@ -283,24 +266,24 @@ Cohesion: 0.67
 Nodes (3): Archivos, Nuevo proyecto, Pestañas de herramientas
 
 ## Knowledge Gaps
-- **261 isolated node(s):** `Correcciones`, `Validación`, `Seguridad y límites`, `Probar localmente y publicar`, `{ app, BrowserWindow, Menu, protocol, net, session, dialog, powerSaveBlocker }` (+256 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 317 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **265 isolated node(s):** `Problema y corrección`, `Exportación con la pestaña oculta`, `Archivos modificados`, `Probar localmente`, `Verificar en producción` (+260 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 321 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **18 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `ClientInputPanel.tsx` to `App.tsx`, `VideoPreviewPlayer.tsx`, `index.ts`, `PremiereInspectorModal.tsx`, `package.json`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
-- **What connects `Correcciones`, `Validación`, `Seguridad y límites` to the rest of the system?**
-  _261 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `react` connect `VideoPreviewPlayer.tsx` to `App.tsx`, `videoRecorder.ts`, `SequenceConfig`, `index.ts`, `package.json`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+- **What connects `Problema y corrección`, `Exportación con la pestaña oculta`, `Archivos modificados` to the rest of the system?**
+  _265 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `App.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.07828967178560675 - nodes in this community are weakly interconnected._
-- **Why does `lucide-react` connect `ClientInputPanel.tsx` to `App.tsx`, `VideoPreviewPlayer.tsx`, `index.ts`, `package.json`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
-- **Should `ClientInputPanel.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09877551020408164 - nodes in this community are weakly interconnected._
-- **Why does `BackgroundAudioEngine` connect `BackgroundAudioEngine` to `index.ts`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _Cohesion score 0.08216216216216216 - nodes in this community are weakly interconnected._
+- **Why does `lucide-react` connect `VideoPreviewPlayer.tsx` to `App.tsx`, `SequenceConfig`, `index.ts`, `package.json`?**
+  _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Should `VideoPreviewPlayer.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.08269394714407502 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11522198731501057 - nodes in this community are weakly interconnected._
+- **Should `videoRecorder.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.1253968253968254 - nodes in this community are weakly interconnected._
+- **Should `SequenceConfig` be split into smaller, more focused modules?**
+  _Cohesion score 0.0825136612021858 - nodes in this community are weakly interconnected._
